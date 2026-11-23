@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	设置	pinyin: shèzhì	machine
+app_remote	远程控制	pinyin: yuǎnchéng kòngzhì	machine
+group_devices	设备		machine
+group_system	系统		machine
+page_network	网络		machine
+page_remote	远程控制		machine
+page_accessibility	辅助功能		machine
+page_displays	显示器		machine
+page_mouse	鼠标		machine
+page_privacy_security	隐私和安全		machine
+page_about	关于		machine
+surface_desktop	桌面		machine
+surface_lock_screen	锁屏		machine
+act_minimize	最小化		machine
+act_maximize	最大化		machine
+act_restore	还原		machine
+act_close	关闭		machine
+act_open	打开		machine
+act_rename	重命名		machine
+act_copy	复制	macOS says 拷贝, Windows 复制; chose 复制.	machine
+act_delete	删除		machine
+act_new_window	新建窗口		machine
+act_find	查找		machine
+act_search	搜索		machine
+act_ok	确定		machine
+act_cancel	取消		machine
+act_done	完成		machine
+act_apply	应用		machine
+act_continue	继续		machine
+act_back	返回		machine
+act_allow	允许		machine
+act_no	否		machine
+act_add	添加		machine
+act_remove	移除		machine
+act_view	显示	macOS 显示 (Windows 查看); fr: Windows Affichage, macOS Présentation	machine
+act_connect	连接		machine
+act_reopen	重新打开		machine
+act_update	更新		machine
+act_lock	锁定		machine
+act_sleep	睡眠		machine
+act_shut_down	关机		machine
+noun_window	窗口		machine
+noun_space	空间		machine
+noun_display	显示器		machine
+noun_vpn	VPN		machine
+noun_password	密码		machine
+noun_name	名称		machine
+state_on	开		machine
+state_off	关		machine
+state_connected	已连接		machine
+folder_home	主文件夹		machine
+folder_desktop	桌面		machine
+folder_documents	文档		machine
+folder_downloads	下载		machine
+folder_music	音乐		machine
+folder_pictures	图片		machine
+folder_videos	视频		machine
+folder_public	公共		machine
+folder_templates	模板		machine
+key_ctrl	Ctrl		machine
+key_shift	Shift		machine
+key_alt	Alt		machine
+key_enter	Enter		machine
+key_delete	Delete		machine
+key_esc	Esc		machine
+key_space	空格		machine
+key_tab	Tab		machine
+key_backspace	Backspace		machine
+sec_nearby	附近的设备		machine
+sec_paired_devices	已配对的设备		machine
+sec_input	输入		machine
+ime_source_french	法语		machine
+ime_source_german	德语		machine
+act_restore_backup	还原		reviewed
+prod_sodium_remote	Sodium Remote		machine

@@ -1,0 +1,57 @@
+# Rendered by server-setup.sh. Placeholders: @RDV_PORT@ @SERVER_NAME@ @TURN_PORT@
+# @TURNS_PORT@ @ENROL@ (open|token|allowlist) and @HOSTS_ALLOW@ (the --hosts-allow
+# option in allowlist mode, otherwise empty).
+[Unit]
+Description=Sodium Remote server (rendezvous)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sodium-remote-server \
+    --listen 0.0.0.0:@RDV_PORT@ \
+    --server-name @SERVER_NAME@ \
+    --tls-cert %d/tls.crt \
+    --tls-key %d/tls.key \
+    --turn-secret-file %d/turn-secret \
+    --turn-url stun:@SERVER_NAME@:@TURN_PORT@ \
+    --turn-url turn:@SERVER_NAME@:@TURN_PORT@?transport=udp \
+    --turn-url turn:@SERVER_NAME@:@TURN_PORT@?transport=tcp \
+    --turn-url turns:@SERVER_NAME@:@TURNS_PORT@?transport=tcp \
+    --enrol @ENROL@ \
+    --state-dir /var/lib/sodium-remote-server @HOSTS_ALLOW@
+ExecReload=/bin/kill -HUP $MAINPID
+# Root-only files at rest; systemd hands copies to this service alone.
+LoadCredential=tls.crt:/etc/sodium-remote-server/tls/server.crt
+LoadCredential=tls.key:/etc/sodium-remote-server/tls/server.key
+LoadCredential=turn-secret:/etc/sodium-remote-server/turn-secret
+DynamicUser=yes
+StateDirectory=sodium-remote-server
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+LimitNOFILE=4096
+MemoryMax=128M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[DoNotDisturb]
+WhenScreenSharing=true
+Until=2099-01-01T00:00:00

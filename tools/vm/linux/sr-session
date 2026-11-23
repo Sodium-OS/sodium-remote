@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# Start the display manager chosen on the kernel command line (sr.session=gnome|kde).
+s=$(sed -n 's/.*[ ^]sr\.session=\([a-z]*\).*/\1/p' /proc/cmdline)
+case "$s" in
+  gnome) exec systemctl --no-block start gdm.service ;;
+  kde)   exec systemctl --no-block start sddm.service ;;
+  *)     echo "sr-session: no sr.session= on the kernel command line; no desktop started" ;;
+esac

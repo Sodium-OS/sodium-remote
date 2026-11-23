@@ -1,0 +1,288 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+#
+# Continuous integration (docs/releasing.md, docs/building/*.md). Jobs:
+#   linux    an Arch Linux container (Qt 6.12, current FFmpeg and PipeWire): the Rust workspace, cargo-deny, REUSE and SPDX
+#            headers, the translation checks, the Qt app and its offscreen smoke test, the Linux-only crates.
+#   windows  the mingw-w64 cross build of the engine and the Qt app, then the "no msvcrt" gate. Heavy: FFmpeg, ICU and Qt are
+#            built once and cached by the hash of their build scripts.
+#   macos    manual only.
+# Actions are pinned to full commit SHAs; the version is in the comment.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  linux:
+    name: Linux (Arch)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 60
+    steps:
+      - name: Install build tools and libraries
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja pkgconf python \
+            ffmpeg openh264 opus pipewire wayland libglvnd libxkbcommon icu \
+            qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools qt6-wayland \
+            cage dbus mesa fcitx5 reuse cargo-deny
+          rustup default stable
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore the Cargo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: linux-cargo-
+
+      # The workspace's default members: everything except the SodiumOS-only host (remoted), its clipboard helper
+      # (wlclip) and the input-method add-on. The relay's tests (remote-rendezvous) are among them.
+      - name: Build the workspace
+        run: cargo build --locked
+      - name: Test the workspace
+        run: cargo test --locked
+      - name: Build and test the Linux-only crates
+        run: |
+          cargo build --locked -p remoted -p remote-wlclip
+          cargo test --locked -p remoted -p remote-wlclip
+          cmake -S fcitx5-remote -B build/fcitx5-remote -G Ninja
+          cmake --build build/fcitx5-remote
+          ctest --test-dir build/fcitx5-remote --output-on-failure
+
+      - name: Licenses and advisories (cargo-deny)
+        run: cargo deny --locked check
+      - name: REUSE
+        run: reuse lint
+      - name: SPDX headers
+        run: python3 tools/spdx-headers.py --check
+      - name: Translations
+        run: |
+          i18n/i18n.sh check --strict
+          i18n/i18n.sh release --strict
+
+      - name: Build the Qt app
+        run: |
+          cmake -S app -B build-app -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-app
+      - name: Test the Qt app (offscreen)
+        run: ctest --test-dir build-app --output-on-failure
+      # A private headless Wayland session (cage on wlroots' headless backend, software rendering): opens About and
+      # Settings, saves the Show previews switch, and checks the pictures and the saved setting exist.
+      - name: Smoke test the Qt app (headless Wayland)
+        run: |
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg-runtime"
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          app/tests/smoke.sh build-app
+      - name: Keep the smoke test's pictures
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke
+          path: build-app/smoke
+          if-no-files-found: ignore
+
+  windows:
+    name: Windows (mingw-w64 cross build)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 360
+    env:
+      JOBS: "4"
+    steps:
+      - name: Install build tools
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja make nasm pkgconf curl zip p7zip python \
+            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools
+          rustup default stable
+          rustup target add x86_64-pc-windows-gnu
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore the Cargo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: windows-cargo-
+
+      # FFmpeg, Opus, the codec headers (build-deps.sh) and ICU (build-icu.sh): the dependency prefix, built once. Every step is
+      # stamped, so a cache saved from an interrupted run is finished by the next one.
+      - name: Restore the dependency prefix (FFmpeg, Opus, ICU)
+        id: deps
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/win-deps
+            !build/win-deps/work
+          key: win-deps-${{ hashFiles('packaging/windows/build-deps.sh', 'packaging/windows/build-icu.sh', 'packaging/windows/env.sh') }}
+      - name: Build FFmpeg, Opus and the codec headers
+        run: packaging/windows/build-deps.sh
+      - name: Build ICU
+        run: packaging/windows/build-icu.sh
+      - name: Save the dependency prefix
+        if: always() && steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/win-deps
+            !build/win-deps/work
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+
+      # Qt's own Windows build (fetch-qt.sh, pinned checksums): its d3dcompiler_47.dll and opengl32sw.dll go into the
+      # package either way, and it is the fallback Qt until the source pins below are filled in.
+      - name: Restore Qt for Windows (official build)
+        id: qtofficial
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/qt-win
+          key: qt-win-${{ hashFiles('packaging/windows/fetch-qt.sh') }}
+      - name: Fetch Qt for Windows
+        run: packaging/windows/fetch-qt.sh
+      - name: Save Qt for Windows
+        if: always() && steps.qtofficial.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/qt-win
+          key: ${{ steps.qtofficial.outputs.cache-primary-key }}
+
+      # Qt built from source on UCRT: needs the source checksums in build-qt-ucrt.sh (maintainer step:
+      # build-qt-ucrt.sh --print-pins). Until they are there the job falls back to Qt's official build, and the
+      # "no msvcrt" gate below only warns.
+      - name: Are the Qt source checksums pinned?
+        id: pins
+        run: |
+          if grep -qE '\]=UNPINNED' packaging/windows/build-qt-ucrt.sh; then
+            echo "ucrt=false" >> "$GITHUB_OUTPUT"
+            echo "::warning file=packaging/windows/build-qt-ucrt.sh::The Qt source checksums are not pinned: building with Qt's official (msvcrt) build, so the no-msvcrt gate only warns. Run packaging/windows/build-qt-ucrt.sh --print-pins and paste the result."
+          else
+            echo "ucrt=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore Qt built on UCRT
+        id: qtucrt
+        if: steps.pins.outputs.ucrt == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/qt-win-ucrt
+            !build/qt-win-ucrt/work
+            !build/qt-win-ucrt/src
+          key: qt-win-ucrt-${{ hashFiles('packaging/windows/build-qt-ucrt.sh', 'packaging/windows/toolchain-mingw.cmake') }}
+      - name: Build Qt on UCRT
+        if: steps.pins.outputs.ucrt == 'true'
+        run: |
+          packaging/windows/build-qt-ucrt.sh
+          cp build/qt-win/6.12.0/mingw_64/d3dcompiler_47.dll build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
+          echo "QT_WIN_ROOT=$GITHUB_WORKSPACE/build/qt-win-ucrt/6.12.0" >> "$GITHUB_ENV"
+      - name: Save Qt built on UCRT
+        if: always() && steps.pins.outputs.ucrt == 'true' && steps.qtucrt.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/qt-win-ucrt
+            !build/qt-win-ucrt/work
+            !build/qt-win-ucrt/src
+          key: ${{ steps.qtucrt.outputs.cache-primary-key }}
+
+      - name: Build the Windows command-line programs
+        run: |
+          packaging/windows/cargo-win.sh build --release -p client-windows
+          packaging/windows/cargo-win.sh build --release -p host-desktop --bins
+      - name: Build and stage the Windows app
+        run: packaging/windows/stage-app.sh --no-zip
+      - name: The gate itself works
+        run: packaging/windows/check-no-msvcrt.sh --selftest
+      - name: No msvcrt in the package
+        run: |
+          if [ "${{ steps.pins.outputs.ucrt }}" = true ]; then
+            packaging/windows/check-no-msvcrt.sh build/win-app/SodiumRemote
+          else
+            packaging/windows/check-no-msvcrt.sh build/win-app/SodiumRemote || echo "::warning::The package still imports msvcrt (official Qt build, expected until the Qt source checksums are pinned)."
+          fi
+
+  # The Arch package (packaging/arch/PKGBUILD) built from a source tarball made of this commit, as the release does: system Qt,
+  # FFmpeg and the rest, the app's tests in check(), both packages split out. Nothing is installed or uploaded.
+  arch-package:
+    name: Arch package
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 60
+    steps:
+      - name: Install build tools
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rustup cargo-about sudo
+          rustup default stable
+          useradd -m -d /opt/builder builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          runuser -u builder -- rustup default stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Source tarball
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          install -d -o builder /opt/builder/pkg
+          packaging/arch/make-source-tarball.sh "$version" /opt/builder/pkg
+          sed "s/^pkgver=.*/pkgver=$version/" packaging/arch/PKGBUILD > /opt/builder/pkg/PKGBUILD
+          chown -R builder /opt/builder/pkg
+      - name: makepkg
+        run: runuser -u builder -- bash -c 'cd ~/pkg && makepkg -s --noconfirm --noprogressbar'
+      - name: What the packages contain
+        run: |
+          for p in /opt/builder/pkg/*.pkg.tar.zst; do echo "== $p"; tar -tf "$p" | grep -v '/$' | sort; done
+
+  # Manual while the repository is private: a Mac runner builds the Rust library and the Swift bindings, checks that
+  # every string has all ten languages, builds the app and runs RemoteKit's tests.
+  macos:
+    name: macOS (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the Cargo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: macos-cargo-
+      - name: Rust target
+        run: |
+          rustup default stable
+          rustup target add aarch64-apple-darwin
+      - name: Every string in all ten languages
+        run: python3 client-mac/Tools/check-xcstrings-languages.py client-mac/App/Localizable.xcstrings
+      # build-app.sh: host-desktop/build-swift.sh mac (libremote_ffi.a and the UniFFI Swift bindings), swift build, the app
+      # bundle with an ad-hoc signature. --test runs `swift test`; --test-id uses the .dev bundle identity.
+      - name: Build the app and run the tests
+        working-directory: client-mac
+        run: ./build-app.sh --test --test-id

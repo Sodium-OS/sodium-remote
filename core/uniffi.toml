@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# UniFFI's Swift output for the Mac client (src/ffi.rs; docs/reference/session-api.md §7).
+[bindings.swift]
+module_name = "RemoteCore"
+ffi_module_name = "RemoteCoreFFI"
+ffi_module_filename = "RemoteCoreFFI"

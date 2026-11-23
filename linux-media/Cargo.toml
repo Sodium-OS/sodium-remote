@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-linux-media"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sodium Remote's PipeWire media on Linux, shared by remoted (the SodiumOS host) and the generic Linux host: audio streams and Opus (the audio shim), the default sink's monitor, and portal ScreenCast video capture"
+
+# Build needs: libpipewire-0.3 and opus headers through pkg-config (pacman -S pipewire opus).
+# C for the same reason as remoted's other shims: SPA pods are built by inline functions
+# and macros, and bindgen would need libclang.
+
+[dependencies]
+
+[build-dependencies]
+cc = "1"

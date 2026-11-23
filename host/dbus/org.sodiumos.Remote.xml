@@ -1,0 +1,107 @@
+<interface name="org.sodiumos.Remote">
+  <!--
+   Ends the session; the device sees "Disconnected by <Name>".
+   -->
+  <method name="Disconnect">
+  </method>
+  <!--
+   The privacy screen accepted the password at the desk; the device sees
+   "Ended at the computer".
+   -->
+  <method name="EndAtDesk">
+  </method>
+  <!--
+   The desk monitor's mode for this session only.
+   -->
+  <method name="SetSessionHomeMode">
+    <arg name="mode" type="s" direction="in"/>
+  </method>
+  <method name="RenameDevice">
+    <arg name="id" type="s" direction="in"/>
+    <arg name="name" type="s" direction="in"/>
+  </method>
+  <!--
+   Deletes the pinned key; a connected device is dropped at once.
+   -->
+  <method name="RemoveDevice">
+    <arg name="id" type="s" direction="in"/>
+  </method>
+  <!--
+   Opens a 5-minute pairing window (one use, 3 wrong tries); returns the code
+   and when it expires. Calling it again is "New code".
+   -->
+  <method name="OpenPairing">
+    <arg name="code" type="s" direction="out"/>
+    <arg name="expires_at" type="t" direction="out"/>
+  </method>
+  <method name="CancelPairing">
+  </method>
+  <method name="ClearRecent">
+  </method>
+  <!--
+   The version of this API. 2: `Session.path` says `vpn` and `relay` (v1 used other names for them). Changes after this one only add.
+   -->
+  <property name="ApiVersion" type="u" access="read"/>
+  <!--
+   "plugin", "fallback" (ext-image-copy-capture) or "unknown" (SR9).
+   -->
+  <property name="Capture" type="s" access="read"/>
+  <property name="ConnectWhileLocked" type="b" access="readwrite"/>
+  <!--
+   The code people compare by eye, `XXXX-XXXX`. A fingerprint only:
+   copying always copies `DeviceId`.
+   -->
+  <property name="DeviceCode" type="s" access="read"/>
+  <!--
+   This host's device ID (its Ed25519 public key, base64url).
+   -->
+  <property name="DeviceId" type="s" access="read"/>
+  <property name="Enabled" type="b" access="readwrite"/>
+  <!--
+   False when the video encoder failed to open: devices can't connect (SR9).
+   -->
+  <property name="EncoderReady" type="b" access="read"/>
+  <!--
+   The desk monitor's default mode: "mirror", "privacy", "off".
+   -->
+  <property name="HomeMode" type="s" access="readwrite"/>
+  <property name="MdnsVisible" type="b" access="readwrite"/>
+  <!--
+   What paired devices call this computer: the user's name, or the computer's
+   own (hostnamed's PrettyHostname, else the hostname) while none is set, and
+   following it live. Setting "" goes back to following it.
+   -->
+  <property name="Name" type="s" access="readwrite"/>
+  <property name="Notify" type="b" access="readwrite"/>
+  <!--
+   Every paired device: id, name, kind, paired_at, last_seen, connected.
+   -->
+  <property name="PairedDevices" type="aa{sv}" access="read"/>
+  <!--
+   The pairing window: code, expires_at, attempts_left, state ("open", "attempt": a
+   device is running SPAKE2 against the code, "attempts_used": 3 wrong codes closed it,
+   "expired", "paired") and, once paired, paired_name. Empty when none.
+   -->
+  <property name="Pairing" type="a{sv}" access="read"/>
+  <!--
+   Settings tells remoted whether the pairing dialog is showing, so a paired
+   device or pairing closed by wrong codes is notified only when it isn't.
+   -->
+  <property name="PairingDialogOpen" type="b" access="readwrite"/>
+  <!--
+   The last 30 days: device, name, start, end (0 = now), path, transport, rtt_ms.
+   -->
+  <property name="RecentConnections" type="aa{sv}" access="read"/>
+  <!--
+   The relays: host, state ("unknown", "online", "unreachable", "not_enrolled"), rtt_ms, last_ok.
+   -->
+  <property name="Relays" type="aa{sv}" access="read"/>
+  <!--
+   The session: empty when nobody is connected.
+   -->
+  <property name="Session" type="a{sv}" access="read"/>
+  <!--
+   "off", "ready", "not_ready", "connected", "reconnecting".
+   -->
+  <property name="State" type="s" access="read"/>
+</interface>

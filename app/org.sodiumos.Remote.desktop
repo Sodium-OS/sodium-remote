@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Sodium Remote
+GenericName=Remote Control
+Comment=Use another computer from here
+Exec=sodium-remote %u
+Icon=sodium-remote
+Terminal=false
+StartupNotify=true
+StartupWMClass=org.sodiumos.Remote
+Categories=Network;RemoteAccess;Qt;
+MimeType=x-scheme-handler/sodium-remote;
+Keywords=remote;remote control;computer;screen sharing;connect;pair;stream;

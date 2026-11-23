@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# UniFFI's Swift output for Remote.app's "This computer" pane (src/ffi.rs;
+# docs/reference/host-mac.md). Its own Swift file (SodiumRemoteHost.swift) and header, but the same
+# C module as remote-core's: both Swift files compile into the app's RemoteCore target,
+# and build-swift.sh writes one RemoteCoreFFI modulemap listing both headers.
+[bindings.swift]
+module_name = "SodiumRemoteHost"
+ffi_module_name = "RemoteCoreFFI"
+ffi_module_filename = "SodiumRemoteHostFFI"

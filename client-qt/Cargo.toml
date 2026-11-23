@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-qt"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Remote's Qt client app engine: a C ABI over remote-engine (docs/reference/client-app.md). Events go out as JSON; commands are plain calls."
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+remote-core = { path = "../core" }
+remote-engine = { path = "../client-engine" }
+anyhow = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "time", "macros", "sync"] }
+
+[features]
+# "This computer" on generic Linux: host-desktop's portal backend in this process,
+# behind the same `rh_*` C ABI as on Windows. Off by default: the SodiumOS build hosts
+# with remoted, and this pulls in FFmpeg, PipeWire and libei (the app then links
+# avcodec, avutil, avfilter, swscale, openh264, opus, pipewire-0.3, xkbcommon).
+linux-host = ["dep:host-desktop"]
+
+# The Linux platform layer (Wayland subsurface). A Windows port adds a `windows` module beside `linux`.
+[target.'cfg(target_os = "linux")'.dependencies]
+remote-client = { path = "../client-linux" }
+host-desktop = { path = "../host-desktop", optional = true }
+
+# The Windows platform layer (child HWND under Qt's stream frame) and the in-process host ("This computer").
+[target.'cfg(windows)'.dependencies]
+client-windows = { path = "../client-windows" }
+host-desktop = { path = "../host-desktop" }

@@ -1,0 +1,79 @@
+# The app end to end against the nested host: every screen once. "<ms> <command> [argument]"; see qml/Main.qml runStep.
+# `log shot NAME` makes tests/e2e.sh take a screenshot; each costs 2.2 s more before the next step.
+2500 log shot 01-computers-empty
+500 add
+900 log shot 02-add
+300 pair {HOST}
+900 log shot 03-pair
+300 code 123456
+1200 log shot 04-pair-wrong
+300 code {CODE}
+1500 log shot 05-paired
+300 close
+1200 log shot 06-computers
+300 settings
+600 log shot 07-settings-display
+300 tab 1
+300 log shot 08-settings-quality
+300 tab 2
+300 log shot 09-settings-input
+300 close
+500 menu {HOST}
+500 log shot 10-card-menu
+300 connect {HOST}
+150 log shot 11-connecting
+5000 log shot 12-stream
+500 log mark stream-up
+300 stats
+1500 log shot 12b-stream-stats
+300 stats
+500 event {"ev":"welcome","name":"Studio PC","host_os":"windows","display_mode":"physical","live_resize":false,"current_display":1,"displays":[{"id":1,"name":"","width":2560,"height":1440,"scale":1.0,"primary":true},{"id":2,"name":"DELL U2720Q","width":3840,"height":2160,"scale":1.5,"primary":false}]}
+500 log shot 13-stream-display-picker
+300 menu-stream displays
+400 log shot 13b-display-menu
+300 menu-stream keyboard
+400 log shot 13c-keyboard-menu-windows
+300 menu-stream none
+300 event {"ev":"secure","on":true}
+500 log shot 14-secure-screen
+300 event {"ev":"secure","on":false}
+300 log shot 15-secure-back
+300 event {"ev":"welcome","name":"Mac mini","host_os":"mac","display_mode":"physical","live_resize":false,"current_display":1,"view_only":true,"displays":[{"id":1,"name":"Built-in display","width":2560,"height":1600,"scale":2.0,"primary":true}]}
+300 menu-stream keyboard
+400 log shot 13d-keyboard-menu-mac
+300 menu-stream none
+300 event {"ev":"status","state":"failed","error":{"kind":"timeout"}}
+500 log shot 16-failure-unreachable
+300 event {"ev":"status","state":"failed","error":{"kind":"busy","by":"MacBook Air"}}
+500 log shot 17-failure-busy
+300 event {"ev":"status","state":"ended","reason":{"kind":"version_mismatch","host":4,"client":5}}
+500 log shot 18-failure-version
+300 event {"ev":"status","state":"ended","reason":{"kind":"taken_over","by":"MacBook Air"}}
+500 log shot 19-failure-taken-over
+300 event {"ev":"status","state":"ended","reason":{"kind":"error","detail":"off"}}
+500 log shot 19b-failure-control-off
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":true,"accessibility":true}}
+500 log shot 19c-failure-screen-recording
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":true,"accessibility":false}}
+500 log shot 19c2-failure-screen-recording-only
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":false,"accessibility":true}}
+500 log shot 19c3-failure-accessibility-only
+300 event {"ev":"welcome","name":"archlinux","host_os":"linux","display_mode":"virtual","live_resize":true,"current_display":1,"displays":[]}
+300 event {"ev":"status","state":"ended","reason":{"kind":"error","detail":"off"}}
+500 log shot 19d-failure-control-off-sodiumos
+300 event {"ev":"status","state":"connected","route":"lan","rtt_ms":2.0}
+300 event {"ev":"stream","width":1100,"height":716}
+400 fullscreen
+700 log shot 20-fullscreen-hint
+1500 event {"ev":"leave_chord"}
+500 log shot 21-leave-chord
+500 disconnect
+2500 log shot 22-after-disconnect
+300 freeze
+300 event {"ev":"hosts","paired":[{"id":"{HOST}","code":"AAAA-BBBB","name":"Workstation","paired_at":1,"last_connected":{T_TODAY},"online":true,"on_lan":true,"last_seen":null,"asleep_since":null},{"id":"FAKE-STUDIO","code":"CCCC-DDDD","name":"Studio PC","paired_at":1,"last_connected":{T_EARLIER},"online":true,"on_lan":true,"last_seen":null,"asleep_since":null},{"id":"FAKE-MAC","code":"EEEE-FFFF","name":"Mac mini","paired_at":1,"last_connected":{T_EARLIER},"online":true,"on_lan":false,"last_seen":null,"asleep_since":null},{"id":"FAKE-LAB","code":"GGGG-HHHH","name":"Lab PC","paired_at":1,"last_connected":{T_EARLIER},"online":true,"on_lan":false,"last_seen":null,"asleep_since":{T_EARLIER}},{"id":"FAKE-OLD","code":"IIII-JJJJ","name":"Old ThinkPad","paired_at":1,"last_connected":{T_OLD},"online":false,"on_lan":false,"last_seen":{T_OLD},"asleep_since":null}],"found":[]}
+400 log shot 24-computers-cards
+300 add
+300 address 192.0.2.1
+4200 log shot 23-address-unreachable
+300 close
+500 quit

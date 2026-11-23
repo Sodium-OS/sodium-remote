@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	設定	kana reading: せってい	machine
+app_remote	リモート	kana reading: りもーと	machine
+group_devices	デバイス		machine
+group_system	システム		machine
+page_network	ネットワーク		machine
+page_remote	リモート		machine
+page_accessibility	アクセシビリティ		machine
+page_displays	ディスプレイ		machine
+page_mouse	マウス		machine
+page_privacy_security	プライバシーとセキュリティ		machine
+page_about	情報		machine
+surface_desktop	デスクトップ		machine
+surface_lock_screen	ロック画面		machine
+act_minimize	最小化		machine
+act_maximize	最大化		machine
+act_restore	元のサイズに戻す		machine
+act_close	閉じる		machine
+act_open	開く		machine
+act_rename	名前を変更		machine
+act_copy	コピー		machine
+act_delete	削除		machine
+act_new_window	新しいウィンドウ		machine
+act_find	検索	ja and de use the same word as Search; the contexts differ (in a document versus the system)	machine
+act_search	検索		machine
+act_ok	OK		machine
+act_cancel	キャンセル		machine
+act_done	完了		machine
+act_apply	適用		machine
+act_continue	続行		machine
+act_back	戻る		machine
+act_allow	許可		machine
+act_no	いいえ		machine
+act_add	追加		machine
+act_remove	取り除く		machine
+act_view	表示		machine
+act_connect	接続		machine
+act_reopen	再度開く		machine
+act_update	アップデート		machine
+act_lock	ロック		machine
+act_sleep	スリープ		machine
+act_shut_down	シャットダウン		machine
+noun_window	ウィンドウ		machine
+noun_space	スペース		machine
+noun_display	ディスプレイ		machine
+noun_vpn	VPN		machine
+noun_password	パスワード		machine
+noun_name	名前		machine
+state_on	オン		machine
+state_off	オフ		machine
+state_connected	接続済み		machine
+folder_home	ホーム		machine
+folder_desktop	デスクトップ		machine
+folder_documents	ドキュメント		machine
+folder_downloads	ダウンロード		machine
+folder_music	ミュージック		machine
+folder_pictures	ピクチャ	Windows and macOS drop the long vowel here (ピクチャ)	machine
+folder_videos	ビデオ		machine
+folder_public	パブリック		machine
+folder_templates	テンプレート		machine
+key_ctrl	Ctrl		machine
+key_shift	Shift		machine
+key_alt	Alt		machine
+key_enter	Enter		machine
+key_delete	Delete		machine
+key_esc	Esc		machine
+key_space	スペース		machine
+key_tab	Tab		machine
+key_backspace	Backspace		machine
+sec_nearby	近くのデバイス		machine
+sec_paired_devices	ペアリング済みのデバイス		machine
+sec_input	入力		machine
+ime_source_french	フランス語		machine
+ime_source_german	ドイツ語		machine
+act_restore_backup	復元		reviewed
+prod_sodium_remote	Sodium Remote		machine

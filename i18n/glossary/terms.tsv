@@ -1,0 +1,80 @@
+id	en_US	context
+prod_sodiumos	SodiumOS	Product name, never translated or transliterated
+prod_sodium_shell	Sodium Shell	Product name for the desktop shell, never translated
+prod_sodium_ui	Sodium UI	Product name for the UI toolkit, never translated
+app_settings	Settings	App name; also the menu item that opens it
+app_remote	Remote	App name (remote desktop)
+group_devices	Devices	Settings group
+group_system	System	Settings group
+page_network	Network	Settings page
+page_remote	Remote	Settings page (remote desktop)
+page_accessibility	Accessibility	Settings page
+page_displays	Displays	Settings page
+page_mouse	Mouse	Settings page
+page_privacy_security	Privacy & security	Settings page
+page_about	About	Settings page
+surface_desktop	Desktop	The desktop surface
+surface_lock_screen	Lock screen	Surface
+act_minimize	Minimize	Window action
+act_maximize	Maximize	Window action
+act_restore	Restore	Window action (back to previous size)
+act_close	Close	Window and dialog action
+act_open	Open	File action
+act_rename	Rename	File action
+act_copy	Copy	Edit action
+act_delete	Delete	Generic delete
+act_new_window	New window	Window action
+act_find	Find	Edit action, find in a document
+act_search	Search	Search field and action
+act_ok	OK	Dialog button
+act_cancel	Cancel	Dialog button
+act_done	Done	Dialog button
+act_apply	Apply	Dialog button
+act_continue	Continue	Dialog button
+act_back	Back	Navigation button
+act_allow	Allow	Permission button
+act_no	No	Dialog button
+act_add	Add	Generic action
+act_remove	Remove	Remove from a list; does not delete the item
+act_view	View	Menu
+act_connect	Connect	Network and device action
+act_reopen	Reopen	Restarts an app so it picks up a new language
+act_update	Update	Action and noun
+act_lock	Lock	Power menu
+act_sleep	Sleep	Power menu
+act_shut_down	Shut down	Power menu
+noun_window	window	Noun
+noun_space	space	Noun, one virtual desktop (macOS Spaces)
+noun_display	display	Noun, a monitor
+noun_vpn	VPN	Technology name
+noun_password	Password	Noun
+noun_name	Name	Column heading
+state_on	On	Switch state
+state_off	Off	Switch state
+state_connected	Connected	State
+folder_home	Home	Home folder in the sidebar
+folder_desktop	Desktop	Home folder display name
+folder_documents	Documents	Home folder display name
+folder_downloads	Downloads	Home folder display name
+folder_music	Music	Home folder display name
+folder_pictures	Pictures	Home folder display name
+folder_videos	Videos	Home folder display name
+folder_public	Public	Home folder display name
+folder_templates	Templates	Home folder display name
+key_ctrl	Ctrl	Key cap
+key_shift	Shift	Key cap
+key_alt	Alt	Key cap
+key_enter	Enter	Key cap
+key_delete	Delete	Key cap
+key_esc	Esc	Key cap
+key_space	Space	Key cap
+key_tab	Tab	Key cap; printed as on the keyboard
+key_backspace	Backspace	Key cap; printed as on the keyboard
+sec_nearby	Nearby	Bluetooth section, nearby devices
+sec_paired_devices	Paired devices	Remote and Bluetooth section
+sec_input	Input	Sound section
+wallpaper_variant_day	day	Wallpaper variant word ("Petal day"); the same in every family
+ime_source_french	French	Input source name (AZERTY with corrections); the language's own name for French
+ime_source_german	German	Input source name (QWERTZ with corrections); the language's own name for German
+act_restore_backup	Restore	Verb: bring files back from a backup (not the window action act_restore)
+prod_sodium_remote	Sodium Remote	Product name of this app, never translated or transliterated

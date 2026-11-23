@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# pkg-config for the Windows dependencies only (never the host's .pc files).
+D=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/build/win-deps
+export PKG_CONFIG_LIBDIR=${WIN_DEPS:-$D}/lib/pkgconfig PKG_CONFIG_PATH=
+exec pkg-config "$@"

@@ -1,0 +1,80 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	Einstellungen		machine
+app_remote	Fernzugriff		machine
+group_devices	Geräte		machine
+group_system	System		machine
+page_network	Netzwerk		machine
+page_remote	Fernzugriff		machine
+page_accessibility	Barrierefreiheit	macOS says Bedienungshilfen; Windows and Android say Barrierefreiheit	machine
+page_displays	Bildschirme	macOS says Displays; Windows and GNOME say Bildschirm	machine
+page_mouse	Maus		machine
+page_privacy_security	Datenschutz und Sicherheit		machine
+page_about	Info		machine
+surface_desktop	Desktop	macOS says Schreibtisch; Windows, GNOME and KDE say Desktop. Chose Desktop	machine
+surface_lock_screen	Sperrbildschirm		machine
+act_minimize	Minimieren		machine
+act_maximize	Maximieren		machine
+act_restore	Wiederherstellen		machine
+act_close	Schließen		machine
+act_open	Öffnen		machine
+act_rename	Umbenennen		machine
+act_copy	Kopieren		machine
+act_delete	Löschen		machine
+act_new_window	Neues Fenster		machine
+act_find	Suchen		machine
+act_search	Suchen		machine
+act_ok	OK		machine
+act_cancel	Abbrechen		machine
+act_done	Fertig		machine
+act_apply	Anwenden		machine
+act_continue	Weiter		machine
+act_back	Zurück		machine
+act_allow	Erlauben		machine
+act_no	Nein		machine
+act_add	Hinzufügen		machine
+act_remove	Entfernen		machine
+act_view	Ansicht		machine
+act_connect	Verbinden		machine
+act_reopen	Erneut öffnen		machine
+act_update	Aktualisieren		machine
+act_lock	Sperren		machine
+act_sleep	Energiesparmodus		machine
+act_shut_down	Herunterfahren		machine
+noun_window	Fenster		machine
+noun_space	Arbeitsbereich	Windows says virtueller Desktop, which collides with Desktop; macOS keeps Spaces. Native check wanted	machine
+noun_display	Bildschirm		machine
+noun_vpn	VPN		machine
+noun_password	Passwort		machine
+noun_name	Name		machine
+state_on	Ein		machine
+state_off	Aus		machine
+state_connected	Verbunden		machine
+folder_home	Persönlicher Ordner		machine
+folder_desktop	Desktop		machine
+folder_documents	Dokumente		machine
+folder_downloads	Downloads		machine
+folder_music	Musik		machine
+folder_pictures	Bilder		machine
+folder_videos	Videos	macOS says Movies / ムービー / 영화 in some languages; Windows wording used	machine
+folder_public	Öffentlich		machine
+folder_templates	Vorlagen		machine
+key_ctrl	Strg		machine
+key_shift	Umschalt		machine
+key_alt	Alt		machine
+key_enter	Eingabe		machine
+key_delete	Entf		machine
+key_esc	Esc		machine
+key_space	Leertaste		machine
+key_tab	Tab		machine
+key_backspace	Rücktaste		machine
+sec_nearby	In der Nähe		machine
+sec_paired_devices	Gekoppelte Geräte		machine
+sec_input	Eingabe		machine
+wallpaper_variant_day	Tag	joined with a hyphen	reviewed
+ime_source_french	Französisch		machine
+ime_source_german	Deutsch		machine
+act_restore_backup	Wiederherstellen		reviewed
+prod_sodium_remote	Sodium Remote		machine

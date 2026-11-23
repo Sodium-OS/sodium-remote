@@ -1,0 +1,22 @@
+[Icon Theme]
+Name=SodiumOS
+Comment=The symbolic icons Sodium Remote uses
+Directories=symbolic/16,symbolic/20,symbolic/24
+
+[symbolic/16]
+Size=16
+Type=Scalable
+MinSize=16
+MaxSize=16
+
+[symbolic/20]
+Size=20
+Type=Scalable
+MinSize=20
+MaxSize=20
+
+[symbolic/24]
+Size=24
+Type=Scalable
+MinSize=24
+MaxSize=24

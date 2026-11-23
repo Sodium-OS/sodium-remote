@@ -1,0 +1,6 @@
+# Everything build-app.sh regenerates.
+/Generated/
+/.build/
+/build/
+/.swiftpm/
+*.xcodeproj/

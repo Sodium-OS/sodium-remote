@@ -1,0 +1,8 @@
+# Sodium Remote for Windows, This computer: the first states; the rest is driven from outside (run-this.sh).
+2500 maintab 1
+500 allow off
+1500 log shot this-off
+500 allow on
+3500 log shot this-waiting
+1500 address-menu
+900 log shot this-address-menu

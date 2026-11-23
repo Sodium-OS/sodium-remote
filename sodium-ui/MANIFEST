@@ -1,0 +1,82 @@
+# The part of Sodium UI that Sodium Remote's app uses, by path under SodiumOS's ui/ (and the same path under sodium-ui/).
+# Written by hand from the QML import closure of app/qml (see tools/sync-sodium-ui.py); tools/sync-sodium-ui.py copies it one way.
+#   copy PATH            copied byte for byte from SodiumOS's ui/PATH
+#   derived PATH FROM    ours: trimmed from ui/FROM (default: the same path). The sync never writes it; it warns when ui/FROM changed since UPSTREAM
+#                        recorded the hash it was derived from.
+#
+# QML closure (39 files, with motion.js and popup.js)
+copy SodiumUI/AppWindow.qml
+copy SodiumUI/Banner.qml
+copy SodiumUI/Button.qml
+copy SodiumUI/Caret.qml
+copy SodiumUI/ButtonRow.qml
+copy SodiumUI/ContentDialog.qml
+copy SodiumUI/ControlRow.qml
+copy SodiumUI/DropDownButton.qml
+copy SodiumUI/EmptyView.qml
+copy SodiumUI/FocusRing.qml
+copy SodiumUI/Glass.qml
+copy SodiumUI/Icon.qml
+copy SodiumUI/IconButton.qml
+copy SodiumUI/KeyCaps.qml
+copy SodiumUI/Menu.qml
+copy SodiumUI/MenuItem.qml
+copy SodiumUI/MenuSection.qml
+copy SodiumUI/MenuSeparator.qml
+copy SodiumUI/ResizeEdges.qml
+copy SodiumUI/Reveal.qml
+copy SodiumUI/Scrim.qml
+copy SodiumUI/ScrollBar.qml
+copy SodiumUI/SegmentedControl.qml
+copy SodiumUI/SettingsRowGroup.qml
+copy SodiumUI/Sheet.qml
+copy SodiumUI/Spinner.qml
+copy SodiumUI/Spring.qml
+copy SodiumUI/StateFill.qml
+copy SodiumUI/StatusStrip.qml
+copy SodiumUI/StyledText.qml
+copy SodiumUI/Switch.qml
+copy SodiumUI/TextField.qml
+copy SodiumUI/Theme.qml
+copy SodiumUI/TitleBar.qml
+copy SodiumUI/Tooltip.qml
+copy SodiumUI/WindowControls.qml
+copy SodiumUI/WrappedLabel.qml
+copy SodiumUI/motion.js
+copy SodiumUI/popup.js
+copy SodiumUI/theme.default.json
+copy SodiumUI/shaders/glass.frag
+copy SodiumUI/shaders/tint.frag
+derived SodiumUI/qmldir
+
+# Native types: ThemeStore, Format (LocaleFormats), I18n, I18nAudit, Match (TextMatch), SodiumwmWindow, WindowChrome (Windows), the icon provider
+copy native/themestore.cpp
+copy native/themestore.h
+copy native/sodiumwmwindow.cpp
+copy native/sodiumwmwindow.h
+copy native/localeformats.cpp
+copy native/localeformats.h
+copy native/i18n.cpp
+copy native/i18n.h
+copy native/i18naudit.cpp
+copy native/i18naudit.h
+copy native/textmatch.cpp
+copy native/textmatch.h
+copy native/iconprovider.cpp
+copy native/iconprovider.h
+copy native/calendarinfo.cpp
+copy native/calendarinfo.h
+copy native/desktopindex.cpp
+copy native/desktopindex.h
+copy native/pseudolocale.cpp
+copy native/pseudolocale.h
+copy native/sort.cpp
+copy native/sort.h
+copy native/textbreaks.cpp
+copy native/textbreaks.h
+copy native/desktoptext.h
+copy native/modulepath.h
+copy native/portable/windowchrome.cpp
+copy native/portable/windowchrome.h
+derived native/plugin.cpp
+derived CMakeLists.txt

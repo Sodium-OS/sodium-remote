@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+version = 1
+
+# Source files carry their own SPDX headers (tools/spdx-headers.py).
+# Everything below covers files that can't carry a header. Earlier entries win
+# for the same path only when "precedence" says so; the order here is deliberate.
+
+# Files that cannot carry a comment header or are data: desktop entries, D-Bus and systemd files, Lua and PowerShell test
+# scripts, templates, the Windows resource files, test data, and the small bookkeeping files. Source code is not listed here:
+# it carries its own header, which tools/spdx-headers.py --check enforces.
+[[annotations]]
+path = [".gitignore", "**/.gitignore", "EXPORTED_FROM", "about.hbs", "**/*.desktop", "**/index.theme", "**/*.lua",
+        "**/*.ps1", "**/*.cmd", "**/*.xml", "**/*.service", "**/*.service.in", "**/*.conf", "**/*.conf.in", "**/*.nft.in",
+        "**/*.txt", "**/*.rc", "**/*.ico", "**/*.example", "**/*.bz2", "**/*.hevc", "**/REGENERATED", "**/MANIFEST", "**/UPSTREAM",
+        "**/qmldir", "**/win-pkg-config", "tools/vm/integration/*.txt", "packaging/arch/*.service", "packaging/arch/*.env"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Third-party license texts keep their own licenses.
+[[annotations]]
+path = "packaging/windows/licenses/**"
+precedence = "override"
+SPDX-FileCopyrightText = "The respective authors; see each file"
+SPDX-License-Identifier = "LicenseRef-Third-Party-Licence-Text"
+
+# The app icon is a trademark; the file itself is AGPL-3.0-only, but the trademark
+# is not licensed (see TRADEMARKS.md). Forks must replace it.
+[[annotations]]
+path = ["app/icons/sodium-remote.*", "client-mac/App/AppIcon.*", "packaging/**/icon.*", "packaging/**/*.ico", "packaging/**/*.icns"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Other icons and images.
+[[annotations]]
+path = ["app/icons/**", "app/assets/**", "sodium-ui/icons/**", "sodium-ui/assets/**", "**/*.svg", "**/*.png"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Documentation.
+[[annotations]]
+path = ["docs/**", "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "LICENSING.md", "TRADEMARKS.md", "SECURITY.md", "CODE_OF_CONDUCT.md", "CLA.md", "**/*.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# Translation catalogs, generated lists and data files without comment syntax.
+[[annotations]]
+path = ["i18n/**", "**/*.xcstrings", "**/*.json", "**/*.plist", "**/*.ts", "**/*.links", "Cargo.lock", "**/Cargo.lock"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# The license text of the project itself, verbatim from the FSF (LICENSES/ is skipped by reuse).
+[[annotations]]
+path = ["LICENSE"]
+precedence = "override"
+SPDX-FileCopyrightText = "Free Software Foundation, Inc."
+SPDX-License-Identifier = "AGPL-3.0-only"

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# Remote's Rust workspace. Each crate is owned by one
+# builder at a time; this root file only lists them.
+[workspace]
+resolver = "3"
+members = ["core", "host", "relay", "client-engine", "client-linux", "client-windows", "client-qt", "host-desktop", "wlclip", "linux-media"]
+# a plain `cargo build` / `cargo test` leaves out the SodiumOS-only host (remoted), the Wayland clipboard helper
+# for it (wlclip) and the input-method add-on's Rust side. Build them on purpose: `cargo build -p remoted`.
+default-members = ["core", "relay", "client-engine", "client-linux", "client-windows", "client-qt", "host-desktop", "linux-media"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+publish = false
+license = "AGPL-3.0-only"
+repository = "https://github.com/sodium-os/sodium-remote"

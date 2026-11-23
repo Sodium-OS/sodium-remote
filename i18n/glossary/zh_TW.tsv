@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	設定	zhuyin: ㄕㄜˋ ㄉㄧㄥˋ	machine
+app_remote	遠端控制	zhuyin: ㄩㄢˇ ㄉㄨㄢ ㄎㄨㄥˋ ㄓˋ	machine
+group_devices	裝置		machine
+group_system	系統		machine
+page_network	網路		machine
+page_remote	遠端控制		machine
+page_accessibility	輔助使用		machine
+page_displays	顯示器		machine
+page_mouse	滑鼠		machine
+page_privacy_security	隱私權與安全性		machine
+page_about	關於		machine
+surface_desktop	桌面		machine
+surface_lock_screen	鎖定畫面		machine
+act_minimize	最小化		machine
+act_maximize	最大化		machine
+act_restore	還原		machine
+act_close	關閉		machine
+act_open	開啟		machine
+act_rename	重新命名		machine
+act_copy	複製	macOS 拷貝, Windows 複製; chose 複製	machine
+act_delete	刪除		machine
+act_new_window	新增視窗		machine
+act_find	尋找		machine
+act_search	搜尋		machine
+act_ok	確定	macOS says 好; chose Windows 確定 so the pair 確定/取消 reads as in Windows	machine
+act_cancel	取消		machine
+act_done	完成		machine
+act_apply	套用		machine
+act_continue	繼續		machine
+act_back	返回		machine
+act_allow	允許		machine
+act_no	否		machine
+act_add	新增		machine
+act_remove	移除		machine
+act_view	檢視		machine
+act_connect	連線		machine
+act_reopen	重新開啟		machine
+act_update	更新		machine
+act_lock	鎖定		machine
+act_sleep	睡眠		machine
+act_shut_down	關機		machine
+noun_window	視窗		machine
+noun_space	空間		machine
+noun_display	顯示器		machine
+noun_vpn	VPN		machine
+noun_password	密碼		machine
+noun_name	名稱		machine
+state_on	開		machine
+state_off	關		machine
+state_connected	已連線		machine
+folder_home	主資料夾	Linux usage also 家目錄; 主資料夾 is clearer to business users	machine
+folder_desktop	桌面		machine
+folder_documents	文件	文件 here means documents, as in Windows and macOS	machine
+folder_downloads	下載		machine
+folder_music	音樂		machine
+folder_pictures	圖片		machine
+folder_videos	影片		machine
+folder_public	公用		machine
+folder_templates	範本		machine
+key_ctrl	Ctrl		machine
+key_shift	Shift		machine
+key_alt	Alt		machine
+key_enter	Enter		machine
+key_delete	Delete		machine
+key_esc	Esc		machine
+key_space	空白鍵		machine
+key_tab	Tab		machine
+key_backspace	Backspace		machine
+sec_nearby	附近的裝置		machine
+sec_paired_devices	已配對的裝置		machine
+sec_input	輸入		machine
+ime_source_french	法文		machine
+ime_source_german	德文		machine
+act_restore_backup	還原		reviewed
+prod_sodium_remote	Sodium Remote		machine

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# cargo-about: generates THIRD-PARTY-NOTICES for each shipped binary, e.g.
+#   cargo about generate --manifest-path host-desktop/Cargo.toml about.hbs > THIRD-PARTY-NOTICES-host-desktop.md
+# Run it once per binary crate (and per target, with --target) so each notice lists only what that binary contains.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unlicense",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "BSL-1.0",
+    "MPL-2.0",
+    "OpenSSL",
+]
+# Sodium Remote's own crates (publish = false, AGPL-3.0-only) are the product, not third-party notices.
+private = { ignore = true }
+ignore-dev-dependencies = true
+ignore-build-dependencies = true
+workarounds = ["ring"]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-gnu",
+    "aarch64-apple-darwin",
+]

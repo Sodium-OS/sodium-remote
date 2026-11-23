@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	Settings		machine
+app_remote	Remote		machine
+group_devices	Devices		machine
+group_system	System		machine
+page_network	Network		machine
+page_remote	Remote		machine
+page_accessibility	Accessibility		machine
+page_displays	Displays		machine
+page_mouse	Mouse		machine
+page_privacy_security	Privacy & security		machine
+page_about	About		machine
+surface_desktop	Desktop		machine
+surface_lock_screen	Lock screen		machine
+act_minimize	Minimise		machine
+act_maximize	Maximise		machine
+act_restore	Restore		machine
+act_close	Close		machine
+act_open	Open		machine
+act_rename	Rename		machine
+act_copy	Copy		machine
+act_delete	Delete		machine
+act_new_window	New window		machine
+act_find	Find		machine
+act_search	Search		machine
+act_ok	OK		machine
+act_cancel	Cancel		machine
+act_done	Done		machine
+act_apply	Apply		machine
+act_continue	Continue		machine
+act_back	Back		machine
+act_allow	Allow		machine
+act_no	No		machine
+act_add	Add		machine
+act_remove	Remove		machine
+act_view	View		machine
+act_connect	Connect		machine
+act_reopen	Reopen		machine
+act_update	Update		machine
+act_lock	Lock		machine
+act_sleep	Sleep		machine
+act_shut_down	Shut down		machine
+noun_window	window		machine
+noun_space	space		machine
+noun_display	display		machine
+noun_vpn	VPN		machine
+noun_password	Password		machine
+noun_name	Name		machine
+state_on	On		machine
+state_off	Off		machine
+state_connected	Connected		machine
+folder_home	Home		machine
+folder_desktop	Desktop		machine
+folder_documents	Documents		machine
+folder_downloads	Downloads		machine
+folder_music	Music		machine
+folder_pictures	Pictures		machine
+folder_videos	Videos		machine
+folder_public	Public		machine
+folder_templates	Templates		machine
+key_ctrl	Ctrl		machine
+key_shift	Shift		machine
+key_alt	Alt		machine
+key_enter	Enter		machine
+key_delete	Delete		machine
+key_esc	Esc		machine
+key_space	Space		machine
+key_tab	Tab		machine
+key_backspace	Backspace		machine
+sec_nearby	Nearby		machine
+sec_paired_devices	Paired devices		machine
+sec_input	Input		machine
+ime_source_french	French		machine
+ime_source_german	German		machine
+act_restore_backup	Restore		reviewed
+prod_sodium_remote	Sodium Remote		machine

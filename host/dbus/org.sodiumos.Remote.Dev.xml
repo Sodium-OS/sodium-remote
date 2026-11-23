@@ -1,0 +1,97 @@
+<interface name="org.sodiumos.Remote.Dev">
+  <method name="Connect">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="width" type="u" direction="in"/>
+    <arg name="height" type="u" direction="in"/>
+    <arg name="refresh_mhz" type="u" direction="in"/>
+    <arg name="ui" type="s" direction="in"/>
+    <arg name="ui_ratio" type="d" direction="in"/>
+    <arg name="takeover" type="b" direction="in"/>
+  </method>
+  <method name="Lose">
+    <arg name="device" type="s" direction="in"/>
+  </method>
+  <method name="Bye">
+    <arg name="device" type="s" direction="in"/>
+  </method>
+  <method name="Resize">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="width" type="u" direction="in"/>
+    <arg name="height" type="u" direction="in"/>
+    <arg name="refresh_mhz" type="u" direction="in"/>
+    <arg name="ui_ratio" type="d" direction="in"/>
+  </method>
+  <method name="Preedit">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="text" type="s" direction="in"/>
+    <arg name="cursor" type="i" direction="in"/>
+  </method>
+  <method name="Commit">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="text" type="s" direction="in"/>
+  </method>
+  <method name="Clipboard">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="text" type="s" direction="in"/>
+    <arg name="concealed" type="b" direction="in"/>
+  </method>
+  <method name="Mic">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="on" type="b" direction="in"/>
+  </method>
+  <method name="HomeMode">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="mode" type="s" direction="in"/>
+  </method>
+  <!--
+   Stands in for a SPAKE2 run: true when `code` is the open window's code.
+   -->
+  <method name="Pair">
+    <arg name="code" type="s" direction="in"/>
+    <arg name="device" type="s" direction="in"/>
+    <arg name="name" type="s" direction="in"/>
+    <arg type="b" direction="out"/>
+  </method>
+  <!--
+   Stands in for core's PairingAttempt: a device started (or, `false`, gave up) a SPAKE2 run against the open
+   window, which Settings shows as "A device is pairing…".
+   -->
+  <method name="PairingAttempt">
+    <arg name="on" type="b" direction="in"/>
+  </method>
+  <!--
+   Stands in for the transport's measurements of `device`'s session (the path, RTT and rates Settings and the pill show).
+   -->
+  <method name="Stats">
+    <arg name="device" type="s" direction="in"/>
+    <arg name="path" type="s" direction="in"/>
+    <arg name="transport" type="s" direction="in"/>
+    <arg name="rtt_ms" type="u" direction="in"/>
+    <arg name="bitrate_kbps" type="u" direction="in"/>
+    <arg name="fps" type="d" direction="in"/>
+  </method>
+  <!--
+   Stands in for the media module's report: "plugin" / "fallback" / "unknown", and
+   whether the video encoder opened.
+   -->
+  <method name="Media">
+    <arg name="capture" type="s" direction="in"/>
+    <arg name="encoder_ready" type="b" direction="in"/>
+  </method>
+  <!--
+   Stands in for the rendezvous' state: "unknown", "online", "unreachable", "not_enrolled".
+   -->
+  <method name="Relay">
+    <arg name="state" type="s" direction="in"/>
+    <arg name="rtt_ms" type="u" direction="in"/>
+  </method>
+  <!--
+   What `device` has heard, one Debug line per event (clipboard content and
+   audio left out), and how many audio packets.
+   -->
+  <method name="Events">
+    <arg name="device" type="s" direction="in"/>
+    <arg type="as" direction="out"/>
+    <arg type="t" direction="out"/>
+  </method>
+</interface>

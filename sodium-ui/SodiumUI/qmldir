@@ -1,0 +1,41 @@
+# Derived from ui/SodiumUI/qmldir: only the types this app's closure has (MANIFEST).
+module SodiumUI
+plugin sodiumuinative
+singleton Theme 1.0 Theme.qml
+Motion 1.0 motion.js
+Spring 1.0 Spring.qml
+Reveal 1.0 Reveal.qml
+Glass 1.0 Glass.qml
+AppWindow 1.0 AppWindow.qml
+TitleBar 1.0 TitleBar.qml
+WindowControls 1.0 WindowControls.qml
+ResizeEdges 1.0 ResizeEdges.qml
+StatusStrip 1.0 StatusStrip.qml
+Button 1.0 Button.qml
+IconButton 1.0 IconButton.qml
+Switch 1.0 Switch.qml
+SegmentedControl 1.0 SegmentedControl.qml
+TextField 1.0 TextField.qml
+ScrollBar 1.0 ScrollBar.qml
+Menu 1.0 Menu.qml
+MenuItem 1.0 MenuItem.qml
+MenuSeparator 1.0 MenuSeparator.qml
+MenuSection 1.0 MenuSection.qml
+Tooltip 1.0 Tooltip.qml
+Spinner 1.0 Spinner.qml
+Icon 1.0 Icon.qml
+FocusRing 1.0 FocusRing.qml
+ContentDialog 1.0 ContentDialog.qml
+Sheet 1.0 Sheet.qml
+EmptyView 1.0 EmptyView.qml
+Banner 1.0 Banner.qml
+StyledText 1.0 StyledText.qml
+WrappedLabel 1.0 WrappedLabel.qml
+singleton KeyCaps 1.0 KeyCaps.qml
+ButtonRow 1.0 ButtonRow.qml
+DropDownButton 1.0 DropDownButton.qml
+ControlRow 1.0 ControlRow.qml
+SettingsRowGroup 1.0 SettingsRowGroup.qml
+internal StateFill StateFill.qml
+internal Caret Caret.qml
+internal Scrim Scrim.qml

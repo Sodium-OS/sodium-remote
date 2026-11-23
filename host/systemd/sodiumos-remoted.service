@@ -1,0 +1,37 @@
+# remoted, Remote's host daemon, as a systemd user
+# service in the graphical session. Not installed or enabled by the build: the
+# the installer links it into ~/.config/systemd/user (install.links) with the user
+# present, after `cargo build --release -p remoted` in remote/.
+#
+# - It reads HYPRLAND_INSTANCE_SIGNATURE and WAYLAND_DISPLAY from the user manager
+#   (Hyprland imports both at start), and owns org.sodiumos.Remote on the session
+#   bus, which Settings › Remote and the shell's privacy pill use.
+# - Crash policy (Settings › Remote, SR8 "remoted stopped 3 times in a minute, so
+#   it's paused"): restarted after 2 s; a third failure within 60 s leaves it
+#   stopped until "Start Remote".
+# - On stop (SIGTERM) it ends the session first: windows back, REMOTE-1 removed,
+#   the default sink back. TimeoutStopSec leaves time for that. If it is killed
+#   anyway, the next start puts the desktop and the audio defaults back from its
+#   runtime files.
+[Unit]
+Description=Remote host daemon (remoted)
+Documentation=file://%h/Code/SodiumOS/remote/docs/reference/host-session.md
+PartOf=graphical-session.target
+After=graphical-session.target pipewire.service wireplumber.service
+Requisite=graphical-session.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=dbus
+BusName=org.sodiumos.Remote
+ExecStart=%h/Code/SodiumOS/remote/target/release/remoted run
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=15
+Slice=app-graphical.slice
+NoNewPrivileges=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=graphical-session.target

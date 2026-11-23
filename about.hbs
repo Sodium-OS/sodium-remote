@@ -1,0 +1,24 @@
+# Third-party notices
+
+Sodium Remote includes the open-source libraries below. Each is used under the license shown. This list is generated from the dependencies of this binary.
+
+## Licenses used
+
+{{#each overview}}
+- [{{{name}}}](#{{id}}) ({{count}})
+{{/each}}
+
+{{#each licenses}}
+## {{{name}}} {#{{id}}}
+
+Used by:
+
+{{#each used_by}}
+- [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
+{{/each}}
+
+```
+{{{text}}}
+```
+
+{{/each}}

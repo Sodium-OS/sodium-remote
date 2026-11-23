@@ -1,0 +1,43 @@
+# Installed by server-setup.sh (no placeholders).
+[Unit]
+Description=coturn STUN/TURN for Sodium Remote
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=turnserver
+Group=turnserver
+# Root-only files at rest; systemd hands copies to this service alone.
+LoadCredential=turnserver.conf:/etc/sodium-remote-server/turnserver.conf
+LoadCredential=tls.crt:/etc/sodium-remote-server/tls/server.crt
+LoadCredential=tls.key:/etc/sodium-remote-server/tls/server.key
+# The egress guard (its own nft table) is in place before coturn starts.
+ExecStartPre=+/usr/sbin/nft -f /etc/sodium-remote-server/relay-guard.nft
+ExecStart=/usr/bin/turnserver -c %d/turnserver.conf
+# Session logs go to their own journal namespace: 7 days, 200 MB, not forwarded.
+LogNamespace=sodium-remote
+RuntimeDirectory=sodium-remote-coturn
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+LimitNOFILE=65536
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

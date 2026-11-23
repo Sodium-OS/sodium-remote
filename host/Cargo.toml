@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remoted"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Build needs: glslc (shaderc) for the colour-conversion shader, ffnvcodec-headers
+# for the NVENC/CUDA shim, libgbm (mesa) for the ext-image-copy-capture source,
+# libpipewire and libopus (headers via pkg-config) for remote-linux-media's audio shim.
+# libcuda.so.1 and libnvidia-encode.so.1 are loaded at run time, never linked.
+
+[dependencies]
+# The protocol, the session API (connect::Host) and the message schemas.
+remote-core = { path = "../core" }
+# The Wayland clipboard (shared with the SodiumOS client).
+remote-wlclip = { path = "../wlclip" }
+# PipeWire audio (the shim shared with the generic Linux host).
+remote-linux-media = { path = "../linux-media" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+anyhow = "1"
+ash = "0.38"
+libc = "0.2"
+rustix = { version = "1", features = ["net", "fs", "time", "rand", "pipe", "event", "system"] }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+# Host session: the daemon, its D-Bus API, the device key.
+base64 = "0.22"
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal", "process"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+futures-util = "0.3"
+
+[build-dependencies]
+cc = "1"

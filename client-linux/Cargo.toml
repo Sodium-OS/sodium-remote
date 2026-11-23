@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-client"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Remote's Linux reference client: decode, present, local cursor, input, and the click-to-photon harness"
+
+# Build needs: ffmpeg (libavcodec, libavutil), libwayland-client, libwayland-egl, libEGL,
+# libpipewire and libopus (audio out, csrc/audio_out.c).
+# At run time NVDEC needs libcuda/libnvcuvid (nvidia-utils); software decode needs dav1d for AV1.
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "remote-client"
+path = "src/main.rs"
+
+[dependencies]
+remote-core = { path = "../core" }
+remote-engine = { path = "../client-engine" }
+remote-wlclip = { path = "../wlclip" }
+anyhow = "1"
+libc = "0.2"
+rand = "0.9"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "time", "macros", "sync", "signal"] }
+wayland-client = { version = "0.31", features = ["system"] }
+wayland-backend = { version = "0.3", features = ["client_system"] }
+wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
+wayland-egl = "0.32"
+khronos-egl = { version = "6", features = ["static"] }
+glow = "0.16"
+ab_glyph = "0.2"
+# remote-core's logs on stderr (RUST_LOG; default warn).
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+[build-dependencies]
+cc = "1"

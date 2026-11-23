@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[AC][Display]
+DimDisplayWhenIdle=false
+TurnOffDisplayWhenIdle=false
+
+[AC][SuspendAndShutdown]
+AutoSuspendAction=0
+PowerButtonAction=0
+
+[Battery][Display]
+DimDisplayWhenIdle=false
+TurnOffDisplayWhenIdle=false
+
+[Battery][SuspendAndShutdown]
+AutoSuspendAction=0

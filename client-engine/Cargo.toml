@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-engine"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Remote's client stream engine: connect, pair, the session loop, decode (FFmpeg shim), stats, the click test, clipboard sync and scripted tests. Platform layers (client-linux, client-windows) present, take input and play audio through the `Platform` trait."
+
+# Build needs: ffmpeg (libavcodec, libavutil) for the target (Windows: remote/packaging/windows/env.sh).
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+remote-core = { path = "../core" }
+anyhow = "1"
+rand = "0.9"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "time", "macros", "sync", "signal"] }
+png = "0.17"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[build-dependencies]
+cc = "1"

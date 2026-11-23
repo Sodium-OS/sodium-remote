@@ -1,0 +1,19 @@
+# A second wall behind coturn's denied-peer-ip: packets the turnserver user sends
+# can't reach private, loopback, link-local, CGNAT or multicast space, nor the
+# cloud's internal resolvers. A table of its own, so nothing else is touched;
+# loading this file replaces only this table. Placeholders: @RESOLVERS@ @PRIVATE_IP@ @MIN_PORT@ @MAX_PORT@
+#
+# The one exception: coturn's own relay ports on the private address. coturn sends
+# relay-to-relay traffic (a peer at its own public address) straight to its private
+# relay socket, so allocation-to-allocation relaying needs exactly this, and those
+# ports are reachable from the internet anyway.
+table inet sodium_remote_guard {}
+delete table inet sodium_remote_guard
+table inet sodium_remote_guard {
+	chain out {
+		type filter hook output priority filter; policy accept;
+		meta skuid "turnserver" ip daddr @PRIVATE_IP@ udp dport @MIN_PORT@-@MAX_PORT@ counter accept
+		meta skuid "turnserver" ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/3@RESOLVERS@ } counter reject
+		meta skuid "turnserver" ip6 daddr { ::1, ::ffff:0:0/96, 64:ff9b::/96, fc00::/7, fe80::/10, ff00::/8 } counter reject
+	}
+}

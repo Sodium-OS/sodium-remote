@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-rendezvous"
+description = "Remote's rendezvous service: device auth, host presence, paired-client lists, opaque signalling, pairing windows, TURN credentials"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# The crate keeps its name; the binary is the public one.
+[[bin]]
+name = "sodium-remote-server"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.8", default-features = false, features = ["ws", "tokio", "http1"] }
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+ed25519-dalek = "2"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+hmac = "0.12"
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+rand = "0.8"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha1 = "0.10"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "sync"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi"] }
+
+[dev-dependencies]
+# Only to check that SOURCE_URL mirrors remote-core's brand.rs.
+remote-core = { path = "../core" }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+tokio-tungstenite = "0.29"

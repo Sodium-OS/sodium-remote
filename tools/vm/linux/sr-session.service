@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[Unit]
+Description=Start the desktop chosen by sr.session= on the kernel command line
+After=systemd-user-sessions.service systemd-logind.service dbus.service
+Before=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/sr-session
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

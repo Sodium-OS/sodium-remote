@@ -1,0 +1,18 @@
+# Findings of tools/lint.py that are on purpose. One entry per line, a reason after " # " is required:
+#
+#   path[:line] [@rule] [/regex/]  # why this is fine
+#
+# path may be a glob; :line limits it to one line; @rule to one rule; /regex/ must match the source line.
+# An entry that matches nothing is reported as stale. Paths are relative to the repository root (app/, sodium-ui/).
+
+sodium-ui/native/i18naudit.cpp @hand-plural  # the overflow audit's own developer overlay chip (SODIUMOS_I18N_AUDIT=1), English on purpose like other developer output
+sodium-ui/native/pseudolocale.cpp @hand-plural  # the pseudo-locale translator resolving "(s)" in the English source to build its fake text, not a message
+sodium-ui/native/localeformats.cpp @hardcoded-locale /"MMMd"|"yMMMd"/  # ICU skeletons passed to formatDate (the Region sets the order), not display patterns
+sodium-ui/native/i18n.cpp @uppercase /territory = parts/  # a BCP 47 territory code normalised to upper case (data)
+sodium-ui/native/calendarinfo.cpp @uppercase /region.toUpper/  # a region code compared as data
+sodium-ui/native/localeformats.cpp @uppercase /return p\.toUpper\(\)/  # a locale's territory code ("sg" -> "SG"), data for the date locale
+sodium-ui/native/localeformats.cpp @uppercase /text\.at\(0\)\.toUpper/  # the first letter of a MIME description (shared-mime-info writes some in lower case) at the start of a label; a no-op in Chinese, Japanese and Korean
+sodium-ui/native/i18n.cpp @uppercase /s\[0\] = s\.at\(0\)\.toUpper/  # a language name's first letter for a list (as Settings' languages.cpp): "français" -> "Français", data from ICU
+app/qml/AboutPage.qml @unwrapped-qml /"Sodium Remote"/  # the product's name is never translated
+app/qml/Main.qml @unwrapped-qml /OpenH264 Video Codec/  # Cisco's required notice, in their wording in every language
+app/qml/NoticesSheet.qml @unwrapped-qml /OpenH264 Video Codec/  # Cisco's required notice, in their wording in every language

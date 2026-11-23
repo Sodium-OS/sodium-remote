@@ -1,0 +1,7 @@
+# remote/host: SRC (relative to this folder) REL (data: = under ~/.local/share); see scripts/links.sh.
+# remoted's user unit and the D-Bus activation file that starts it when Settings › Remote opens
+# The binary is remote/target/release/remoted (`cargo build --release -p remoted` in remote/).
+# Linking doesn't start or enable anything: after scripts/install.sh run `systemctl --user daemon-reload`, and
+# `systemctl --user enable --now sodiumos-remoted` when Remote should run from sign-in (host-session.md, 1).
+systemd/sodiumos-remoted.service systemd/user/sodiumos-remoted.service
+dbus/org.sodiumos.Remote.service data:dbus-1/services/org.sodiumos.Remote.service

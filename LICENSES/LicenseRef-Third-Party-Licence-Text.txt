@@ -1,0 +1,3 @@
+The files in packaging/windows/licenses/ are the texts of other projects' own licences (and their
+required notices), kept unchanged so they can ship with the Windows package. Each text applies to
+the project it names, not to Sodium Remote, and stays under the terms it states.

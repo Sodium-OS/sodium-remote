@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# Sodium Remote rendezvous server (the Arch package). Settings: /etc/sodium-remote-server/server.env.
+# The TLS certificate and key and the TURN secret are root-only files; systemd hands the service copies (LoadCredential):
+#   /etc/sodium-remote-server/tls/server.crt   the full certificate chain
+#   /etc/sodium-remote-server/tls/server.key
+#   /etc/sodium-remote-server/turn-secret      coturn's static-auth-secret (the server needs the file; with no coturn put any long random string in it)
+# docs/self-hosting.md walks through DNS, TLS and coturn.
+[Unit]
+Description=Sodium Remote server (rendezvous)
+Documentation=https://github.com/sodium-os/sodium-remote/blob/main/docs/self-hosting.md
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/sodium-remote-server/server.env
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/sodium-remote-server/server.env
+ExecStart=/usr/bin/sodium-remote-server \
+    --tls-cert %d/tls.crt \
+    --tls-key %d/tls.key \
+    --turn-secret-file %d/turn-secret \
+    --state-dir /var/lib/sodium-remote-server \
+    $SODIUM_REMOTE_SERVER_ARGS
+ExecReload=/bin/kill -HUP $MAINPID
+LoadCredential=tls.crt:/etc/sodium-remote-server/tls/server.crt
+LoadCredential=tls.key:/etc/sodium-remote-server/tls/server.key
+LoadCredential=turn-secret:/etc/sodium-remote-server/turn-secret
+DynamicUser=yes
+StateDirectory=sodium-remote-server
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+LimitNOFILE=4096
+MemoryMax=128M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

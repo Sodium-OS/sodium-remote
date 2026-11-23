@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	설정		machine
+app_remote	원격 제어		machine
+group_devices	장치		machine
+group_system	시스템		machine
+page_network	네트워크		machine
+page_remote	원격 제어		machine
+page_accessibility	접근성		machine
+page_displays	디스플레이		machine
+page_mouse	마우스		machine
+page_privacy_security	개인정보 보호 및 보안		machine
+page_about	정보		machine
+surface_desktop	데스크톱		machine
+surface_lock_screen	잠금 화면		machine
+act_minimize	최소화		machine
+act_maximize	최대화		machine
+act_restore	이전 크기로 복원		machine
+act_close	닫기		machine
+act_open	열기		machine
+act_rename	이름 바꾸기		machine
+act_copy	복사		machine
+act_delete	삭제		machine
+act_new_window	새 창		machine
+act_find	찾기		machine
+act_search	검색		machine
+act_ok	확인		machine
+act_cancel	취소		machine
+act_done	완료		machine
+act_apply	적용		machine
+act_continue	계속		machine
+act_back	뒤로		machine
+act_allow	허용		machine
+act_no	아니요		machine
+act_add	추가		machine
+act_remove	제거		machine
+act_view	보기		machine
+act_connect	연결		machine
+act_reopen	다시 열기		machine
+act_update	업데이트		machine
+act_lock	잠금		machine
+act_sleep	절전		machine
+act_shut_down	시스템 종료		machine
+noun_window	창		machine
+noun_space	스페이스		machine
+noun_display	디스플레이		machine
+noun_vpn	VPN		machine
+noun_password	비밀번호	Windows 암호, macOS 비밀번호	machine
+noun_name	이름		machine
+state_on	켬		machine
+state_off	끔		machine
+state_connected	연결됨		machine
+folder_home	홈		machine
+folder_desktop	바탕 화면		machine
+folder_documents	문서		machine
+folder_downloads	다운로드		machine
+folder_music	음악		machine
+folder_pictures	사진		machine
+folder_videos	비디오		machine
+folder_public	공용		machine
+folder_templates	서식 파일		machine
+key_ctrl	Ctrl		machine
+key_shift	Shift		machine
+key_alt	Alt		machine
+key_enter	Enter		machine
+key_delete	Delete		machine
+key_esc	Esc		machine
+key_space	스페이스		machine
+key_tab	Tab		machine
+key_backspace	Backspace		machine
+sec_nearby	주변 장치		machine
+sec_paired_devices	페어링된 장치		machine
+sec_input	입력		machine
+ime_source_french	프랑스어		reviewed
+ime_source_german	독일어		reviewed
+act_restore_backup	복원		reviewed
+prod_sodium_remote	Sodium Remote		machine

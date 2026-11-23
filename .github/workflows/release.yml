@@ -1,0 +1,355 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+#
+# Release (docs/releasing.md): on a tag vX.Y.Z this builds the files, writes SHA256SUMS, attests each file's build provenance
+# and creates a DRAFT GitHub release with the changelog entry as its notes. Nothing is published: the maintainer reads the
+# draft, tries the Windows zip, and publishes it by hand.
+#   Windows  SodiumRemote-X.Y.Z-win64.zip       portable, unsigned (SmartScreen warns), Qt built from source on UCRT
+#   Source   sodium-remote-X.Y.Z.tar.gz         the tracked files plus the third-party notices of each binary
+#   Arch     PKGBUILD, sodium-remote.SRCINFO    builds that tarball (checksum filled in)
+#   macOS    Sodium-Remote-X.Y.Z.dmg            only when the signing secrets exist; otherwise the job is skipped
+# Every package carries THIRD-PARTY-NOTICES made by cargo-about.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      mac: ${{ steps.mac.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The tag, the workspace version and the changelog agree
+        id: version
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The tag $GITHUB_REF_NAME is not vX.Y.Z (the Arch package version cannot carry a suffix)."; exit 1
+          fi
+          cargo_version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          if [[ $cargo_version != "$version" ]]; then
+            echo "::error file=Cargo.toml::The tag says $version but [workspace.package] version is $cargo_version."; exit 1
+          fi
+          if ! grep -qE "^## \[$version\]" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::There is no '## [$version]' entry in CHANGELOG.md."; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Windows no longer ships a self-built OpenH264. The host downloads Cisco's DLL and checks it against the SHA-256 in
+      # host-desktop/src/openh264_pin.rs; with the placeholder there it would never load, so a release must not go out.
+      - name: The OpenH264 pin is filled in
+        run: |
+          sha=$(sed -n 's/^pub const SHA256: &str = "\(.*\)";.*/\1/p' host-desktop/src/openh264_pin.rs | head -1)
+          dll=$(sed -n 's/^pub const DLL_SHA256: &str = "\(.*\)";.*/\1/p' host-desktop/src/openh264_pin.rs | head -1)
+          if ! [[ $sha =~ ^[0-9a-f]{64}$ && $dll =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error file=host-desktop/src/openh264_pin.rs::An OpenH264 SHA-256 (SHA256 or DLL_SHA256) is still the placeholder. Run packaging/windows/pin-openh264.sh on a networked machine, paste its line into host-desktop/src/openh264_pin.rs, commit, and tag again."; exit 1
+          fi
+
+      - name: The Qt source checksums are pinned
+        run: |
+          if grep -qE '\]=UNPINNED' packaging/windows/build-qt-ucrt.sh; then
+            echo "::error file=packaging/windows/build-qt-ucrt.sh::The SHA-256 of Qt's source archives are placeholders. Run packaging/windows/build-qt-ucrt.sh --print-pins, paste the result into the script, commit, and tag again."; exit 1
+          fi
+
+      # Secrets cannot be tested in `if:`, so the answer is computed here. No Developer ID, no Mac binary.
+      - name: Are the macOS signing secrets there?
+        id: mac
+        env:
+          CERT: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          NOTARY: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+        run: |
+          if [[ -n $CERT && -n $IDENTITY && -n $NOTARY ]]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else echo "enabled=false" >> "$GITHUB_OUTPUT"; echo "::notice::No macOS signing secrets: the release has no Mac binary (build from source)."; fi
+
+  windows:
+    name: Windows zip
+    needs: preflight
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 360
+    env:
+      JOBS: "4"
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - name: Install build tools
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja make nasm pkgconf curl zip p7zip python \
+            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools cargo-about
+          rustup default stable
+          rustup target add x86_64-pc-windows-gnu
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Restore the Cargo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: windows-cargo-
+
+      # The same caches and steps as ci.yml's Windows job (the keys are the hashes of the scripts, so a CI run warms them).
+      - name: Restore the dependency prefix (FFmpeg, Opus, ICU)
+        id: deps
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/win-deps
+            !build/win-deps/work
+          key: win-deps-${{ hashFiles('packaging/windows/build-deps.sh', 'packaging/windows/build-icu.sh', 'packaging/windows/env.sh') }}
+      - name: Build FFmpeg, Opus and the codec headers
+        run: packaging/windows/build-deps.sh
+      - name: Build ICU
+        run: packaging/windows/build-icu.sh
+      - name: Save the dependency prefix
+        if: always() && steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/win-deps
+            !build/win-deps/work
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+
+      - name: Restore Qt for Windows (official build, for two run-time DLLs)
+        id: qtofficial
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/qt-win
+          key: qt-win-${{ hashFiles('packaging/windows/fetch-qt.sh') }}
+      - name: Fetch Qt for Windows
+        run: packaging/windows/fetch-qt.sh
+      - name: Save Qt for Windows
+        if: always() && steps.qtofficial.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/qt-win
+          key: ${{ steps.qtofficial.outputs.cache-primary-key }}
+
+      - name: Restore Qt built on UCRT
+        id: qtucrt
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/qt-win-ucrt
+            !build/qt-win-ucrt/work
+            !build/qt-win-ucrt/src
+          key: qt-win-ucrt-${{ hashFiles('packaging/windows/build-qt-ucrt.sh', 'packaging/windows/toolchain-mingw.cmake') }}
+      - name: Build Qt on UCRT
+        run: |
+          packaging/windows/build-qt-ucrt.sh
+          cp build/qt-win/6.12.0/mingw_64/d3dcompiler_47.dll build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
+          echo "QT_WIN_ROOT=$GITHUB_WORKSPACE/build/qt-win-ucrt/6.12.0" >> "$GITHUB_ENV"
+      - name: Save Qt built on UCRT
+        if: always() && steps.qtucrt.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            build/qt-win-ucrt
+            !build/qt-win-ucrt/work
+            !build/qt-win-ucrt/src
+          key: ${{ steps.qtucrt.outputs.cache-primary-key }}
+
+      - name: Build and stage the app
+        run: packaging/windows/stage-app.sh --no-zip
+
+      - name: Third-party notices
+        run: |
+          cargo about generate --locked about.hbs --manifest-path client-qt/Cargo.toml --target x86_64-pc-windows-gnu \
+            --output-file build/win-app/SodiumRemote/THIRD-PARTY-NOTICES.md
+          cp LICENSE LICENSING.md TRADEMARKS.md build/win-app/SodiumRemote/licenses/
+
+      - name: No msvcrt in the package
+        run: packaging/windows/check-no-msvcrt.sh build/win-app/SodiumRemote
+
+      - name: Zip
+        run: |
+          mkdir -p dist
+          (cd build/win-app && 7z a -tzip -mx=6 -bso0 -bsp0 "$GITHUB_WORKSPACE/dist/SodiumRemote-$VERSION-win64.zip" SodiumRemote)
+          ls -la dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-windows
+          path: dist/*
+          if-no-files-found: error
+
+  source:
+    name: Source tarball and Arch package files
+    needs: preflight
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed base-devel git rustup cargo-about
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Trust the checkout
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          rustup default stable
+
+      - name: The tarball (git archive plus the notices of the app and the server)
+        run: packaging/arch/make-source-tarball.sh "$VERSION" dist
+
+      # The release's PKGBUILD is the one in the tree with this version and this tarball's checksum.
+      - name: PKGBUILD and .SRCINFO
+        run: |
+          sum=$(sha256sum "dist/sodium-remote-$VERSION.tar.gz" | cut -d' ' -f1)
+          sed -e "s/^pkgver=.*/pkgver=$VERSION/" -e "s/^pkgrel=.*/pkgrel=1/" -e "s/^sha256sums=.*/sha256sums=('$sum')/" \
+            packaging/arch/PKGBUILD > dist/PKGBUILD
+          useradd -m -d /opt/builder builder
+          install -d -o builder /opt/builder/pkg
+          cp dist/PKGBUILD /opt/builder/pkg/
+          chown builder /opt/builder/pkg/PKGBUILD
+          runuser -u builder -- bash -c 'cd ~/pkg && makepkg --printsrcinfo' > dist/sodium-remote.SRCINFO
+          cat dist/sodium-remote.SRCINFO
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-source
+          path: dist/*
+          if-no-files-found: error
+
+  # Only with the signing secrets. Untested until a Mac and a certificate exist.
+  mac:
+    name: macOS disk image (signed)
+    needs: preflight
+    if: needs.preflight.outputs.mac == 'true'
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+      IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust and cargo-about
+        run: |
+          rustup default stable
+          rustup target add aarch64-apple-darwin
+          cargo install cargo-about --locked --version 0.8.4
+      - name: Third-party notices
+        run: |
+          mkdir -p build
+          cargo about generate --locked about.hbs --manifest-path host-desktop/Cargo.toml --target aarch64-apple-darwin \
+            --output-file build/THIRD-PARTY-NOTICES-mac.md
+      - name: Import the signing certificate
+        env:
+          CERT: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          pw=$(uuidgen)
+          security create-keychain -p "$pw" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$pw" "$keychain"
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$pw" "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          rm "$RUNNER_TEMP/cert.p12"
+      - name: Build, sign (hardened runtime) and make the disk image
+        working-directory: client-mac
+        run: |
+          REMOTE_SIGN_IDENTITY="$IDENTITY" REMOTE_NOTICES="$GITHUB_WORKSPACE/build/THIRD-PARTY-NOTICES-mac.md" ./build-app.sh
+          app="build/Sodium Remote.app"
+          codesign --force --deep --options runtime --timestamp --sign "$IDENTITY" "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          dmg="$GITHUB_WORKSPACE/dist/Sodium-Remote-$VERSION.dmg"
+          hdiutil create -volname "Sodium Remote" -srcfolder "$app" -ov -format UDZO "$dmg"
+          codesign --force --timestamp --sign "$IDENTITY" "$dmg"
+      - name: Notarize and staple
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+        run: |
+          dmg="dist/Sodium-Remote-$VERSION.dmg"
+          xcrun notarytool submit "$dmg" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD" --wait
+          xcrun stapler staple "$dmg"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-macos
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Checksums, attestations, draft release
+    needs: [preflight, windows, source, mac]
+    # The Mac job is skipped without secrets; everything else must have succeeded.
+    if: ${{ !cancelled() && needs.windows.result == 'success' && needs.source.result == 'success' && (needs.mac.result == 'success' || needs.mac.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+
+      - name: SHA256SUMS
+        run: |
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Attest the build provenance of each file
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+
+      # The notes are the changelog entry for this version, then what the maintainer needs to know about these files.
+      - name: Release notes
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "## Files"
+            echo
+            echo "- \`SodiumRemote-$VERSION-win64.zip\`: Windows, portable, **not code-signed** (SmartScreen will warn)."
+            echo "- \`sodium-remote-$VERSION.tar.gz\`: the source, with the third-party notices of each program."
+            echo "- \`PKGBUILD\` and \`sodium-remote.SRCINFO\`: the Arch Linux package; put them next to the tarball and run \`makepkg -si\`."
+            if ls dist/*.dmg >/dev/null 2>&1; then
+              echo "- \`Sodium-Remote-$VERSION.dmg\`: macOS, signed and notarized."
+            else
+              echo "- macOS: no disk image in this release. Build the app from source: \`client-mac/BUILD.md\`."
+            fi
+            echo
+            echo "Check a download against \`SHA256SUMS\`, or verify where it came from: \`gh attestation verify FILE --repo $GITHUB_REPOSITORY\`."
+          } >> notes.md
+          cat notes.md
+
+      - name: Draft release
+        run: |
+          flags=(--draft --verify-tag --title "Sodium Remote $VERSION" --notes-file notes.md)
+          [[ $VERSION == 0.* ]] && flags+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" dist/* "${flags[@]}"

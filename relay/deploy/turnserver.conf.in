@@ -1,0 +1,99 @@
+# coturn for Sodium Remote. Rendered by server-setup.sh into
+# /etc/sodium-remote-server/turnserver.conf (root-only, because it holds the secret);
+# sodium-remote-coturn.service hands it to coturn through systemd's LoadCredential.
+# Placeholders: @PRIVATE_IP@ @PUBLIC_IP@ @SERVER_NAME@ @REALM@ @SECRET@ @DENY_RESOLVERS@
+# @TURN_PORT@ @TURNS_PORT@ @MIN_PORT@ @MAX_PORT@ @USER_QUOTA@ @TOTAL_QUOTA@ @MAX_BPS@
+
+# Listeners: STUN/TURN on UDP+TCP @TURN_PORT@, TURN over TLS on @TURNS_PORT@, on the
+# server's own address only (not a VPN interface). If the cloud maps a public IP 1:1,
+# @PUBLIC_IP@/@PRIVATE_IP@ tells coturn so; on a host with the public address itself
+# server-setup.sh renders a plain external-ip.
+listening-ip=@PRIVATE_IP@
+relay-ip=@PRIVATE_IP@
+@EXTERNAL_IP@
+listening-port=@TURN_PORT@
+tls-listening-port=@TURNS_PORT@
+alt-listening-port=0
+alt-tls-listening-port=0
+
+# A small relay port range: one port per allocation.
+min-port=@MIN_PORT@
+max-port=@MAX_PORT@
+
+# Auth: TURN REST credentials (HMAC of "<expiry>:<device>" with the shared secret),
+# issued by sodium-remote-server with a 10-minute TTL.
+realm=@REALM@
+server-name=@SERVER_NAME@
+fingerprint
+use-auth-secret
+static-auth-secret=@SECRET@
+stale-nonce=600
+
+# TLS (the same certificate as the rendezvous).
+cert=/run/credentials/sodium-remote-coturn.service/tls.crt
+pkey=/run/credentials/sodium-remote-coturn.service/tls.key
+no-tlsv1
+no-tlsv1_1
+no-dtls
+
+# Only what Remote needs: UDP relaying. No TCP relay (RFC 6062), no multicast,
+# no admin CLI, no NAT-behaviour discovery, no version in responses.
+no-tcp-relay
+no-multicast-peers
+no-cli
+no-rfc5780
+no-stun-backward-compatibility
+response-origin-only-with-rfc5780
+no-software-attribute
+
+# Quotas and bandwidth: allocations per credential and in total, and bytes per
+# second per allocation (default 5000000 = 5 MB/s = 40 Mbit/s, each direction). No bps-capacity:
+# coturn reserves max-bps from it for every allocation, so it caps the number of
+# allocations (an ICE agent makes three, UDP+TCP+TLS), not the traffic.
+user-quota=@USER_QUOTA@
+total-quota=@TOTAL_QUOTA@
+max-bps=@MAX_BPS@
+max-allocate-lifetime=3600
+channel-lifetime=600
+permission-lifetime=300
+
+# Never relay into private, loopback, link-local, CGNAT (Tailscale), multicast or
+# reserved space, so the relay can't reach the server's own networks (VPC, VPN) or loopback services.
+# coturn still grants its own relay address (@PRIVATE_IP@) whatever this list says
+# (it's where relay-to-relay traffic goes); the nft guard (relay-guard.nft) lets the
+# turnserver user reach only the relay ports (@MIN_PORT@-@MAX_PORT@) there.
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=100.64.0.0-100.127.255.255
+denied-peer-ip=127.0.0.0-127.255.255.255
+denied-peer-ip=169.254.0.0-169.254.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.0.0.0-192.0.0.255
+denied-peer-ip=192.0.2.0-192.0.2.255
+denied-peer-ip=192.88.99.0-192.88.99.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+denied-peer-ip=198.18.0.0-198.19.255.255
+denied-peer-ip=198.51.100.0-198.51.100.255
+denied-peer-ip=203.0.113.0-203.0.113.255
+denied-peer-ip=224.0.0.0-255.255.255.255
+# (No range may start at "::": coturn 4.6 skips the family check for an all-zero
+# minimum, so "::-::ffff" denies every IPv4 peer.)
+denied-peer-ip=::1
+denied-peer-ip=::ffff:0.0.0.0-::ffff:255.255.255.255
+denied-peer-ip=64:ff9b::-64:ff9b::ffff:ffff
+denied-peer-ip=100::-100::ffff:ffff:ffff:ffff
+denied-peer-ip=2001::-2001:1ff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=2001:db8::-2001:db8:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=2002::-2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+denied-peer-ip=ff00::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+# The cloud's internal DNS resolvers (from /etc/resolv.conf):
+@DENY_RESOLVERS@
+
+# Logs: session metadata (addresses, usernames = expiry:device, byte counts) to the
+# journal namespace "sodium-remote" (7 days, 200 MB, not forwarded). simple-log, and never
+# "verbose" or "Verbose".
+log-file=stdout
+simple-log
+pidfile=/run/sodium-remote-coturn/turnserver.pid

@@ -1,0 +1,79 @@
+id	term	notes	status
+prod_sodiumos	SodiumOS		machine
+prod_sodium_shell	Sodium Shell		machine
+prod_sodium_ui	Sodium UI		machine
+app_settings	Ajustes	Windows says Configuración; macOS Spain says Ajustes. Chose Ajustes (shorter, matches the Mac-inspired UI). An es-419 override can use Configuración	machine
+app_remote	Acceso remoto		machine
+group_devices	Dispositivos		machine
+group_system	Sistema		machine
+page_network	Red		machine
+page_remote	Acceso remoto		machine
+page_accessibility	Accesibilidad		machine
+page_displays	Pantallas		machine
+page_mouse	Ratón		machine
+page_privacy_security	Privacidad y seguridad		machine
+page_about	Acerca de		machine
+surface_desktop	Escritorio		machine
+surface_lock_screen	Pantalla de bloqueo		machine
+act_minimize	Minimizar		machine
+act_maximize	Maximizar		machine
+act_restore	Restaurar		machine
+act_close	Cerrar		machine
+act_open	Abrir		machine
+act_rename	Cambiar nombre		machine
+act_copy	Copiar		machine
+act_delete	Eliminar		machine
+act_new_window	Nueva ventana		machine
+act_find	Buscar		machine
+act_search	Buscar		machine
+act_ok	Aceptar		machine
+act_cancel	Cancelar		machine
+act_done	Listo		machine
+act_apply	Aplicar		machine
+act_continue	Continuar		machine
+act_back	Atrás		machine
+act_allow	Permitir		machine
+act_no	No		machine
+act_add	Añadir		machine
+act_remove	Quitar		machine
+act_view	Ver		machine
+act_connect	Conectar		machine
+act_reopen	Volver a abrir		machine
+act_update	Actualizar		machine
+act_lock	Bloquear		machine
+act_sleep	Suspender		machine
+act_shut_down	Apagar		machine
+noun_window	ventana		machine
+noun_space	espacio		machine
+noun_display	pantalla		machine
+noun_vpn	VPN		machine
+noun_password	Contraseña		machine
+noun_name	Nombre		machine
+state_on	Activado		machine
+state_off	Desactivado		machine
+state_connected	Conectado		machine
+folder_home	Carpeta personal		machine
+folder_desktop	Escritorio		machine
+folder_documents	Documentos		machine
+folder_downloads	Descargas		machine
+folder_music	Música		machine
+folder_pictures	Imágenes		machine
+folder_videos	Vídeos		machine
+folder_public	Público		machine
+folder_templates	Plantillas		machine
+key_ctrl	Ctrl		machine
+key_shift	Mayús		machine
+key_alt	Alt		machine
+key_enter	Intro		machine
+key_delete	Supr		machine
+key_esc	Esc		machine
+key_space	Espacio		machine
+key_tab	Tab		machine
+key_backspace	Retroceso		machine
+sec_nearby	Cercanos		machine
+sec_paired_devices	Dispositivos emparejados		machine
+sec_input	Entrada		machine
+ime_source_french	Francés		machine
+ime_source_german	Alemán		machine
+act_restore_backup	Restaurar		reviewed
+prod_sodium_remote	Sodium Remote		machine

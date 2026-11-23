@@ -1,0 +1,13 @@
+yuv444.hevc and nv12.hevc were regenerated on 2026-11-23 from ffmpeg's synthetic
+testsrc2 pattern (no captured screen content), 4 frames each, 2940x1848, 60 fps,
+HEVC from hevc_nvenc: P1, ultra-low latency, CBR, two slices per frame, no B frames,
+parameter sets on the first frame, full range, BT.709. yuv444.hevc is Rext 4:4:4 at 55 Mbit/s,
+nv12.hevc is Main 4:2:0 (yuvj420p) at 100 Mbit/s.
+
+  ffmpeg -f lavfi -i "testsrc2=size=2940x1848:rate=60,format=yuv444p" -frames:v 4 \
+    -c:v hevc_nvenc -preset p1 -tune ull -rc cbr -b:v 55M -profile:v rext -g 60 -bf 0 -slices 2 \
+    -bsf:v filter_units=remove_types=39 -color_range pc -colorspace bt709 \
+    -color_primaries bt709 -color_trc iec61966-2-1 -f hevc yuv444.hevc
+  (nv12.hevc: format=yuvj420p, -b:v 100M, -profile:v main)
+
+Nothing depends on the exact frames: s6-probe only measures decode time.

@@ -1,0 +1,14 @@
+OpenH264 Video Codec provided by Cisco Systems, Inc.
+
+Sodium Remote does not contain OpenH264. On a Windows computer with no hardware video
+encoder it downloads Cisco's own prebuilt OpenH264 library (openh264-<version>-win64.dll) once,
+checks it against a pinned SHA-256, and uses it for H.264 video on that computer only. It is
+never uploaded and never redistributed by Sodium Remote.
+
+The library is Cisco's binary and is covered by Cisco's binary licence and its AVC/H.264 patent
+terms: https://www.openh264.org/BINARY_LICENSE.txt
+
+Source: https://github.com/cisco/openh264 (BSD-2-Clause). Only its header files are compiled into
+Sodium Remote (see openh264-headers-BSD-2-Clause.txt).
+
+Software video can be turned off in Settings; the download then never happens.

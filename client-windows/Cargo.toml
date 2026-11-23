@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "client-windows"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sodium Remote's Windows client: a Win32 window with a D3D11 flip-model swapchain, Raw Input, a low-level keyboard hook, clipboard and WASAPI audio, on remote-engine (docs/reference/client-windows.md)"
+
+# Cross-compiled: . packaging/windows/env.sh && cargo build --release --target x86_64-pc-windows-gnu -p client-windows
+# On other systems the crate builds to a stub (and the scancode table's tests run).
+
+[lib]
+name = "client_windows"
+path = "src/lib.rs"
+
+[[bin]]
+name = "remote-client"
+path = "src/main.rs"
+
+[dependencies]
+remote-engine = { path = "../client-engine" }
+remote-core = { path = "../core" }
+anyhow = "1"
+png = "0.17"
+tokio = { version = "1", features = ["rt"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.61"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D_Fxc",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Media",
+    "Win32_Media_Audio",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_DataExchange",
+    "Win32_System_Ole",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Performance",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+]

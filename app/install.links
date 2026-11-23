@@ -1,0 +1,6 @@
+# remote/app: SRC (relative to this folder) REL (data: = under ~/.local/share); see scripts/links.sh.
+# The binary is apps/build/bin/sodium-remote, built by apps/build.sh (after ui/build.sh); the desktop file's Exec=sodium-remote
+# finds it in ~/.local/bin (data:../bin is that folder), so no checkout path is written into a shipped file.
+org.sodiumos.Remote.desktop data:applications/org.sodiumos.Remote.desktop
+windows/icon.svg data:icons/hicolor/scalable/apps/sodium-remote.svg
+../../apps/build/bin/sodium-remote data:../bin/sodium-remote

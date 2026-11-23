@@ -1,0 +1,69 @@
+# Sodium Remote for Windows, Computers: pair with the nested SodiumOS host by bare address, connect, the stream bar, failure cards.
+# {HOST} {CODE} {ADDR} ({IP}:{LANPORT}) are replaced by integration.sh. `log shot NAME` is a screenshot (shots.ps1).
+3000 log shot computers-empty
+500 add
+900 log shot add
+300 address {ADDR}
+1500 log shot pair
+300 code 123456
+1200 log shot pair-wrong
+300 code {CODE}
+1800 log shot paired
+300 close
+1200 log shot computers
+300 settings
+700 log shot settings-display
+300 tab 1
+500 log shot settings-quality
+300 tab 2
+500 log shot settings-input
+300 close
+500 menu {HOST}
+700 log shot card-menu
+300 connect {HOST}
+300 log shot connecting
+7000 log shot stream
+300 stats
+2000 log shot stream-stats
+300 stats
+300 main-hide
+900 log shot stream-alone
+500 menu-stream keyboard
+900 log shot keyboard-menu-over-picture
+300 menu-stream none
+300 main-show
+500 stream-settings
+1200 log shot stream-settings-opened
+300 close
+500 menu-stream displays
+700 log shot display-menu
+300 menu-stream keyboard
+700 log shot keyboard-menu
+300 menu-stream none
+300 main-hide
+300 event {"ev":"secure","on":true}
+700 log shot secure-screen
+300 event {"ev":"secure","on":false}
+300 event {"ev":"status","state":"failed","error":{"kind":"timeout"}}
+700 log shot failure-unreachable
+300 event {"ev":"status","state":"failed","error":{"kind":"busy","by":"MacBook Air"}}
+700 log shot failure-busy
+300 event {"ev":"status","state":"ended","reason":{"kind":"version_mismatch","host":4,"client":5}}
+700 log shot failure-version
+300 event {"ev":"status","state":"ended","reason":{"kind":"error","detail":"off"}}
+700 log shot failure-control-off
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":true,"accessibility":true}}
+700 log shot failure-screen-recording
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":true,"accessibility":false}}
+700 log shot failure-screen-recording-only
+300 event {"ev":"status","state":"ended","reason":{"kind":"permission_missing","screen_recording":false,"accessibility":true}}
+700 log shot failure-accessibility-only
+300 disconnect
+1500 log shot after-disconnect
+300 main-show
+300 add
+500 address {DEAD}
+14000 log shot address-unreachable
+300 close
+800 log shot computers-cards
+300 quit

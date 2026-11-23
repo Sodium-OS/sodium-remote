@@ -1,0 +1,113 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# Maintainer: Ning Bao <enterprise@sodiumos.com>
+#
+# Sodium Remote for Arch Linux, built from the release's source tarball (packaging/arch/make-source-tarball.sh) against the
+# system's Qt, FFmpeg, Opus and PipeWire. Two packages:
+#   sodium-remote         the Qt app (client): sodium-remote, its desktop entry, icon, translations and notices
+#   sodium-remote-server  the rendezvous server for self-hosting, with a systemd unit
+# The app hosts the computer itself, in its process ("This computer" on GNOME and KDE Plasma 6, through the desktop portals).
+# The standalone host program, sodium-remote-host, is not in a package: build it from source (docs/building/linux.md).
+#
+# From a release:  download PKGBUILD and sodium-remote-<version>.tar.gz from the GitHub release into one folder, then
+#                  makepkg -si        (the release's PKGBUILD has the checksum filled in)
+# From a checkout: packaging/arch/make-source-tarball.sh 0.1.0 packaging/arch, then makepkg -si in packaging/arch
+#                  (sha256sums is SKIP in the repository; the release workflow fills it in).
+pkgbase=sodium-remote
+pkgname=(sodium-remote sodium-remote-server)
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Remote desktop between your own computers (client and rendezvous server)'
+arch=(x86_64)
+url='https://github.com/sodium-os/sodium-remote'
+license=(AGPL-3.0-only)
+makedepends=(cargo cmake ninja pkgconf
+             ffmpeg openh264 opus pipewire wayland libglvnd libxkbcommon icu
+             qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools)
+options=(!lto)
+source=("$pkgbase-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgbase-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked
+}
+
+build() {
+  cd "$pkgbase-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
+
+  # The server: remote-rendezvous (binary sodium-remote-server).
+  cargo build --release --locked -p remote-rendezvous
+
+  # The app. CMake builds the Rust engine (remote-qt, with cargo) and Sodium UI (sodium-ui/, vendored) as part of it.
+  cmake -S app -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DREMOTE_LINUX_HOST=ON
+  cmake --build build
+
+  # The ten translations of the app and of Sodium UI (.qm), and the desktop entry with every translation.
+  i18n/i18n.sh release --strict --out build/qm
+  i18n/i18n.sh generate
+}
+
+check() {
+  cd "$pkgbase-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
+  cargo test --release --locked -p remote-rendezvous
+  QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+}
+
+package_sodium-remote() {
+  pkgdesc='Remote desktop between your own computers: the Qt app'
+  depends=(ffmpeg opus pipewire libxkbcommon wayland libglvnd icu hicolor-icon-theme
+           qt6-base qt6-declarative qt6-svg qt6-wayland)
+  optdepends=('xdg-desktop-portal: screen sharing for controlling this computer (GNOME and KDE Plasma ship it)'
+              'openh264: software H.264 video when there is no hardware encoder'
+              'nvidia-utils: hardware video decoding (NVDEC)'
+              'libva-mesa-driver: hardware video decoding (VA-API) on AMD'
+              'intel-media-driver: hardware video decoding (VA-API) on Intel'
+              'dav1d: software AV1 decoding')
+  cd "$pkgbase-$pkgver"
+
+  install -Dm755 build/bin/sodium-remote "$pkgdir/usr/bin/sodium-remote"
+
+  # Sodium UI's QML module, found by the app at ../lib/sodium-remote next to the program.
+  install -d "$pkgdir/usr/lib/sodium-remote"
+  cp -r build/sodium-ui/SodiumUI "$pkgdir/usr/lib/sodium-remote/SodiumUI"
+  find "$pkgdir/usr/lib/sodium-remote/SodiumUI" -type f -name '*.so' -exec chmod 755 {} +
+  find "$pkgdir/usr/lib/sodium-remote/SodiumUI" -type f ! -name '*.so' -exec chmod 644 {} +
+
+  # Translations (../share/sodium-remote/translations) and the icon theme the app carries (../share/sodium-remote/data).
+  install -d "$pkgdir/usr/share/sodium-remote/translations"
+  install -m644 build/qm/*.qm "$pkgdir/usr/share/sodium-remote/translations/"
+  install -d "$pkgdir/usr/share/sodium-remote/data/icons"
+  cp -r app/data/icons/SodiumOS "$pkgdir/usr/share/sodium-remote/data/icons/SodiumOS"
+
+  install -Dm644 build/i18n/desktop/org.sodiumos.Remote.desktop "$pkgdir/usr/share/applications/org.sodiumos.Remote.desktop"
+  install -Dm644 app/windows/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/sodium-remote.svg"
+
+  # Licenses and the third-party notices (About › Third-party notices reads the file in /usr/share/doc/sodium-remote).
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/sodium-remote/LICENSE"
+  install -Dm644 LICENSING.md TRADEMARKS.md -t "$pkgdir/usr/share/licenses/sodium-remote/"
+  install -Dm644 notices/THIRD-PARTY-NOTICES-app.md "$pkgdir/usr/share/doc/sodium-remote/THIRD-PARTY-NOTICES.md"
+  install -Dm644 README.md CHANGELOG.md -t "$pkgdir/usr/share/doc/sodium-remote/"
+}
+
+package_sodium-remote-server() {
+  pkgdesc='Sodium Remote rendezvous server for self-hosting'
+  depends=(glibc gcc-libs)
+  optdepends=('coturn: the STUN and TURN relay for connections that cannot go direct (docs/self-hosting.md)')
+  backup=(etc/sodium-remote-server/server.env)
+  cd "$pkgbase-$pkgver"
+
+  install -Dm755 target/release/sodium-remote-server "$pkgdir/usr/bin/sodium-remote-server"
+  install -Dm644 packaging/arch/sodium-remote-server.service "$pkgdir/usr/lib/systemd/system/sodium-remote-server.service"
+  install -Dm640 packaging/arch/server.env.example "$pkgdir/etc/sodium-remote-server/server.env"
+  install -Dm644 docs/self-hosting.md -t "$pkgdir/usr/share/doc/sodium-remote-server/"
+  install -Dm644 notices/THIRD-PARTY-NOTICES-server.md "$pkgdir/usr/share/doc/sodium-remote-server/THIRD-PARTY-NOTICES.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/sodium-remote-server/LICENSE"
+  install -Dm644 LICENSING.md TRADEMARKS.md -t "$pkgdir/usr/share/licenses/sodium-remote-server/"
+}

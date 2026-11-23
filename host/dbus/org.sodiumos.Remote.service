@@ -1,0 +1,7 @@
+# D-Bus activation for org.sodiumos.Remote: opening Settings ›
+# Remote starts remoted through its systemd user unit. Installed with the unit
+# (install.links): ~/.local/share/dbus-1/services/org.sodiumos.Remote.service.
+[D-BUS Service]
+Name=org.sodiumos.Remote
+Exec=/usr/bin/false
+SystemdService=sodiumos-remoted.service

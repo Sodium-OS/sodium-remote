@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+[package]
+name = "remote-wlclip"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Remote's Wayland clipboard (ext-data-control-v1 on its own thread and connection): remoted's host side and the SodiumOS client's both use it"
+
+[dependencies]
+remote-core = { path = "../core" }
+anyhow = "1"
+rustix = { version = "1", features = ["fs", "time", "pipe", "event"] }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }

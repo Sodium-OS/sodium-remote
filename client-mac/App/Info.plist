@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>__BUNDLE_ID__</string>
+	<key>CFBundleName</key>
+	<string>__NAME__</string>
+	<key>CFBundleDisplayName</key>
+	<string>__NAME__</string>
+	<key>CFBundleExecutable</key>
+	<string>Remote</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>__BUILD__</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>en-GB</string>
+		<string>en-AU</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>__BUNDLE_ID__.server-link</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sodium-remote</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Ning Bao. Licensed AGPL-3.0-only.</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSSupportsSuddenTermination</key>
+	<false/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Sodium Remote finds your computers on this network, with no server in between: the fastest path. It also lets them find this Mac when you allow remote control.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_sodium-remote._tcp</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sodium Remote sends this Mac’s microphone to the computer you stream, when you switch it on.</string>
+</dict>
+</plist>

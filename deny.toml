@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# cargo-deny: run `cargo deny check` in the workspace root (CI does).
+# Dependencies must be permissive. MPL-2.0 is allowed only for the UniFFI crates
+# (the Mac app's static library). AGPL, GPL and LGPL-only crates are denied.
+
+[graph]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-gnu",
+    "aarch64-apple-darwin",
+]
+all-features = true
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unlicense",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "BSL-1.0",
+    "OpenSSL",
+]
+confidence-threshold = 0.8
+# Our own crates have no license field yet (set at integration); treat them as private.
+private = { ignore = true }
+
+# MPL-2.0 only for the uniffi crates.
+exceptions = [
+    { allow = ["MPL-2.0"], crate = "uniffi" },
+    { allow = ["MPL-2.0"], crate = "uniffi_bindgen" },
+    { allow = ["MPL-2.0"], crate = "uniffi_core" },
+    { allow = ["MPL-2.0"], crate = "uniffi_internal_macros" },
+    { allow = ["MPL-2.0"], crate = "uniffi_macros" },
+    { allow = ["MPL-2.0"], crate = "uniffi_meta" },
+    { allow = ["MPL-2.0"], crate = "uniffi_pipeline" },
+    { allow = ["MPL-2.0"], crate = "uniffi_udl" },
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = []
+
+[bans]
+multiple-versions = "allow"
+wildcards = "allow"
+# GPL-family crates are rejected by [licenses] above (they are not in `allow`).
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
