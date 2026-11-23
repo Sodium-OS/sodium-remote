@@ -1,13 +1,12 @@
 <!--
-LEGAL REVIEW REQUIRED. This agreement was drafted without a lawyer.
-A lawyer must review it before this repository goes public (the project's lawyer):
-the grant wording, the relicensing right, the patent license, governing law and the
-treatment of contributions made for an employer.
+Draft, not yet reviewed by a lawyer. Until it has been, the project merges no pull requests
+from outside contributors. Under review: the grant wording, the relicensing right, the patent
+license, governing law and the treatment of contributions made for an employer.
 -->
 
 # Individual Contributor License Agreement
 
-This agreement is between you ("You") and Ning Bao ("the Maintainer"), the copyright holder of Sodium Remote ("the Project"). It covers every Contribution You make to the Project. You keep the copyright in Your Contributions. This is a license, not an assignment.
+This agreement is between you ("You") and Ning Bao, together with Ning Bao's successors and assigns ("the Maintainer"), the copyright holder of Sodium Remote ("the Project"). It covers every Contribution You make to the Project. You keep the copyright in Your Contributions. This is a license, not an assignment.
 
 A "Contribution" is any code, documentation, translation, artwork or other work that You intentionally submit to the Project, for example in a pull request, issue or patch, and that is not marked "Not a Contribution".
 
@@ -21,7 +20,7 @@ The license in section 1 includes the right for the Maintainer to license Your C
 
 ## 3. Patent license
 
-You grant the Maintainer, and everyone who receives the Project, a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made, use, offer to sell, sell, import and otherwise transfer the Project, under patent claims that You can license and that are necessarily infringed by Your Contribution alone or by combining it with the Project. If someone brings a patent claim saying that the Project or a Contribution infringes a patent, the patent licenses You granted for that Project end on the date the claim is filed.
+You grant the Maintainer, and everyone who receives the Project, a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made, use, offer to sell, sell, import and otherwise transfer the Project, under patent claims that You can license and that are necessarily infringed by Your Contribution alone or by combining it with the Project. If anyone brings a patent claim saying that the Project or a Contribution infringes a patent, the patent licenses You granted under this agreement to that party end on the date the claim is filed.
 
 ## 4. You keep Your rights
 

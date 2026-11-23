@@ -24,10 +24,6 @@ allow = [
     "Zlib",
     "Unlicense",
     "Unicode-3.0",
-    "Unicode-DFS-2016",
-    "CC0-1.0",
-    "BSL-1.0",
-    "OpenSSL",
 ]
 confidence-threshold = 0.8
 # Our own crates have no license field yet (set at integration); treat them as private.

@@ -46,7 +46,7 @@ A hosted relay service at remote.sodiumos.com is planned. It is a separate servi
 
 - The documentation (the `docs/` folder and other Markdown files) is licensed under [CC-BY-SA-4.0](LICENSES/CC-BY-SA-4.0.txt), unless a file says otherwise.
 - Source files and assets, such as icons, are AGPL-3.0-only, except the app icon, which is covered by the trademark note below. [REUSE.toml](REUSE.toml) records the license of every path.
-- Third-party libraries keep their own licenses. They are listed in THIRD-PARTY-NOTICES, which is generated for each release binary, and their license texts are in `packaging/windows/licenses/` and the Mac app's acknowledgements. The project's dependencies are checked to be permissive, apart from MPL-2.0 for the UniFFI crates in the Mac app's library.
+- Third-party libraries keep their own licenses. They are listed in THIRD-PARTY-NOTICES, which is generated for each release binary, and their license texts are in `packaging/windows/licenses/` and the Mac app's acknowledgements. The Rust dependencies are checked to be permissive, apart from MPL-2.0 for the UniFFI crates in the Mac app's library. The commercial license covers Sodium Remote's own code; Qt (LGPL-3.0) and FFmpeg (LGPL-2.1 or later) keep their own terms under it too. A build linked against a GPL build of FFmpeg, such as some Linux distributions ship, is covered by the GPL and not by the commercial license.
 - The vendored part of Sodium UI in `sodium-ui/` is AGPL-3.0-only like the rest.
 
 ## Trademarks

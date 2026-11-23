@@ -13,11 +13,7 @@ accepted = [
     "Zlib",
     "Unlicense",
     "Unicode-3.0",
-    "Unicode-DFS-2016",
-    "CC0-1.0",
-    "BSL-1.0",
     "MPL-2.0",
-    "OpenSSL",
 ]
 # Sodium Remote's own crates (publish = false, AGPL-3.0-only) are the product, not third-party notices.
 private = { ignore = true }

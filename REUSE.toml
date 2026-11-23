@@ -3,8 +3,8 @@
 version = 1
 
 # Source files carry their own SPDX headers (tools/spdx-headers.py).
-# Everything below covers files that can't carry a header. Earlier entries win
-# for the same path only when "precedence" says so; the order here is deliberate.
+# Everything below covers files that can't carry a header. When several annotations match
+# a path, the last one wins; the order here is deliberate.
 
 # Files that cannot carry a comment header or are data: desktop entries, D-Bus and systemd files, Lua and PowerShell test
 # scripts, templates, the Windows resource files, test data, and the small bookkeeping files. Source code is not listed here:
@@ -17,13 +17,6 @@ path = [".gitignore", "**/.gitignore", "EXPORTED_FROM", "about.hbs", "**/*.deskt
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Ning Bao"
 SPDX-License-Identifier = "AGPL-3.0-only"
-
-# Third-party license texts keep their own licenses.
-[[annotations]]
-path = "packaging/windows/licenses/**"
-precedence = "override"
-SPDX-FileCopyrightText = "The respective authors; see each file"
-SPDX-License-Identifier = "LicenseRef-Third-Party-Licence-Text"
 
 # The app icon is a trademark; the file itself is AGPL-3.0-only, but the trademark
 # is not licensed (see TRADEMARKS.md). Forks must replace it.
@@ -60,3 +53,11 @@ path = ["LICENSE"]
 precedence = "override"
 SPDX-FileCopyrightText = "Free Software Foundation, Inc."
 SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Third-party license texts and notices keep their own licenses. Last, because the last matching
+# annotation wins (the documentation block above matches **/*.md).
+[[annotations]]
+path = ["packaging/windows/licenses/**", "client-mac/App/Acknowledgements.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "The respective authors; see each file"
+SPDX-License-Identifier = "LicenseRef-Third-Party-Licence-Text"
