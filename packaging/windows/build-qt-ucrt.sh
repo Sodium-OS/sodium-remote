@@ -51,12 +51,12 @@ QT_HOST_PATH=${QT_HOST_PATH:-/usr}
 MODULES=(qtbase qtshadertools qtdeclarative qtsvg)
 
 BASE_URL=https://download.qt.io/official_releases/qt/$QT_MINOR/$QT_VER/submodules
-# SHA-256 of <module>-everywhere-src-$QT_VER.tar.xz. PLACEHOLDERS until a maintainer or CI runs --print-pins.
+# SHA-256 of <module>-everywhere-src-$QT_VER.tar.xz, from Qt's published .sha256 files (--print-pins). Re-pin when QT_VER changes.
 declare -A QT_SHA=(
-  [qtbase]=UNPINNED-run-build-qt-ucrt.sh---print-pins
-  [qtshadertools]=UNPINNED-run-build-qt-ucrt.sh---print-pins
-  [qtdeclarative]=UNPINNED-run-build-qt-ucrt.sh---print-pins
-  [qtsvg]=UNPINNED-run-build-qt-ucrt.sh---print-pins
+  [qtbase]=a951bd163c7b80fc6b8c88d7668fb56abf91c152373e13c10666763238131307
+  [qtshadertools]=c7d84f436e1aaef39fdcadebf2bd71bdf24dc69497e13f2e0198873cbbfea2ab
+  [qtdeclarative]=311f3a2603e1973bb59baef9dfa740a376de713157d4782ee043681e889c9260
+  [qtsvg]=e4ab39534ec97987b1b9b60ef7f4d3253d5912a69f8c713a01753174a4029331
 )
 
 log() { printf '\n==== %s\n' "$*" >&2; }

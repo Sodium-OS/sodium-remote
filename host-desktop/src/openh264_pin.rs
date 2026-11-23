@@ -21,15 +21,12 @@ pub const URL: &str = "https://ciscobinary.openh264.org/openh264-2.7.0-win64.dll
 
 /// SHA-256 of the `.bz2` file at [`URL`], 64 hex digits.
 ///
-/// PLACEHOLDER: a maintainer or CI runs `remote/packaging/windows/pin-openh264.sh` on a
-/// networked machine and paste its output here.
-pub const SHA256: &str = "UNPINNED-run-packaging-windows-pin-openh264.sh-and-paste-the-sha256-here";
+/// Printed by `remote/packaging/windows/pin-openh264.sh`; re-pin when [`VERSION`] changes.
+pub const SHA256: &str = "7073fda55e904ac515f787d9728c4bcf9965ec7c91c9f84eae3f260ef9b9b37c";
 
 /// SHA-256 of the unpacked DLL (`DLL_NAME`), 64 hex digits. The host checks it every time it loads the DLL, because the
 /// codecs folder is writable by the user while the host may run elevated. `pin-openh264.sh` prints it with `SHA256`.
-///
-/// PLACEHOLDER, like `SHA256`: until it is replaced, nothing is loaded.
-pub const DLL_SHA256: &str = "UNPINNED-run-packaging-windows-pin-openh264.sh-and-paste-the-sha256-here";
+pub const DLL_SHA256: &str = "0ef5e7f3b38753b15c13afa0418d4d7805fa228e6adfd3e425bbf758cff1c288";
 
 /// The unpacked DLL's file name in the codecs folder (the version is in it, so a new pin
 /// downloads a new file and the old one is left for cleanup).
@@ -70,9 +67,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_placeholder_is_not_a_pin() {
-        assert!(pinned().is_err(), "a build with the placeholder must fail closed");
-        assert!(pinned_dll().is_err());
+    fn the_pins_parse_and_a_placeholder_would_not() {
+        assert!(pinned().is_ok(), "the release pins Cisco's archive");
+        assert!(pinned_dll().is_ok(), "and the unpacked DLL");
+        assert!(parse_sha256("UNPINNED-run-packaging-windows-pin-openh264.sh-and-paste-the-sha256-here").is_none());
         assert!(parse_sha256(&"0".repeat(64)).is_none());
         assert!(parse_sha256(&"g".repeat(64)).is_none());
         assert_eq!(parse_sha256(&"AB".repeat(32)), Some([0xab; 32]));

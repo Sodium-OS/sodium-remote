@@ -12,16 +12,41 @@ Neither is modified by Sodium Remote, and neither is LGPL or GPL: the licenses b
 only require that these notices travel with the binary.
 
 
-1. Mesa (MIT license)
----------------------
+1. Mesa 11.2.2 (docs/license.html of the Mesa 11.2.2 source, verbatim)
+------------------------------------------------------------------------
 
-The core Mesa library and most of the Gallium code are under the MIT license. Mesa's
-own license page (docs/license.html in the Mesa source) describes the components and
-their licenses; those are the MIT license, in several copyright holders' names, and
-permissive licenses of the same kind in a few files.
+Disclaimer
+
+Mesa is a 3-D graphics library with an API which is very similar to
+that of OpenGL.*
+To the extent that Mesa utilizes the OpenGL command syntax or state
+machine, it is being used with authorization from Silicon Graphics,
+Inc.(SGI). However, the author does not possess an OpenGL license
+from SGI, and makes no claim that Mesa is in any way a compatible
+replacement for OpenGL or associated with SGI. Those who want a
+licensed implementation of OpenGL should contact a licensed
+vendor.
+
+Please do not refer to the library as MesaGL (for legal
+reasons). It's just Mesa or The Mesa 3-D graphics
+library.
+
+* OpenGL is a trademark of Silicon Graphics Incorporated.
+
+License / Copyright Information
+
+The Mesa distribution consists of several components.  Different copyrights
+and licenses apply to different components.  For example, some demo programs
+are copyrighted by SGI, some of the Mesa device drivers are copyrighted by
+their authors.  See below for a list of Mesa's main components and the license
+for each.
+
+The core Mesa library is licensed according to the terms of the MIT license.
+This allows integration with the XFree86, Xorg and DRI projects.
+
+The default Mesa license is as follows:
 
 Copyright (C) 1999-2007  Brian Paul   All Rights Reserved.
-Copyright (C) the other Mesa authors, as named in each Mesa source file.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -33,22 +58,48 @@ Software is furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included
 in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Attention, Contributors
+
+When contributing to the Mesa project you must agree to the licensing terms
+of the component to which you're contributing.
+The following section lists the primary components of the Mesa distribution
+and their respective licenses.
+
+Mesa Component Licenses
+
+Component         Location               License
+------------------------------------------------------------------
+Main Mesa code    src/mesa/              Mesa (MIT)
+
+Device drivers    src/mesa/drivers/*     MIT, generally
+
+Ext headers       include/GL/glext.h     Khronos
+                  include/GL/glxext.h
+
+C11 thread        include/c11/threads*.h Boost (permissive)
+emulation
+
+In general, consult the source files for license terms.
 
 
-2. LLVM 3.6.2 (University of Illinois/NCSA Open Source License)
----------------------------------------------------------------
+2. LLVM 3.6.2 (LICENSE.TXT of the LLVM 3.6.2 source, verbatim)
+----------------------------------------------------------------
 
+==============================================================================
+LLVM Release License
+==============================================================================
 University of Illinois/NCSA
 Open Source License
 
-Copyright (c) 2003-2015 University of Illinois at Urbana-Champaign.
+Copyright (c) 2003-2014 University of Illinois at Urbana-Champaign.
 All rights reserved.
 
 Developed by:
@@ -80,14 +131,38 @@ so, subject to the following conditions:
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
 CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
 SOFTWARE.
 
-LLVM also contains a few files under other permissive licenses; each carries its own
-copyright line in the LLVM source (see LICENSE.TXT and CREDITS.TXT of LLVM 3.6.2).
+==============================================================================
+Copyrights and Licenses for Third Party Software Distributed with LLVM:
+==============================================================================
+The LLVM software contains code written by third parties.  Such software will
+have its own individual LICENSE.TXT file in the directory in which it appears.
+This file will describe the copyrights, license, and restrictions which apply
+to that code.
+
+The disclaimer of warranty in the University of Illinois Open Source License
+applies to all code in the LLVM Distribution, and nothing in any of the
+other licenses gives permission to use the names of the LLVM Team or the
+University of Illinois to endorse or promote products derived from this
+Software.
+
+The following pieces of software have additional or alternate copyrights,
+licenses, and/or restrictions:
+
+Program             Directory
+-------             ---------
+Autoconf            llvm/autoconf
+                    llvm/projects/ModuleMaker/autoconf
+Google Test         llvm/utils/unittest/googletest
+OpenBSD regex       llvm/lib/Support/{reg*, COPYRIGHT.regex}
+pyyaml tests        llvm/test/YAMLParser/{*.data, LICENSE.TXT}
+ARM contributions   llvm/lib/Target/ARM/LICENSE.TXT
+md5 contributions   llvm/lib/Support/MD5.cpp llvm/include/llvm/Support/MD5.h
 
 
 3. Visual C++ run-time

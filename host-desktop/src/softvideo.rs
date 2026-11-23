@@ -485,6 +485,13 @@ mod tests {
             Ok(self.0.clone())
         }
     }
+    struct Offline;
+    impl Fetch for Offline {
+        fn get(&self, _: &str, _: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<Vec<u8>, String> {
+            Err("offline".into())
+        }
+    }
+
     struct Never;
     impl Fetch for Never {
         fn get(&self, _: &str, _: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<Vec<u8>, String> {
@@ -548,7 +555,8 @@ mod tests {
     #[test]
     fn an_unpinned_build_fails_closed_without_the_network() {
         let dir = temp("unpinned");
-        let e = install(&Never, pin::pinned(), "u", &dir, "x.dll", &AtomicBool::new(false), &mut |_| {}).unwrap_err();
+        let unpinned = Err("OpenH264 is not pinned in this build: run packaging/windows/pin-openh264.sh".to_string());
+        let e = install(&Never, unpinned, "u", &dir, "x.dll", &AtomicBool::new(false), &mut |_| {}).unwrap_err();
         assert!(e.text.contains("pin-openh264.sh"), "{e:?}");
         assert_eq!(e.reason, Reason::Unpinned);
         assert!(!dir.exists());
@@ -581,7 +589,7 @@ mod tests {
     }
 
     #[test]
-    fn needed_fires_once_and_an_unpinned_build_then_fails() {
+    fn needed_fires_once_and_an_offline_download_then_fails() {
         let data = temp("needed");
         let events: Arc<Mutex<Vec<&'static str>>> = Default::default();
         let (tx, rx) = std::sync::mpsc::channel();
@@ -594,15 +602,15 @@ mod tests {
                 }
             })
         };
-        let sv = SoftwareVideo::downloaded(&data, data.join("codecs"), Arc::new(Never), sink.clone());
+        let sv = SoftwareVideo::downloaded(&data, data.join("codecs"), Arc::new(Offline), sink.clone());
         sv.note_hardware(false);
         let failed = rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
-        assert_eq!(failed.reason, Some(Reason::Unpinned));
-        assert!(failed.error.unwrap().contains("not pinned"));
+        assert_eq!(failed.reason, Some(Reason::Network));
+        assert!(failed.error.unwrap().contains("offline"));
         assert_eq!(*events.lock().unwrap(), ["needed", "downloading", "failed"]);
         // A second start (the notice was shown) goes straight to the download.
         events.lock().unwrap().clear();
-        let again = SoftwareVideo::downloaded(&data, data.join("codecs"), Arc::new(Never), sink);
+        let again = SoftwareVideo::downloaded(&data, data.join("codecs"), Arc::new(Offline), sink);
         again.note_hardware(false);
         rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
         assert_eq!(*events.lock().unwrap(), ["downloading", "failed"]);
