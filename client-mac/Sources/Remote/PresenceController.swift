@@ -137,7 +137,7 @@ final class PresenceController: NSObject, NSMenuDelegate {
         switch state {
         case .off: statusText = String(localized: "Remote control is off")
         case .on: statusText = String(localized: "Remote control is on")
-        case .controlled: statusText = String(localized: "\(controller?.name ?? "") is connected")
+        case .controlled: statusText = String(localized: "\(controller?.name ?? "") is connected")  // i18n:ok
         }
         let status = NSMenuItem(title: statusText, action: nil, keyEquivalent: "")
         status.isEnabled = false

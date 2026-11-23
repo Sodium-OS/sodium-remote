@@ -232,7 +232,7 @@ final class VideoDecoder: VideoSink {
         okFrames += 1
         guard let frame = makeTextures(pb, frameId: f.frameId) else { return }
         if okFrames == 1 {
-            let what = "VideoToolbox \(c.label) · \(hardware ? "hardware" : "software")"
+            let what = "VideoToolbox \(c.label) · \(hardware ? "hardware" : "software")"  // i18n:ok a log line
             Log.info("first picture: \(what), \(frame.width)×\(frame.height)")
             delegate?.decoderChanged(description: what, hardware: hardware)
         }

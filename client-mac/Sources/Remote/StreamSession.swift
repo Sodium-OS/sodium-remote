@@ -175,7 +175,8 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         // Where the computer is looked for: the configured server's name, or just this network (no server).
         model.serverName = app.model.serverName
         model.progress.findDetail = app.model.serverName.map { String(localized: "through \($0)") } ?? String(localized: "on this network")
-        model.progress.network = app.network.interfaceName.isEmpty ? "" : "From \(app.network.interfaceName) · usually under 2 s"
+        let via = app.network.interfaceName
+        model.progress.network = via.isEmpty ? "" : String(localized: "From \(via) · usually under 2 s")
         model.progress.sizeDetail = "\(currentDisplay().width) × \(currentDisplay().height) · \(display.hz) Hz"
         firstFrame = false
         connectCardTimer?.invalidate()
@@ -231,7 +232,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         case .Refused(let reason):
             model.card = disconnectedCard(reason, host: model.hostName, os: hostOS ?? app.store.hostMeta(hostID).hostOS)
         case .Timeout:
-            model.card = .failed("\(model.hostName) didn’t answer in time.")
+            model.card = .failed(String(localized: "\(model.hostName) didn’t answer in time."))
             scheduleRetry()
         case .Failed(let message):
             model.card = .failed(message)
@@ -243,7 +244,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
     private func showOffline() {
         let meta = app.store.hostMeta(hostID)
         if let since = app.asleepSince(hostID) {
-            model.card = .asleep(since: HostLine.when(since).replacingOccurrences(of: "today, ", with: ""), retryIn: retryDelay)
+            model.card = .asleep(since: HostLine.whenShort(since), retryIn: retryDelay)
         } else if !app.network.satisfied {
             model.card = .macOffline
         } else {
@@ -466,7 +467,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
             app.store.update(hostID) { $0.locked = w.locked }
             if w.locked { showLockedToast() }
             if let from = w.tookOverFrom {
-                model.toast = Toast(symbol: "laptopcomputer", tone: .accent, text: "Took over from \(from)", sub: "it was idle")
+                model.toast = Toast(symbol: "laptopcomputer", tone: .accent, text: String(localized: "Took over from \(from)"), sub: String(localized: "it was idle"))
             }
         case .format(let f):
             setFormat(f)
@@ -478,7 +479,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         case .takenOver(let by):
             takenOverBy = by
         case .tookOver(let from):
-            model.toast = Toast(symbol: "laptopcomputer", tone: .accent, text: "Took over from \(from)", sub: "it was idle")
+            model.toast = Toast(symbol: "laptopcomputer", tone: .accent, text: String(localized: "Took over from \(from)"), sub: String(localized: "it was idle"))
         case .clipboardOffer(let o):
             clipboard.onOffer(o)
         case .clipboardRequest(let serial, let format):
@@ -521,7 +522,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
     private func showLockedToast() {
         guard !lockedToastShown else { return }
         lockedToastShown = true
-        model.toast = Toast(symbol: "lock.fill", tone: .neutral, text: "\(model.hostName) is locked. Type your password here.", sub: "Secure input is on.")
+        model.toast = Toast(symbol: "lock.fill", tone: .neutral, text: String(localized: "\(model.hostName) is locked. Type your password here."), sub: String(localized: "Secure input is on."))
     }
 
     private func setFormat(_ f: StreamFormat) {
@@ -541,10 +542,10 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
             if oldKind != kind {
                 if r.rttMs + 10 <= old.rttMs || !oldKind.isTCPRelay && r.rttMs < old.rttMs {
                     model.toast = Toast(symbol: "point.topleft.down.to.point.bottomright.curvepath", tone: .accent,
-                                        text: "Now \(kind.label) · \(Int(r.rttMs.rounded())) ms", sub: "was \(oldKind.label) · \(Int(old.rttMs.rounded())) ms")
+                                        text: String(localized: "Now \(kind.label) · \(Int(r.rttMs.rounded())) ms"), sub: String(localized: "was \(oldKind.label) · \(Int(old.rttMs.rounded())) ms"))
                 } else if r.rttMs >= old.rttMs + 10 {
                     model.toast = Toast(symbol: "point.topleft.down.to.point.bottomright.curvepath", tone: .neutral,
-                                        text: "Now \(kind.label) · \(Int(r.rttMs.rounded())) ms", sub: "\(oldKind.label) stopped answering")
+                                        text: String(localized: "Now \(kind.label) · \(Int(r.rttMs.rounded())) ms"), sub: String(localized: "\(oldKind.label) stopped answering"))
                 }
             }
         }
@@ -560,8 +561,8 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
             if !app.store.tcpToastShown(network: net) {
                 app.store.markTcpToast(network: net)
                 model.toast = Toast(symbol: "exclamationmark.triangle", tone: .warning,
-                                    text: "UDP is blocked on this network, so Sodium Remote goes through the relay over TCP.",
-                                    sub: "Expect about \(Int(r.rttMs.rounded())) ms.", action: "Details", actionID: .details, duration: 10)
+                                    text: String(localized: "UDP is blocked on this network, so Sodium Remote goes through the relay over TCP."),
+                                    sub: String(localized: "Expect about \(Int(r.rttMs.rounded())) ms."), action: String(localized: "Details"), actionID: .details, duration: 10)
             }
         }
     }
@@ -580,7 +581,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         updateShortcutTap()
         if case .user = reason, closing { return }
         if case .takenOver(let by) = reason {
-            model.card = .takenOver(by: by, at: HostLine.when(Date()).replacingOccurrences(of: "today, ", with: ""))
+            model.card = .takenOver(by: by, at: HostLine.whenShort(Date()))
         } else {
             model.card = disconnectedCard(reason, host: model.hostName, os: hostOS ?? app.store.hostMeta(hostID).hostOS)
         }
@@ -651,14 +652,15 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         h.fecPercent = Double(link.fecRatio) * 100
         if let f = format {
             h.sizeText = "\(f.width) × \(f.height) · \(Int((Double(f.refreshMhz) / 1000).rounded())) Hz"
-            h.codecText = f.codec.label + (decoderText.isEmpty ? "" : (hardware ? " · hardware decode" : " · software decode"))
+            let codec = f.codec.label
+            h.codecText = decoderText.isEmpty ? codec : (hardware ? String(localized: "\(codec) · hardware decode") : String(localized: "\(codec) · software decode"))
         }
         var paths: [HudPath] = []
         if let r = route {
-            paths.append(HudPath(kind: RouteKind(r.path), state: "in use", rttMs: r.rttMs, inUse: true))
+            paths.append(HudPath(kind: RouteKind(r.path), state: String(localized: "in use"), rttMs: r.rttMs, inUse: true))
         }
         if let g = hedge, g != route {
-            paths.append(HudPath(kind: RouteKind(g.path), state: link.hedging ? "hedging" : "standby", rttMs: g.rttMs, inUse: false))
+            paths.append(HudPath(kind: RouteKind(g.path), state: link.hedging ? String(localized: "hedging") : String(localized: "standby"), rttMs: g.rttMs, inUse: false))
         }
         h.paths = paths
         h.awdl = awdl
@@ -832,8 +834,8 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
 
     func fullScreenChanged(_ on: Bool) {
         if on {
-            model.toast = Toast(symbol: "arrow.up.left.and.arrow.down.right", tone: .neutral, text: "Full screen. Move to the top edge for the menu;",
-                                sub: "⌘Esc leaves, ⌘⇧Esc disconnects.")
+            model.toast = Toast(symbol: "arrow.up.left.and.arrow.down.right", tone: .neutral, text: String(localized: "Full screen. Move to the top edge for the menu;"),
+                                sub: String(localized: "⌘Esc leaves, ⌘⇧Esc disconnects."))
         }
         updateShortcutTap()
         layoutChanged()
@@ -975,7 +977,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
     func noteShortcutTapUnavailable() {
         guard !accessibilityToastShown else { return }
         accessibilityToastShown = true
-        model.toast = Toast(symbol: "keyboard", tone: .warning, text: "⌘Tab stays on this Mac: Accessibility is off", action: "Allow…",
+        model.toast = Toast(symbol: "keyboard", tone: .warning, text: String(localized: "⌘Tab stays on this Mac: Accessibility is off"), action: String(localized: "Allow…"),
                             actionID: .allowAccessibility, duration: 8)
     }
 
@@ -1027,7 +1029,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         let t = ClickTest(config: ClickTest.Config(), csvURL: stats.path("clicks.csv"), epochNs: stats.epochNs)
         clickTest = t
         pipeline?.setClickTest(t)
-        model.toast = Toast(symbol: "timer", tone: .neutral, text: "Latency test: clicking the test surface…", sub: "100 clicks", duration: nil)
+        model.toast = Toast(symbol: "timer", tone: .neutral, text: String(localized: "Latency test: clicking the test surface…"), sub: String(localized: "100 clicks"), duration: nil)
         Task { [weak self] in
             await self?.clickLoop(t)
         }
@@ -1071,6 +1073,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         let a = stats.bytesReceivedSample()
         try? await Task.sleep(nanoseconds: UInt64(max(t.config.idleMs, 2500)) * 1_000_000)
         let b = stats.bytesReceivedSample()
+        // i18n:off the latency report is a file for developers, in English
         var idle = "n/a"
         if b.atUs > a.atUs {
             let secs = Double(b.atUs - a.atUs) / 1e6
@@ -1090,9 +1093,10 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
             md += String(format: "| %@ | %.2f | %.2f | %d |\n", row.name, row.p50 ?? 0, row.p95 ?? 0, row.n)
         }
         try? md.write(to: stats.path("latency.md"), atomically: true, encoding: .utf8)
+        // i18n:on
         pipeline?.setClickTest(nil)
         clickTest = nil
         Log.info(t.status())
-        model.toast = Toast(symbol: "timer", tone: .success, text: t.status(), sub: "latency.md in the stats folder", duration: 15)
+        model.toast = Toast(symbol: "timer", tone: .success, text: t.status(), sub: String(localized: "latency.md in the stats folder"), duration: 15)
     }
 }

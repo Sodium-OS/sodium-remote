@@ -101,7 +101,7 @@ final class NetworkWatch {
         } else if path.usesInterfaceType(.wiredEthernet) {
             interfaceName = "Ethernet"
         } else if path.usesInterfaceType(.cellular) {
-            interfaceName = "a phone"
+            interfaceName = String(localized: "a phone")
         } else {
             interfaceName = ""
         }

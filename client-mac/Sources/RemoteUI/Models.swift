@@ -47,9 +47,9 @@ public enum SystemShortcutsChoice: String, Codable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .never: return "Never"
-        case .fullScreen: return "Full screen only"
-        case .fullScreenAndFocused: return "Full screen and focused"
+        case .never: return String(localized: "Never")
+        case .fullScreen: return String(localized: "Full screen only")
+        case .fullScreenAndFocused: return String(localized: "Full screen and focused")
         }
     }
 }
@@ -450,7 +450,7 @@ public struct ConnectProgress: Equatable {
     /// "on this network" with no server, "through relay.example.org" with one; set by the session.
     public var findDetail = ""
     public var pathDetail = ""
-    public var keyDetail = "the one you paired"
+    public var keyDetail = String(localized: "the one you paired")
     public var sizeDetail = ""
     /// "From Office Wi-Fi · usually under 2 s".
     public var network = ""

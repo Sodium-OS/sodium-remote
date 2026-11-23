@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import SodiumUI
 
 // Settings › About › Third-party notices: a short list of what Sodium Remote is built on, and
-// the notices file that carries the full text (cargo-about writes it at release; it sits next to the program).
+// the notices file that carries the full text (cargo-about's list of the Rust libraries, then the text of every other license; stage-app.sh writes it for the Windows zip; it sits next to the program).
 // The component names and license ids are proper names and are never translated.
 ContentDialog {
     id: dialog

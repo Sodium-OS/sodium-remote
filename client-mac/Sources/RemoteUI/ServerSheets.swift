@@ -167,7 +167,7 @@ struct AddServerSheet: View {
             }
             HStack(spacing: 8) {
                 if sheet.stage == .manual && !sheet.isChange {
-                    SettingsLink(String(localized: "Back to the link")) { sheet.goLink() }
+                    SettingsLink("Back to the link") { sheet.goLink() }
                 }
                 Spacer(minLength: 8)
                 LButton(title: "Cancel", kind: .secondary, action: cancel)
@@ -252,7 +252,7 @@ private struct LinkStage: View {
         }
         HStack {
             Spacer(minLength: 0)
-            SettingsLink(String(localized: "Enter the details yourself…")) { sheet.goManual() }
+            SettingsLink("Enter the details yourself…") { sheet.goManual() }
         }
         .padding(.top, 12)
     }

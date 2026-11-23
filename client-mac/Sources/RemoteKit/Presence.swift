@@ -16,32 +16,35 @@ public enum HostState: Equatable {
 
 /// The card's second line and its path line.
 public enum HostLine {
+    /// The time of day in the user's own format.
     static func clock(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_GB")
-        f.dateFormat = "HH:mm"
-        return f.string(from: d)
+        d.formatted(date: .omitted, time: .shortened)
     }
 
+    /// The day and month, short, in the user's language.
     static func day(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_GB")
-        f.dateFormat = "d MMM"
-        return f.string(from: d)
+        d.formatted(.dateTime.day().month(.abbreviated))
     }
 
     /// "today, 09:12", "yesterday, 18:40", "3 Nov, 10:02".
     public static func when(_ d: Date, now: Date = Date()) -> String {
         let cal = Calendar.current
-        if cal.isDate(d, inSameDayAs: now) { return "today, " + clock(d) }
-        if let y = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(d, inSameDayAs: y) { return "yesterday, " + clock(d) }
-        return day(d) + ", " + clock(d)
+        let time = clock(d)
+        if cal.isDate(d, inSameDayAs: now) { return String(localized: "today, \(time)") }
+        if let y = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(d, inSameDayAs: y) { return String(localized: "yesterday, \(time)") }
+        let date = day(d)
+        return String(localized: "\(date), \(time)")
+    }
+
+    /// The same, but only the time of day when it is today.
+    public static func whenShort(_ d: Date, now: Date = Date()) -> String {
+        Calendar.current.isDate(d, inSameDayAs: now) ? clock(d) : when(d, now: now)
     }
 
     /// "3 weeks ago".
     public static func ago(_ d: Date, now: Date = Date()) -> String {
         let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "en_GB")
+        f.locale = Locale.current
         f.unitsStyle = .full
         return f.localizedString(for: d, relativeTo: now)
     }
@@ -50,20 +53,20 @@ public enum HostLine {
     public static func line(_ state: HostState, lastConnected: Date?, lastSeen: Date?, now: Date = Date()) -> String {
         switch state {
         case .online:
-            if let c = lastConnected { return "Last connected " + when(c, now: now) }
-            return "Not connected yet"
+            if let c = lastConnected { let w = when(c, now: now); return String(localized: "Last connected \(w)") }
+            return String(localized: "Not connected yet")
         case .locked:
-            return "Locked: unlock in the stream"
+            return String(localized: "Locked: unlock in the stream")
         case .busy(let by):
-            return "In use by \(by)"
+            return String(localized: "In use by \(by)")
         case .asleep(let since):
-            let cal = Calendar.current
-            return "Asleep since " + (cal.isDate(since, inSameDayAs: now) ? clock(since) : day(since) + ", " + clock(since))
+            let w = whenShort(since, now: now)
+            return String(localized: "Asleep since \(w)")
         case .offline:
-            if let s = lastSeen { return "Last seen " + ago(s, now: now) }
-            return "Offline"
+            if let s = lastSeen { let a = ago(s, now: now); return String(localized: "Last seen \(a)") }
+            return String(localized: "Offline")
         case .connecting:
-            return "Finding the best path…"
+            return String(localized: "Finding the best path…")
         }
     }
 
@@ -71,7 +74,7 @@ public enum HostLine {
     public static func path(_ route: RouteKind?, rttMs: Double?, current: Bool) -> String? {
         guard let r = route else { return nil }
         var s = r.label
-        if let ms = rttMs { s += " · \(Int(ms.rounded())) ms" }
-        return current ? s : "Last time: " + s
+        if let ms = rttMs { s = String(localized: "\(s) · \(Int(ms.rounded())) ms") }
+        return current ? s : String(localized: "Last time: \(s)")
     }
 }

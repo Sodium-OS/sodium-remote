@@ -120,7 +120,7 @@ private struct KeyRuleRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(KeyNames.from(rule))
+            Text(verbatim: KeyNames.from(rule))
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundColor(Theme.text)
                 .lineLimit(1)
@@ -131,14 +131,15 @@ private struct KeyRuleRow: View {
             } else {
                 SwiftUI.Button(action: onEdit) {
                     HStack(spacing: 0) {
-                        Text(KeyNames.to(rule))
+                        Text(verbatim: KeyNames.to(rule))
                             .font(.system(size: 12.5))
                             .foregroundColor(Theme.text)
                             .lineLimit(1)
                         if changed {
-                            Text(" · changed")
+                            Text("· changed")
                                 .font(.system(size: 11.5))
                                 .foregroundColor(Theme.warning)
+                                .padding(.leading, 4)
                         }
                         Spacer(minLength: 0)
                     }
@@ -166,7 +167,7 @@ private struct AddKeyRow: View {
         HStack(spacing: 12) {
             Group {
                 if let f = from {
-                    Text(KeyNames.mac(f))
+                    Text(verbatim: KeyNames.mac(f))
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundColor(Theme.text)
                         .lineLimit(1)
@@ -195,7 +196,7 @@ private struct AddKeyRow: View {
 /// A field that looks focused while keys are recorded into it.
 @MainActor
 private struct KeyRecordingField: View {
-    let prompt: String
+    let prompt: LocalizedStringKey
 
     var body: some View {
         HStack(spacing: 6) {

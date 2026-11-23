@@ -11,11 +11,11 @@ public enum RouteKind: String, Equatable, Codable, CaseIterable {
     public var label: String {
         switch self {
         case .lan: return "LAN"
-        case .direct: return "Direct"
+        case .direct: return String(localized: "Direct")
         case .vpn: return "VPN"
         case .tailscale: return "Tailscale"
-        case .relayUDP: return "Relay"
-        case .relayTCP, .relayTLS: return "Relay · TCP"
+        case .relayUDP: return String(localized: "Relay")
+        case .relayTCP, .relayTLS: return String(localized: "Relay · TCP")
         }
     }
 
@@ -26,9 +26,9 @@ public enum RouteKind: String, Equatable, Codable, CaseIterable {
         case .direct: return "direct"
         case .vpn: return "VPN"
         case .tailscale: return "Tailscale"
-        case .relayUDP: return "relay udp"
-        case .relayTCP: return "relay tcp"
-        case .relayTLS: return "relay tls"
+        case .relayUDP: return "relay udp"  // i18n:ok
+        case .relayTCP: return "relay tcp"  // i18n:ok
+        case .relayTLS: return "relay tls"  // i18n:ok
         }
     }
 
@@ -95,9 +95,9 @@ public struct LinkView: Equatable {
         public var tone: Tone
 
         public var text: String {
-            if lost { return "Lost" }
+            if lost { return String(localized: "Lost") }
             guard let r = route else { return "" }
-            if let ms = rttMs, tone == .normal { return "\(r.label) · \(Int(ms.rounded())) ms" }
+            if let ms = rttMs, tone == .normal { let l = r.label; return String(localized: "\(l) · \(Int(ms.rounded())) ms") }
             return r.label
         }
     }
@@ -109,9 +109,9 @@ public struct LinkView: Equatable {
 
         public var text: String {
             switch self {
-            case .reconnecting: return "Reconnecting…"
-            case .lost: return "Connection lost · retrying"
-            case .waitingForNetwork: return "Waiting for the network…"
+            case .reconnecting: return String(localized: "Reconnecting…")
+            case .lost: return String(localized: "Connection lost · retrying")
+            case .waitingForNetwork: return String(localized: "Waiting for the network…")
             }
         }
     }

@@ -156,8 +156,8 @@ jobs:
             !build/win-deps/work
           key: ${{ steps.deps.outputs.cache-primary-key }}
 
-      # Qt's own Windows build (fetch-qt.sh, pinned checksums): its d3dcompiler_47.dll and opengl32sw.dll go into the
-      # package either way, and it is the fallback Qt until the source pins below are filled in.
+      # Qt's own Windows build (fetch-qt.sh, pinned checksums): its opengl32sw.dll goes into the
+      # package either way (and its SBOM files give the Qt third-party attributions), and it is the fallback Qt until the source pins below are filled in.
       - name: Restore Qt for Windows (official build)
         id: qtofficial
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -199,7 +199,7 @@ jobs:
         if: steps.pins.outputs.ucrt == 'true'
         run: |
           packaging/windows/build-qt-ucrt.sh
-          cp build/qt-win/6.12.0/mingw_64/d3dcompiler_47.dll build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
+          cp build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
           echo "QT_WIN_ROOT=$GITHUB_WORKSPACE/build/qt-win-ucrt/6.12.0" >> "$GITHUB_ENV"
       - name: Save Qt built on UCRT
         if: always() && steps.pins.outputs.ucrt == 'true' && steps.qtucrt.outputs.cache-hit != 'true'
@@ -216,7 +216,7 @@ jobs:
           packaging/windows/cargo-win.sh build --release -p client-windows
           packaging/windows/cargo-win.sh build --release -p host-desktop --bins
       - name: Build and stage the Windows app
-        run: packaging/windows/stage-app.sh --no-zip
+        run: packaging/windows/stage-app.sh --no-zip --no-notices   # the cargo-about list is the release's (the license texts are checked here)
       - name: The gate itself works
         run: packaging/windows/check-no-msvcrt.sh --selftest
       - name: No msvcrt in the package

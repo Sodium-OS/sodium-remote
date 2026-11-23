@@ -16,9 +16,11 @@ Layout written to --out (docs: remote/packaging/windows/README.md):
     fonts/                 Inter, JetBrains Mono, Noto Sans CJK (OFL), loaded by the plugin at start
     data/icons/SodiumOS/   the icon theme (Qt's GenericDataLocation on Windows includes <app>/data)
     translations/          sodiumui_<lang>.qm
-    licenses/              the fonts', ICU's and Qt's license texts
+    licenses/              the fonts', ICU's and Qt's license texts: Qt/ (every text in Qt's own LICENSES folder, which
+                           the host's qt6-base package carries) and Qt-third-party-attributions.txt (made here from Qt's
+                           SBOM files). Missing Qt texts, Qt SBOMs or font licenses stop the staging.
 """
-import argparse, json, os, shutil, subprocess, sys
+import argparse, json, os, re, shutil, subprocess, sys
 from pathlib import Path
 
 TRIPLET = "x86_64-w64-mingw32"
@@ -48,6 +50,15 @@ QT_PLUGINS = ["platforms/qwindows.dll", "imageformats/qsvg.dll", "imageformats/q
 # Only with --qml-dir (the app): the gallery has no file chooser.
 EXTRA_QML_MODULES = ["QtQuick/Dialogs", "QtQuick/Dialogs/quickimpl"]
 SYSTEM_DLLS_PREFIXES = ("api-ms-win-",)
+# Qt's license texts: Qt's own LICENSES folder, as the Linux qt6-base package installs it (the Windows Qt archives
+# carry none). LGPL-3.0 and GPL-3.0 must be there, and the file the attributions list refers to by LicenseRef.
+QT_LICENSES_DEFAULT = "/usr/share/licenses/qt6-base"
+QT_LICENSES_REQUIRED = ["LGPL-3.0-only.txt", "GPL-3.0-only.txt"]
+# The modules whose DLLs are shipped (qtshadertools is a build tool here: Qt6ShaderTools.dll is not in the package).
+QT_SBOM_MODULES = ["qtbase", "qtdeclarative", "qtsvg"]
+# SBOM packages that are build or test tools, other platforms' code or databases, not in the Windows package.
+QT_SBOM_SKIP = ("Bootstrap", "Test", "QSQLite", "DBus_", "Platform_", "CMake", "Compiler", "Linker", "WrapRt", "WrapAtomic",
+                "PostgreSQL", "ODBC", "Oracle", "Interbase", "Mimer")
 
 
 def log(*a):
@@ -64,6 +75,61 @@ def imports(path):
     return [l.split("DLL Name:")[1].strip() for l in out.splitlines() if "DLL Name:" in l]
 
 
+def sbom_attributions(spdx):
+    """(display name, license, source, copyright) of the third-party parts a Qt module's SPDX file lists."""
+    text = spdx.read_text(encoding="utf-8", errors="replace")
+    found = []
+    for m in re.finditer(r"^PackageName: (.*?)\n(.*?)(?=^PackageName: |\Z)", text, re.S | re.M):
+        name, body = m.group(1).strip(), m.group(2)
+        if name.startswith(QT_SBOM_SKIP) or "Private" in name or not ("_Attribution_" in name or name.startswith("Bundled")):
+            continue
+        field = lambda k: (re.search(rf"^{k}: (.*)$", body, re.M) or [None, ""])[1].strip()
+        lic = field("PackageLicenseConcluded")
+        if lic in ("", "NOASSERTION"):
+            continue
+        cr = re.search(r"^PackageCopyrightText: (<text>.*?</text>|[^\n]*)", body, re.S | re.M)
+        cr = re.sub(r"</?text>", "", cr.group(1)).strip() if cr else ""
+        disp = name.split("_Attribution_")[-1] if "_Attribution_" in name else re.sub(r"^Bundled", "", name)
+        found.append((disp, lic, field("PackageDownloadLocation"), cr))
+    return found
+
+
+def stage_qt_licenses(out, lic_dir, sbom_dirs):
+    """Qt's license texts (all of Qt's LICENSES folder) and the attributions of the Qt parts that carry third-party code."""
+    for need in QT_LICENSES_REQUIRED:
+        if not (lic_dir / need).is_file():
+            sys.exit(f"stage: Qt's license text {need} is not in {lic_dir} (install qt6-base, or give --qt-licenses)")
+    for f in sorted(lic_dir.glob("*.txt")):
+        copy(f, out / "licenses" / "Qt" / f.name)
+    entries, used = {}, []
+    for mod in QT_SBOM_MODULES:
+        spdx = next((p for d in sbom_dirs if d.is_dir() for p in sorted(d.glob(f"{mod}-*.spdx")) if ".source." not in p.name), None)
+        if spdx is None:
+            sys.exit(f"stage: no SBOM (*.spdx) of {mod} in {[str(d) for d in sbom_dirs]}: Qt's third-party attributions cannot be made")
+        used.append(spdx.name)
+        for disp, lic, src, cr in sbom_attributions(spdx):
+            entries.setdefault((disp, lic), (src, cr))
+    lines = ["Qt 6.12: third-party parts and the licenses of Qt itself", "=" * 56, "",
+             "Qt (qtbase, qtdeclarative, qtsvg) is used under the GNU Lesser General Public License version 3 (LGPL-3.0-only,",
+             "Qt/LGPL-3.0-only.txt, which refers to Qt/GPL-3.0-only.txt). The Qt libraries are the DLLs beside the program and",
+             "can be replaced by your own build of the same Qt version. The exact sources are release assets of the same",
+             "release as this package (licenses/README.txt says where). Qt's own files carry the copyright of The Qt Company Ltd. and other",
+             "contributors.", "",
+             "Qt contains the following third-party code (taken from Qt's own SBOM files: " + ", ".join(used) + ").",
+             "The license ids are SPDX ids; each text is in the Qt/ folder next to this file, as <id>.txt",
+             "(LicenseRef-X as Qt/LicenseRef-X.txt). Some parts are not linked into every DLL.", ""]
+    for (disp, lic), (src, cr) in sorted(entries.items(), key=lambda kv: kv[0][0].lower()):
+        lines += [f"* {disp}", f"  License: {lic}"]
+        if src and src != "NOASSERTION":
+            lines.append(f"  Source:  {src}")
+        for c in cr.splitlines():
+            if c.strip():
+                lines.append("  " + c.strip())
+        lines.append("")
+    (out / "licenses" / "Qt-third-party-attributions.txt").write_text("\n".join(lines), encoding="utf-8")
+    log(f"Qt licenses: {len(list((out / 'licenses' / 'Qt').glob('*.txt')))} texts, {len(entries)} attributions")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build", required=True, type=Path)
@@ -77,6 +143,8 @@ def main():
     ap.add_argument("--qml-dir", type=Path, action="append", default=[], help="more QML to scan for Qt modules (an app's)")
     ap.add_argument("--no-gallery", action="store_true", help="the package is an app, not the gallery")
     ap.add_argument("--catalog", action="append", default=[], help="translation catalogs to carry besides sodiumui (e.g. remote)")
+    ap.add_argument("--qt-licenses", type=Path, default=Path(QT_LICENSES_DEFAULT), help="Qt's LICENSES folder")
+    ap.add_argument("--qt-sbom", type=Path, action="append", default=[], help="folders with Qt's *.spdx files (default <qt>/sbom)")
     ap.add_argument("--icons", type=Path, help="built SodiumOS icon theme (themes/icons/build/SodiumOS)")
     a = ap.parse_args()
     if a.exe is None:
@@ -155,10 +223,10 @@ def main():
             seen.add(key)
             copy(src, out / src.name)
             queue.append(out / src.name)
-    # run-time loaded, never imported: Direct3D's shader compiler and the software OpenGL fallback
-    for extra in ("d3dcompiler_47.dll", "opengl32sw.dll"):
-        if (qt / extra).exists():
-            copy(qt / extra, out / extra)
+    # run-time loaded, never imported: the software OpenGL fallback. d3dcompiler_47.dll is not shipped: Windows 10 and 11
+    # carry it in System32 (Microsoft's redistribution terms then do not apply) and Qt loads it from there.
+    if (qt / "opengl32sw.dll").exists():
+        copy(qt / "opengl32sw.dll", out / "opengl32sw.dll")
 
     # --- fonts, icons, translations, licenses
     for name, cands in FONT_SOURCES.items():
@@ -167,8 +235,10 @@ def main():
             sys.exit(f"stage: font not found: {name} (looked in {cands})")
         copy(src, out / "fonts" / name)
     for name, src in FONT_LICENCES.items():
-        if Path(src).exists():
-            copy(Path(src), out / "licenses" / name)
+        if not Path(src).exists():
+            sys.exit(f"stage: the license of a shipped font is missing: {src} (for {name})")
+        copy(Path(src), out / "licenses" / name)
+    stage_qt_licenses(out, a.qt_licenses, a.qt_sbom or [qt / "sbom"])
     icons = a.icons or (repo / "app/data/icons/sodium-remote")   # the icons the app uses, carried in the repository
     if not icons.is_dir():
         sys.exit(f"stage: the icon theme folder is missing ({icons})")

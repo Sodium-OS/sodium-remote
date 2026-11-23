@@ -89,8 +89,8 @@ private struct WelcomeHero: View {
 @MainActor
 private struct PermissionRow: View {
     let symbol: String
-    let title: String
-    let sub: String
+    let title: LocalizedStringKey
+    let sub: LocalizedStringKey
     let state: PermissionState
     let allow: () -> Void
     let openSettings: () -> Void
@@ -143,7 +143,7 @@ private struct PermissionRow: View {
 /// kits.banner, the info tone: says in place what a missing permission costs.
 @MainActor
 private struct InfoBanner: View {
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {

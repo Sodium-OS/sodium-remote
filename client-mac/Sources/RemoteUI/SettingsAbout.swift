@@ -6,7 +6,7 @@ import SwiftUI
 
 // Settings › About, Server (the state, Add, Change, Remove, Import and Export; sheets in ServerSheets.swift) and the Computers group of Advanced
 // (Show previews). Every string here goes through the
-// catalog (`Text("…")` or `String(localized:)`); the product's name and the license's name are not translated.
+// catalog (`Text("…")`, `LocalizedStringKey` or `String(localized:)`; tools/lint-i18n.py checks); the product's name and the license's name are not translated.
 
 // MARK: - About
 
@@ -85,9 +85,9 @@ private struct NoticesSheet: View {
                 Text("Sodium Remote is built on this software.").font(.system(size: 12)).foregroundColor(Theme.text2)
             }
             LGroup {
-                NoticeRow(name: "Opus", license: "BSD-3-Clause")
+                NoticeRow(name: Text(verbatim: "Opus"), license: Text(verbatim: "BSD-3-Clause"))
                 RowDivider()
-                NoticeRow(name: String(localized: "Rust libraries"), license: "MIT, Apache-2.0, others")
+                NoticeRow(name: Text("Rust libraries"), license: Text("MIT, Apache-2.0, others"))
             }
             Text("The full text of every license is in the notices file.")
                 .font(.system(size: 12))
@@ -109,14 +109,14 @@ private struct NoticesSheet: View {
 
 @MainActor
 private struct NoticeRow: View {
-    let name: String
-    let license: String
+    let name: Text
+    let license: Text
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(verbatim: name).font(.system(size: 13)).foregroundColor(Theme.text)
+            name.font(.system(size: 13)).foregroundColor(Theme.text)
             Spacer(minLength: 8)
-            Text(verbatim: license).font(.system(size: 12.5)).foregroundColor(Theme.text2)
+            license.font(.system(size: 12.5)).foregroundColor(Theme.text2)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -172,7 +172,7 @@ struct ServerTab: View {
             }
             HStack(spacing: 10) {
                 LButton(title: "Add a server…", kind: .primary, icon: "plus", height: 32) { request = ServerSheetRequest(kind: .add) }
-                SettingsLink(String(localized: "How to run your own server")) { model.serverActions?.openServerGuide() }
+                SettingsLink("How to run your own server") { model.serverActions?.openServerGuide() }
                 Spacer(minLength: 8)
                 LButton(title: "Import…", kind: .secondary, height: 32) { model.serverActions?.importServerFile() }
             }
@@ -186,7 +186,7 @@ struct ServerTab: View {
         let problem = ServerProblem.parse(offlineError)
         return VStack(alignment: .leading, spacing: 16) {
             LGroup {
-                LRow(Text(verbatim: name), sub: Text(status(name)), lead: {
+                LRow(Text(verbatim: name), sub: status(name), lead: {
                     LeadTile(symbol: "server.rack", bg: Theme.accentSoft, fg: Theme.accentInk, size: 40)
                 }, trailing: {
                     HStack(spacing: 8) {
@@ -228,7 +228,7 @@ struct ServerTab: View {
                 LButton(title: "Import…", kind: .secondary) { model.serverActions?.importServerFile() }
                 LButton(title: "Export…", kind: .secondary) { model.serverActions?.exportServerFile() }
                 Spacer(minLength: 8)
-                SettingsLink(String(localized: "How to run your own server")) { model.serverActions?.openServerGuide() }
+                SettingsLink("How to run your own server") { model.serverActions?.openServerGuide() }
             }
             if !server.token.isEmpty {
                 Text("The exported file includes the enrollment token.")
@@ -269,12 +269,12 @@ struct ServerTab: View {
         return nil
     }
 
-    private func status(_ name: String) -> String {
+    private func status(_ name: String) -> Text {
         switch model.rendezvous {
-        case .online: return String(localized: "\(name) reachable")
-        case .offline: return String(localized: "\(name) unreachable")
-        case .connecting: return String(localized: "Checking…")
-        case .off: return ""
+        case .online: return Text("\(name) reachable")
+        case .offline: return Text("\(name) unreachable")
+        case .connecting: return Text("Checking…")
+        case .off: return Text(verbatim: "")
         }
     }
 
@@ -305,7 +305,7 @@ struct ComputersGroup: View {
         LGroup(title: "Computers") {
             LRow(Text("Show previews"),
                  sub: Text("Shows a picture of each computer in the list. The pictures stay on this computer, and turning this off deletes them.")) {
-                KitSwitch(String(localized: "Show previews"), isOn: $model.showPreviews)
+                KitSwitch("Show previews", isOn: $model.showPreviews)
             }
         }
     }

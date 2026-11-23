@@ -206,20 +206,20 @@ extension Codec {
 func disconnectedCard(_ r: DisconnectReason, host: String, os: HostOS? = nil) -> StreamCard {
     switch r {
     case .holdExpired:
-        return .disconnected(title: "Disconnected", body: "\(host)’s 2-minute hold ended, so it put the desk back. Reconnect starts a new session.")
+        return .disconnected(title: String(localized: "Disconnected"), body: String(localized: "\(host)’s 2-minute hold ended, so it put the desk back. Reconnect starts a new session."))
     case .hostShutdown:
-        return .disconnected(title: "Disconnected", body: "Remote stopped on \(host). Reconnect when it’s back.")
+        return .disconnected(title: String(localized: "Disconnected"), body: String(localized: "Remote stopped on \(host). Reconnect when it’s back."))
     case .hostSleeping:
-        return .disconnected(title: "\(host) went to sleep", body: "It told this Mac it was going to sleep. Reconnect once it’s awake.")
+        return .disconnected(title: String(localized: "\(host) went to sleep"), body: String(localized: "It told this Mac it was going to sleep. Reconnect once it’s awake."))
     case .endedAtComputer:
-        return .disconnected(title: "Ended at the computer", body: "Someone typed the password at \(host), which ends the remote session.")
+        return .disconnected(title: String(localized: "Ended at the computer"), body: String(localized: "Someone typed the password at \(host), which ends the remote session."))
     case .hostLocked:
         // The computer's screen is locked (generic Linux): the typed reason, consent and the saved choice stay on that computer.
         return .disconnected(title: String(localized: "\(host) is locked"), body: String(localized: "Unlock it at that computer, then reconnect."))
     case .user:
-        return .disconnected(title: "Disconnected", body: "\(host) ended the session.")
+        return .disconnected(title: String(localized: "Disconnected"), body: String(localized: "\(host) ended the session."))
     case .error(let e):
-        return .disconnected(title: "Disconnected", body: e)
+        return .disconnected(title: String(localized: "Disconnected"), body: e)
     case .controlOff:
         // The typed reason: "Allow remote control" is off on the host. No text is matched.
         return .controlOff(os: os)
@@ -227,7 +227,7 @@ func disconnectedCard(_ r: DisconnectReason, host: String, os: HostOS? = nil) ->
         // A Mac host without a permission turns this Mac away; the flags say which one (either or both).
         return .hostNeedsPermission(screenRecording: screenRecording, accessibility: accessibility)
     case .takenOver(let by):
-        return .takenOver(by: by, at: HostLine.when(Date()).replacingOccurrences(of: "today, ", with: ""))
+        return .takenOver(by: by, at: HostLine.whenShort(Date()))
     case .revoked:
         return .removed
     case .versionMismatch(let h, let c):

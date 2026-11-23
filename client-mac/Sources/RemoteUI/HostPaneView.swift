@@ -240,7 +240,7 @@ private struct Countdown: View {
         f.allowedUnits = [.minute, .second]
         f.zeroFormattingBehavior = .pad
         f.unitsStyle = .positional
-        return f.string(from: TimeInterval(seconds)) ?? "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
+        return f.string(from: TimeInterval(seconds)) ?? "\(seconds / 60):\(String(format: "%02d", seconds % 60))"  // i18n:ok digits
     }
 }
 
@@ -568,7 +568,7 @@ private struct Steps: View {
 
     private func step(_ n: Int, _ text: Text) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Text("\(n)")
+            Text(verbatim: String(n))
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(Theme.text)
                 .frame(width: 20, height: 20)

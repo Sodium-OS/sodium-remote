@@ -80,11 +80,9 @@ package_sodium-remote() {
   find "$pkgdir/usr/lib/sodium-remote/SodiumUI" -type f -name '*.so' -exec chmod 755 {} +
   find "$pkgdir/usr/lib/sodium-remote/SodiumUI" -type f ! -name '*.so' -exec chmod 644 {} +
 
-  # Translations (../share/sodium-remote/translations) and the icon theme the app carries (../share/sodium-remote/data).
+  # Translations (../share/sodium-remote/translations). The app's icons are built into it as Qt resources.
   install -d "$pkgdir/usr/share/sodium-remote/translations"
   install -m644 build/qm/*.qm "$pkgdir/usr/share/sodium-remote/translations/"
-  install -d "$pkgdir/usr/share/sodium-remote/data/icons"
-  cp -r app/data/icons/SodiumOS "$pkgdir/usr/share/sodium-remote/data/icons/SodiumOS"
 
   install -Dm644 build/i18n/desktop/org.sodiumos.Remote.desktop "$pkgdir/usr/share/applications/org.sodiumos.Remote.desktop"
   install -Dm644 app/windows/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/sodium-remote.svg"

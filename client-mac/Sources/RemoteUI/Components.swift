@@ -99,14 +99,23 @@ struct RemoteButtonStyle: ButtonStyle {
 
 /// A text button in one of the kit's kinds, with an optional SF Symbol.
 public struct KitButton: View {
-    let title: String
+    let title: Text
     let kind: ButtonKind
     let icon: String?
     let height: CGFloat
     let action: () -> Void
 
-    public init(_ title: String, kind: ButtonKind = .secondary, icon: String? = nil, height: CGFloat = 30, action: @escaping () -> Void) {
-        self.title = title
+    public init(_ title: LocalizedStringKey, kind: ButtonKind = .secondary, icon: String? = nil, height: CGFloat = 30, action: @escaping () -> Void) {
+        self.title = Text(title)
+        self.kind = kind
+        self.icon = icon
+        self.height = height
+        self.action = action
+    }
+
+    /// A title that is already text (a name, or a string translated elsewhere); never looked up.
+    public init(verbatim title: String, kind: ButtonKind = .secondary, icon: String? = nil, height: CGFloat = 30, action: @escaping () -> Void) {
+        self.title = Text(verbatim: title)
         self.kind = kind
         self.icon = icon
         self.height = height
@@ -119,7 +128,7 @@ public struct KitButton: View {
                 if let i = icon {
                     Image(systemName: i).font(.system(size: 13, weight: .medium))
                 }
-                Text(title).lineLimit(1)
+                title.lineLimit(1)
             }
         }
         .buttonStyle(RemoteButtonStyle(kind: kind, height: height))
@@ -129,12 +138,12 @@ public struct KitButton: View {
 /// A square icon button (the title bar's `wbtn`: 28 pt, radius 8).
 public struct IconButton: View {
     let symbol: String
-    let label: String
+    let label: LocalizedStringKey
     let on: Bool
     let action: () -> Void
     @State private var hovering = false
 
-    public init(_ symbol: String, label: String, on: Bool = false, action: @escaping () -> Void) {
+    public init(_ symbol: String, label: LocalizedStringKey, on: Bool = false, action: @escaping () -> Void) {
         self.symbol = symbol
         self.label = label
         self.on = on
@@ -165,12 +174,19 @@ public enum PillKind {
 
 /// kits.pill: a small rounded label, optionally with an icon.
 public struct StatusPill: View {
-    let text: String
+    let text: Text
     let kind: PillKind
     let icon: String?
 
-    public init(_ text: String, kind: PillKind, icon: String? = nil) {
-        self.text = text
+    public init(_ text: LocalizedStringKey, kind: PillKind, icon: String? = nil) {
+        self.text = Text(text)
+        self.kind = kind
+        self.icon = icon
+    }
+
+    /// A pill whose words are already text (a product name, or a string translated elsewhere).
+    public init(verbatim text: String, kind: PillKind, icon: String? = nil) {
+        self.text = Text(verbatim: text)
         self.kind = kind
         self.icon = icon
     }
@@ -186,7 +202,7 @@ public struct StatusPill: View {
         }
         return HStack(spacing: 4) {
             if let i = icon { Image(systemName: i).font(.system(size: 10, weight: .semibold)) }
-            Text(text).font(.system(size: 11.5, weight: .semibold)).lineLimit(1)
+            text.font(.system(size: 11.5, weight: .semibold)).lineLimit(1)
         }
         .foregroundColor(colors.1)
         .padding(.horizontal, 8)
@@ -374,7 +390,7 @@ public struct PathChip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Path: " + chip.text)
+        .accessibilityLabel(Text("Path: \(chip.text)"))
     }
 }
 
@@ -382,11 +398,11 @@ public struct PathChip: View {
 
 /// The kit's segmented control.
 public struct Segmented<T: Hashable>: View {
-    let options: [(T, String)]
+    let options: [(T, LocalizedStringKey)]
     @Binding var selection: T
     var disabled: Bool = false
 
-    public init(_ options: [(T, String)], selection: Binding<T>, disabled: Bool = false) {
+    public init(_ options: [(T, LocalizedStringKey)], selection: Binding<T>, disabled: Bool = false) {
         self.options = options
         self._selection = selection
         self.disabled = disabled
@@ -421,9 +437,9 @@ public struct Segmented<T: Hashable>: View {
 /// A switch in the accent.
 public struct KitSwitch: View {
     @Binding var isOn: Bool
-    let label: String
+    let label: LocalizedStringKey
 
-    public init(_ label: String, isOn: Binding<Bool>) {
+    public init(_ label: LocalizedStringKey, isOn: Binding<Bool>) {
         self.label = label
         self._isOn = isOn
     }
@@ -439,22 +455,36 @@ public struct KitSwitch: View {
 
 /// A Settings-style row: title and subtitle on the left, a control on the right.
 public struct KitRow<Trailing: View>: View {
-    let title: String
-    let sub: String?
+    let title: Text
+    let sub: Text?
     let trailing: Trailing
 
-    public init(_ title: String, sub: String? = nil, @ViewBuilder trailing: () -> Trailing) {
-        self.title = title
-        self.sub = sub
+    public init(_ title: LocalizedStringKey, sub: LocalizedStringKey? = nil, @ViewBuilder trailing: () -> Trailing) {
+        self.title = Text(title)
+        self.sub = sub.map { Text($0) }
+        self.trailing = trailing()
+    }
+
+    /// A subtitle built from a `Text` (interpolations, or a choice between messages).
+    public init(_ title: LocalizedStringKey, subText: Text?, @ViewBuilder trailing: () -> Trailing) {
+        self.title = Text(title)
+        self.sub = subText
+        self.trailing = trailing()
+    }
+
+    /// Rows whose words are already text: a name, or a string translated elsewhere.
+    public init(verbatim title: String, sub: String? = nil, @ViewBuilder trailing: () -> Trailing) {
+        self.title = Text(verbatim: title)
+        self.sub = sub.map { Text(verbatim: $0) }
         self.trailing = trailing()
     }
 
     public var body: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13)).foregroundColor(Theme.text)
+                title.font(.system(size: 13)).foregroundColor(Theme.text)
                 if let s = sub {
-                    Text(s).font(.system(size: 12)).foregroundColor(Theme.text2).fixedSize(horizontal: false, vertical: true)
+                    s.font(.system(size: 12)).foregroundColor(Theme.text2).fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 8)
@@ -469,19 +499,33 @@ public struct KitRow<Trailing: View>: View {
 /// A titled group: a 12 / 600 uppercase header, then a raised panel of rows
 /// with hairlines between them, then an optional footnote.
 public struct KitGroup<Content: View>: View {
-    let title: String
-    let foot: String?
+    let title: Text?
+    let foot: Text?
     let content: Content
 
-    public init(_ title: String = "", foot: String? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.foot = foot
+    public init(_ title: LocalizedStringKey? = nil, foot: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title.map { Text($0) }
+        self.foot = foot.map { Text($0) }
+        self.content = content()
+    }
+
+    /// A footnote built from a `Text` (interpolations, or a choice between messages).
+    public init(_ title: LocalizedStringKey? = nil, footText: Text?, @ViewBuilder content: () -> Content) {
+        self.title = title.map { Text($0) }
+        self.foot = footText
+        self.content = content()
+    }
+
+    /// A group whose title or footnote is already text (translated elsewhere).
+    public init(verbatimTitle: String?, verbatimFoot: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = verbatimTitle.map { Text(verbatim: $0) }
+        self.foot = verbatimFoot.map { Text(verbatim: $0) }
         self.content = content()
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !title.isEmpty {
+            if let title = title {
                 SectionHeader(title).padding(.horizontal, 4)
             }
             VStack(spacing: 0) {
@@ -490,7 +534,7 @@ public struct KitGroup<Content: View>: View {
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.raised2))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hair2, lineWidth: 1))
             if let f = foot {
-                Text(f).font(.system(size: 12)).foregroundColor(Theme.text2).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true)
+                f.font(.system(size: 12)).foregroundColor(Theme.text2).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -506,14 +550,19 @@ public struct RowDivider: View {
 
 /// An uppercase section header (12 / 600, text3).
 public struct SectionHeader: View {
-    let text: String
+    let text: Text
 
-    public init(_ text: String) {
+    public init(_ text: LocalizedStringKey) {
+        self.text = Text(text)
+    }
+
+    public init(_ text: Text) {
         self.text = text
     }
 
     public var body: some View {
-        Text(text.uppercased())
+        text
+            .textCase(.uppercase)
             .font(.system(size: 12, weight: .semibold))
             .tracking(0.3)
             .foregroundColor(Theme.text3)
@@ -561,14 +610,14 @@ public struct Spinner: View {
 
 /// A keycap (kits.kbd).
 public struct Keycap: View {
-    let text: String
+    let text: String  // a key's name; shown as is
 
     public init(_ text: String) {
         self.text = text
     }
 
     public var body: some View {
-        Text(text)
+        Text(verbatim: text)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(Theme.menuText)
             .frame(minWidth: 22)

@@ -156,7 +156,8 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
             Log.info("this Mac is \(model.thisMacCode) (\(c.id()))")
         } catch {
             Log.error("the core didn't start: \(error)")
-            model.rendezvous = .offline("Remote couldn’t start: \(error)")
+            let detail = "\(error)"
+            model.rendezvous = .offline(String(localized: "Remote couldn’t start: \(detail)"))
         }
     }
 
@@ -328,8 +329,8 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
         guard let s = StreamSession(app: self, hostID: hostID, name: displayName(hostID), core: c, statsDir: store.statsDir,
                                     keep: model.settings.keepSessions) else {
             let a = NSAlert()
-            a.messageText = "Remote can’t show the stream"
-            a.informativeText = "Metal or VideoToolbox isn’t available on this Mac."
+            a.messageText = String(localized: "Remote can’t show the stream")
+            a.informativeText = String(localized: "Metal or VideoToolbox isn’t available on this Mac.")
             a.runModal()
             return
         }
@@ -511,7 +512,7 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
             if reason.contains("attempts") || reason.contains("too_many") { return .tooMany }
             if reason.contains("expired") { return .expired }
             if reason.contains("not found") || reason.contains("not_found") { return .noComputer }
-            return .failed("The computer closed its pairing window. Make a new code there.")
+            return .failed(String(localized: "The computer closed its pairing window. Make a new code there."))
         case .Failed(let message):
             return .failed(message)
         default:
@@ -552,9 +553,9 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
     func askTakeover(by: String, session s: StreamSession) {
         guard let w = s.window.window, dialogSheet == nil else { return }
         let vc = DialogUI.makeController(
-            symbol: "laptopcomputer", title: "In use by \(by). Take over?",
-            body: "\(by) is streaming \(s.model.hostName) right now. Taking over ends that stream; nothing on the computer closes.",
-            cancel: "Cancel", confirm: "Take over", confirmKind: .primary,
+            symbol: "laptopcomputer", title: String(localized: "In use by \(by). Take over?"),
+            body: String(localized: "\(by) is streaming \(s.model.hostName) right now. Taking over ends that stream; nothing on the computer closes."),
+            cancel: String(localized: "Cancel"), confirm: String(localized: "Take over"), confirmKind: .primary,
             onCancel: { [weak self, weak s] in
                 self?.endDialog(on: w)
                 s?.closeCard()
@@ -644,8 +645,8 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
         settingsDone()
         guard let s = session, s.connected else {
             let a = NSAlert()
-            a.messageText = "Connect first"
-            a.informativeText = "The latency test clicks the test surface on the computer (spikes/remote-e2e) and times its flip to this screen. Start the test surface there, connect, then run the test."
+            a.messageText = String(localized: "Connect first")
+            a.informativeText = String(localized: "The latency test clicks the test surface on the computer (spikes/remote-e2e) and times its flip to this screen. Start the test surface there, connect, then run the test.")
             a.runModal()
             return
         }
@@ -667,24 +668,25 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
 
     func showAWDLHelp() {
         let a = NSAlert()
-        a.messageText = "AirDrop and Handoff on Wi-Fi"
-        a.informativeText = "While they are on, the Wi-Fi radio hops channels and can hold packets back for up to 90 ms. Turn off AirDrop (Control Centre › AirDrop › No One) and Handoff (System Settings › General › AirDrop & Handoff) while streaming, or run `sudo ifconfig awdl0 down` until the next restart."
+        a.messageText = String(localized: "AirDrop and Handoff on Wi-Fi")
+        a.informativeText = String(localized: "While they are on, the Wi-Fi radio hops channels and can hold packets back for up to 90 ms. Turn off AirDrop (Control Center › AirDrop › No One) and Handoff (System Settings › General › AirDrop & Handoff) while streaming, or run `sudo ifconfig awdl0 down` until the next restart.")
         a.runModal()
     }
 
     func showHelp(anchor: String) {
         let a = NSAlert()
         if anchor == "update" {
-            a.messageText = "Updating Sodium Remote"
-            a.informativeText = "Sodium Remote doesn’t check for updates. Build the new version of the app (BUILD.md in the source) and install it on both computers. Each release speaks its own protocol version and the one before it."
+            a.messageText = String(localized: "Updating Sodium Remote")
+            a.informativeText = String(localized: "Sodium Remote doesn’t check for updates. Build the new version of the app (BUILD.md in the source) and install it on both computers. Each release speaks its own protocol version and the one before it.")
         } else {
             a.messageText = "Sodium Remote"
-            a.informativeText = "Sodium Remote streams another computer to this Mac. ⌘ is the computer’s Win key. In full screen every key goes to the computer; ⌘Esc leaves full screen and ⌘⇧Esc disconnects. Remote’s own shortcuts are ⌃⌥⌘ + a key: F full screen, S stats, M the in-stream menu, D disconnect, K release the keyboard, L lock."
+            a.informativeText = String(localized: "Sodium Remote streams another computer to this Mac. ⌘ is the computer’s Win key. In full screen every key goes to the computer; ⌘Esc leaves full screen and ⌘⇧Esc disconnects. Remote’s own shortcuts are ⌃⌥⌘ + a key: F full screen, S stats, M the in-stream menu, D disconnect, K release the keyboard, L lock.")
         }
         a.runModal()
     }
 
     func copyDiagnostics() {
+        // i18n:off diagnostics are for bug reports, in English
         var lines: [String] = []
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
@@ -697,6 +699,7 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
         if let s = session { lines.append(StreamUI.statsText(s.model.hud)) }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        // i18n:on
     }
 
     // MARK: - ⌘Tab and friends (the event tap)

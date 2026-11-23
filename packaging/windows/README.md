@@ -34,11 +34,11 @@ FFmpeg flags: `--disable-gpl --disable-nonfree --disable-version3 --disable-prog
 - **Encoders:** `{h264,hevc,av1}_{mf,nvenc,amf,qsv}`. No software encoder: host-desktop uses OpenH264 directly, from Cisco's DLL.
 - **Colour conversion:** `swscale`.
 
-The full configure line is in `avcodec_configuration()`, which the smoke test prints. `-static-libgcc -static-libstdc++` is used, so the only mingw runtime DLL the package needs is `libwinpthread-1.dll` (MIT/BSD-style license, from `/usr/x86_64-w64-mingw32/bin`; `smoke/build.sh` copies it next to the executable).
+The full configure line is in `avcodec_configuration()`, which the smoke test prints. FFmpeg is linked with `-static-libgcc -static-libstdc++`, so the FFmpeg DLLs need only `libwinpthread-1.dll` (MIT/BSD-style license, from `/usr/x86_64-w64-mingw32/bin`; `smoke/build.sh` copies it next to the executable). The app package also carries `libgcc_s_seh-1.dll` and `libstdc++-6.dll`: Qt's DLLs import them (GPL-3.0 with the GCC Runtime Library Exception; see "Licenses of the shipped files").
 
 ## Licenses
 
-- FFmpeg is built without any GPL or nonfree part (`avcodec_license()` reports "LGPL version 2.1 or later") and **linked dynamically** (DLLs next to the executables, replaceable by the user), which is what the LGPL asks. Qt will be dynamically linked as well. The license texts are in `licenses/` and go into every Windows package, with the source locations above.
+- FFmpeg is built without any GPL or nonfree part (`avcodec_license()` reports "LGPL version 2.1 or later") and **linked dynamically** (DLLs next to the executables, replaceable by the user), which is what the LGPL asks. Qt is dynamically linked as well. The license texts are in `licenses/` (Qt's are copied from Qt's own LICENSES folder at stage time) and go into every Windows package; the release carries the exact Qt and FFmpeg source tarballs as assets (below).
 - **H.264 and HEVC patents are a separate matter** from copyright licenses (see `LICENSING.md`). Cisco's royalty coverage for OpenH264 applies to the binaries Cisco itself builds and distributes, so Sodium Remote no longer builds or ships OpenH264: see the next section. The hardware encoders (NVENC, AMF, QSV, Media Foundation) rely on the GPU vendor's and Windows' own licenses. `licenses/` holds Cisco's required notice (`OpenH264-Cisco-NOTICE.txt`: "OpenH264 Video Codec provided by Cisco Systems, Inc.") and the BSD-2 text of the OpenH264 headers that are compiled in (`openh264-headers-BSD-2-Clause.txt`).
 
 ## OpenH264: Cisco's DLL, fetched on first need
@@ -55,7 +55,7 @@ Qt's official mingw build uses msvcrt, our toolchain UCRT; the verdict above (on
 
 | Script | What it does |
 |---|---|
-| `build-qt-ucrt.sh` | CI recipe: qtbase, qtshadertools, qtdeclarative and qtsvg (6.12.0, the modules the app and the vendored Sodium UI use) from source with the same UCRT GCC (`-mcrtdll=ucrt`), host tools from the Linux Qt at `/usr` (`QT_HOST_PATH`, same version), into `remote/build/qt-win-ucrt/6.12.0/` (use it as `QT_WIN_ROOT`). Qt is built without ICU, as Qt's own Windows builds are (`QT_ICU=1` links it to `build-icu.sh`'s ICU). Sources: the official submodule tarballs, pinned by SHA-256 in the script; with the placeholder pins it refuses to run (a maintainer or CI runs `build-qt-ucrt.sh --print-pins`), or `QT_SRC_DIR` points at an unpacked tree. Hours and several GB: not run by hand here. `d3dcompiler_47.dll` and `opengl32sw.dll` still come from `fetch-qt.sh`. |
+| `build-qt-ucrt.sh` | CI recipe: qtbase, qtshadertools, qtdeclarative and qtsvg (6.12.0, the modules the app and the vendored Sodium UI use) from source with the same UCRT GCC (`-mcrtdll=ucrt`), host tools from the Linux Qt at `/usr` (`QT_HOST_PATH`, same version), into `remote/build/qt-win-ucrt/6.12.0/` (use it as `QT_WIN_ROOT`). Qt is built without ICU, as Qt's own Windows builds are (`QT_ICU=1` links it to `build-icu.sh`'s ICU). Sources: the official submodule tarballs, pinned by SHA-256 in the script; with the placeholder pins it refuses to run (a maintainer or CI runs `build-qt-ucrt.sh --print-pins`), or `QT_SRC_DIR` points at an unpacked tree. Hours and several GB: not run by hand here. `opengl32sw.dll` and Qt's SBOM files (for the attributions) still come from `fetch-qt.sh`. `build-qt-ucrt.sh --sources DIR` only downloads the four verified source tarballs into `DIR` (the release attaches them). |
 | `check-no-msvcrt.sh [DIR]` | The gate: `objdump -p` over every `.exe` and `.dll` under `DIR` (default `remote/build/win-app/SodiumRemote`); lists each file importing `msvcrt.dll` (any case) and fails, passes when none do. `--selftest` builds a UCRT and an msvcrt program in `remote/build/crt-selftest` and checks that only the second fails (Arch's toolchain is UCRT only, so the msvcrt one is linked by hand against `libmsvcrt-os.a`). With Qt's official DLLs the gate fails; it passes once the package uses `build-qt-ucrt.sh`'s Qt. |
 
 ## Smoke test
@@ -74,7 +74,7 @@ remote/packaging/windows/gallery-shots.sh           # English, German, Japanese,
 
 | Script | What it does |
 |---|---|
-| `fetch-qt.sh` | Qt 6.12.0's official `mingw_64` build from `download.qt.io`'s online repository (the plain 7z archives; no installer, no helper tool): qtbase, qtdeclarative, qtsvg, qtshadertools, `d3dcompiler_47.dll` and `opengl32sw.dll`, 170 MB downloaded, 1.4 GB unpacked into `remote/build/qt-win/6.12.0/mingw_64/`. Each archive is checked against Qt's published `.sha1` and a SHA-256 pinned in the script. |
+| `fetch-qt.sh` | Qt 6.12.0's official `mingw_64` build from `download.qt.io`'s online repository (the plain 7z archives; no installer, no helper tool): qtbase, qtdeclarative, qtsvg, qtshadertools and `opengl32sw.dll`, 170 MB downloaded, 1.4 GB unpacked into `remote/build/qt-win/6.12.0/mingw_64/`. Each archive is checked against Qt's published `.sha1` and a SHA-256 pinned in the script. |
 | `build-icu.sh` | ICU 78.3 (the Linux desktop's version) from the official release, SHA-256 pinned: a native build first (its tools make the data), then the mingw cross build. Shared DLLs `icuuc78.dll`, `icuin78.dll`, `icudt78.dll` (33 MB of data) into `win-deps/bin`. It passes `--build` so `configure` never runs its test programs (with wine in `binfmt_misc` it would, in `~/.wine`). About 30 minutes on 6 jobs. |
 | `toolchain-mingw.cmake` | Arch's mingw-w64 GCC, Qt for Windows and `win-deps` on the search paths, the Linux Qt (`QT_HOST_PATH=/usr`, the same version, 6.12.0) for `moc`, `rcc` and `qsb`. |
 | `build-sodiumui.sh` | Runs the above, configures and builds `ui/` (`SODIUMUI_PORTABLE`) and stages it. |
@@ -92,7 +92,7 @@ Qt's own 13.1 runtime archive is not used. If a Qt module ever needs another sta
 
 ### What is in the package (`remote/build/win-gallery/`)
 
-`sodiumui-gallery.exe`; the Qt, ICU and GCC DLLs beside it; `platforms/qwindows.dll`, `imageformats/`, `iconengines/`; `qml/` (10 Qt modules for the gallery; the app's package adds `QtQuick/Dialogs` and `QtQuick/Dialogs/quickimpl`, and `Qt6QuickDialogs2*.dll` comes in with the DLL closure); `SodiumUI/` (QML and `sodiumuinative.dll`); `gallery/`; `fonts/` (Inter, JetBrains Mono, Noto Sans CJK: OFL, texts in `licenses/`); `data/icons/SodiumOS/`; `translations/`; `d3dcompiler_47.dll` and `opengl32sw.dll`. About 195 MB, 69 MB of it fonts and 33 MB ICU data. Qt Quick draws with Direct3D 11 (its shaders go through `qsb` for HLSL and the DLL compiles them); `opengl32sw.dll` is the fallback for a machine with no usable adapter (`QSG_RHI_BACKEND=opengl QT_OPENGL=software`), which is also how the wine runs draw (wined3d on this PC's headless Mesa crashes in LLVM).
+`sodiumui-gallery.exe`; the Qt, ICU and GCC DLLs beside it; `platforms/qwindows.dll`, `imageformats/`, `iconengines/`; `qml/` (10 Qt modules for the gallery; the app's package adds `QtQuick/Dialogs` and `QtQuick/Dialogs/quickimpl`, and `Qt6QuickDialogs2*.dll` comes in with the DLL closure); `SodiumUI/` (QML and `sodiumuinative.dll`); `gallery/`; `fonts/` (Inter, JetBrains Mono, Noto Sans CJK: OFL, texts in `licenses/`); `data/icons/SodiumOS/`; `translations/`; `opengl32sw.dll`. About 195 MB, 69 MB of it fonts and 33 MB ICU data. Qt Quick draws with Direct3D 11 (its shaders go through `qsb` for HLSL and Windows' own `d3dcompiler_47.dll` in System32 compiles them: the package does not ship Microsoft's DLL, so there are no redistribution terms to carry); `opengl32sw.dll` is the fallback for a machine with no usable adapter (`QSG_RHI_BACKEND=opengl QT_OPENGL=software`), which is also how the wine runs draw (wined3d on this PC's headless Mesa crashes in LLVM).
 
 Qt is LGPL-3 here: dynamic linking, the DLLs replaceable; its license texts go into the package with the app's.
 
@@ -101,3 +101,24 @@ Qt is LGPL-3 here: dynamic linking, the DLLs replaceable; its license texts go i
 `stage-app.sh [--no-ui] [--no-zip]` builds `remote-qt` (Rust), the Qt app (`packaging/windows/app/CMakeLists.txt`, which pulls `app/`), the ten language catalogues, stages `remote/build/win-app/SodiumRemote/` and writes `remote/build/SodiumRemote-<version>-win64.zip` with the licenses in `licenses/`. `ICONS` points at another icon folder (default `app/data/icons/sodium-remote`).
 
 VM helpers are in `remote/tools/vm/windows-app/`: `redeploy.sh` (stage and copy to the guest's `windows-app` folder, `$REMOTE_VM_GUEST_DIR`), `run-app.ps1` (starts the app in session 1 through a scheduled task; `-Lang`, `-Theme`, `-AppArgs`), `qmp.py` (keys and pointer through QMP). Hold `win.sh lock windows-app` first.
+
+## Licenses of the shipped files
+
+`stage-app.sh` ends with `package-licenses.py check`, which fails when a DLL or exe in the package has no rule here or its text is missing from `licenses/`, or when `d3dcompiler_47.dll` is in the package. It also appends every text to `THIRD-PARTY-NOTICES.md` (after cargo-about's Rust list), which the app's "Third-party notices" sheet opens. The same table is written into the zip's `licenses/README.txt`.
+
+| File | License | Text in `licenses/` |
+|---|---|---|
+| `Qt6*.dll`, `platforms/`, `imageformats/`, `iconengines/`, `qml/**/*.dll` | LGPL-3.0 (Qt 6.12; dynamic) | `Qt/LGPL-3.0-only.txt`, `Qt/GPL-3.0-only.txt`, the other texts in `Qt/`, `Qt-third-party-attributions.txt` |
+| `avcodec-63.dll`, `avutil-61.dll`, `swscale-10.dll` | LGPL-2.1-or-later (FFmpeg 9.0.2) | `FFmpeg-LGPL-2.1.txt`, `FFmpeg-LICENSE.md` |
+| `icuuc78.dll`, `icuin78.dll`, `icudt78.dll` | Unicode license | `ICU-LICENSE.txt` |
+| `libgcc_s_seh-1.dll`, `libstdc++-6.dll` | GPL-3.0 with the GCC Runtime Library Exception 3.1 | `GCC-runtime-GPL-3.0.txt`, `GCC-Runtime-Library-Exception-3.1.txt` |
+| `libwinpthread-1.dll`, the MinGW-w64 run-time in the exe | MIT and BSD-style | `MinGW-w64-runtime-and-winpthreads.txt` |
+| `opengl32sw.dll` | MIT (Mesa 11.2.2), NCSA (LLVM 3.6.2) | `Mesa-opengl32sw-NOTICE.txt` |
+| `SodiumRemote.exe`: Opus, libvpl, nv-codec-headers, AMF, OpenH264 headers | BSD-3, MIT, MIT, MIT, BSD-2 | `opus-BSD-3-Clause.txt`, `libvpl-MIT.txt`, `nv-codec-headers-MIT.txt`, `AMF-MIT.txt`, `openh264-headers-BSD-2-Clause.txt`, `OpenH264-Cisco-NOTICE.txt` |
+| `fonts/` | SIL OFL 1.1 | `Inter-OFL.txt`, `JetBrainsMono-OFL.txt`, `NotoSansCJK-OFL.txt` |
+| `SodiumRemote.exe`, `sodiumuinative.dll`, Rust libraries | AGPL-3.0-only; the Rust libraries' own | `LICENSE`, `LICENSING.md`, `THIRD-PARTY-NOTICES.md` |
+| `d3dcompiler_47.dll` | not shipped (Microsoft's; Windows 10 and 11 have it in System32, where Qt loads it) | none |
+
+Qt's texts come from Qt's LICENSES folder (`/usr/share/licenses/qt6-base` from the Linux Qt package; `QT_LICENSES` or `--qt-licenses` names another), and the attributions from the `*.spdx` files of Qt's Windows build (`sbom/`); staging stops when either is missing. A missing font license stops it too.
+
+LGPL sources: the release attaches `qtbase-`, `qtshadertools-`, `qtdeclarative-` and `qtsvg-everywhere-src-6.12.0.tar.xz` and `ffmpeg-9.0.2.tar.xz`, the archives the scripts build from (made by `build-qt-ucrt.sh --sources DIR` and `FFMPEG_SOURCE_DIR=DIR build-deps.sh ffmpeg-source`; both check the pinned SHA-256). The zip's `licenses/README.txt` says where they are.

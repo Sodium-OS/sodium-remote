@@ -28,16 +28,16 @@ enum SettingsMetrics {
 enum SettingsTab: CaseIterable, Hashable {
     case display, quality, input, home, audio, server, advanced, about
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
         case .display: return "Display"
         case .quality: return "Quality"
         case .input: return "Input"
         case .home: return "Home monitor"
         case .audio: return "Audio"
-        case .server: return String(localized: "Server")
+        case .server: return "Server"
         case .advanced: return "Advanced"
-        case .about: return String(localized: "About")
+        case .about: return "About"
         }
     }
 
@@ -221,15 +221,23 @@ struct SettingsRadioDot: View {
 /// A radio row: dot, title and subtitle (a tap chooses it), then a control.
 @MainActor
 private struct SettingsRadioRow<Trailing: View>: View {
-    let title: String
-    let sub: String?
+    let title: LocalizedStringKey
+    let sub: Text?
     let on: Bool
     let select: () -> Void
     let trailing: Trailing
 
-    init(_ title: String, sub: String? = nil, on: Bool, select: @escaping () -> Void, @ViewBuilder trailing: () -> Trailing) {
+    init(_ title: LocalizedStringKey, sub: LocalizedStringKey? = nil, on: Bool, select: @escaping () -> Void, @ViewBuilder trailing: () -> Trailing) {
         self.title = title
-        self.sub = sub
+        self.sub = sub.map { Text($0) }
+        self.on = on
+        self.select = select
+        self.trailing = trailing()
+    }
+
+    init(_ title: LocalizedStringKey, subText: Text?, on: Bool, select: @escaping () -> Void, @ViewBuilder trailing: () -> Trailing) {
+        self.title = title
+        self.sub = subText
         self.on = on
         self.select = select
         self.trailing = trailing()
@@ -242,7 +250,7 @@ private struct SettingsRadioRow<Trailing: View>: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.system(size: 13)).foregroundColor(Theme.text)
                     if let s = sub {
-                        Text(s).font(.system(size: 12)).foregroundColor(Theme.text2).fixedSize(horizontal: false, vertical: true)
+                        s.font(.system(size: 12)).foregroundColor(Theme.text2).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: 8)
@@ -264,11 +272,11 @@ private struct SettingsRadioRow<Trailing: View>: View {
 /// A small accent link ("Allow…", "Add a key…").
 @MainActor
 struct SettingsLink: View {
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String?
     let action: () -> Void
 
-    init(_ title: String, symbol: String? = nil, action: @escaping () -> Void) {
+    init(_ title: LocalizedStringKey, symbol: String? = nil, action: @escaping () -> Void) {
         self.title = title
         self.symbol = symbol
         self.action = action
@@ -293,7 +301,7 @@ struct SettingsLink: View {
 @MainActor
 private struct SettingsNoteLine: View {
     let symbol: String
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -329,31 +337,31 @@ private struct ResolutionGroup: View {
         PixelSize(width: 2560, height: 1600),
     ]
 
-    private var windowSub: String? {
+    private var windowSub: Text? {
         let w = model.settingsInfo.windowPixels
-        return w.isEmpty ? nil : "Now \(w); follows every resize"
+        return w.isEmpty ? nil : Text("Now \(w); follows every resize")
     }
 
-    private var displaySub: String? {
+    private var displaySub: Text? {
         let d = model.settingsInfo.displayPixels
-        return d.isEmpty ? nil : "\(d), the full screen size"
+        return d.isEmpty ? nil : Text("\(d), the full screen size")
     }
 
     var body: some View {
         let res: ResolutionChoice = model.settings.resolution
         return KitGroup("Resolution") {
-            SettingsRadioRow("Match the window", sub: windowSub, on: res == .matchWindow, select: { model.settings.resolution = .matchWindow }) {
+            SettingsRadioRow("Match the window", subText: windowSub, on: res == .matchWindow, select: { model.settings.resolution = .matchWindow }) {
                 EmptyView()
             }
             RowDivider()
-            SettingsRadioRow("Match the display", sub: displaySub, on: res == .matchDisplay, select: { model.settings.resolution = .matchDisplay }) {
+            SettingsRadioRow("Match the display", subText: displaySub, on: res == .matchDisplay, select: { model.settings.resolution = .matchDisplay }) {
                 EmptyView()
             }
             RowDivider()
             SettingsRadioRow("A fixed size", on: res == .fixed, select: { model.settings.resolution = .fixed }) {
                 Picker("Fixed size", selection: $model.settings.fixedSize) {
                     ForEach(ResolutionGroup.fixedSizes, id: \.self) { s in
-                        Text("\(s.width) × \(s.height)").tag(s)
+                        Text(verbatim: "\(s.width) × \(s.height)").tag(s)
                     }
                 }
                 .labelsHidden()
@@ -431,21 +439,21 @@ private struct DisplayOptionsGroup: View {
         )
     }
 
-    private var foot: String {
+    private var foot: Text {
         let s = model.settingsInfo.scaleText
-        let scale = s.isEmpty ? "this Mac’s scale" : s
-        return "UI size Match Mac runs the computer at \(scale), so text is the size of this Mac’s own."
+        if s.isEmpty { return Text("UI size Match Mac runs the computer at this Mac’s scale, so text is the size of this Mac’s own.") }
+        return Text("UI size Match Mac runs the computer at \(s), so text is the size of this Mac’s own.")
     }
 
     var body: some View {
-        let rateOptions: [(Int, String)] = DisplayOptionsGroup.rates.map { ($0, String($0)) }
-        let sizeOptions: [(UISizeChoice, String)] = [
+        let rateOptions: [(Int, LocalizedStringKey)] = DisplayOptionsGroup.rates.map { ($0, LocalizedStringKey(String($0))) }
+        let sizeOptions: [(UISizeChoice, LocalizedStringKey)] = [
             (UISizeChoice.matchMac, "Match Mac"),
             (UISizeChoice.larger, "Larger"),
             (UISizeChoice.smaller, "Smaller"),
             (UISizeChoice.sameAsDesk, "Same as desk"),
         ]
-        return KitGroup(foot: foot) {
+        return KitGroup(footText: foot) {
             KitRow("Fixed resolution", sub: "Keep the computer’s size when this window resizes; the picture scales") {
                 KitSwitch("Fixed resolution", isOn: $model.settings.fixedResolution)
             }
@@ -473,7 +481,7 @@ private struct DisplayOptionsGroup: View {
 private struct QualityTab: View {
     @ObservedObject var model: AppModel
 
-    private var codecSub: String {
+    private var codecSub: LocalizedStringKey {
         if model.settings.codec == .hevc {
             return "HEVC 4:2:0: fewer bytes than 4:4:4"
         }
@@ -483,8 +491,8 @@ private struct QualityTab: View {
     }
 
     var body: some View {
-        let codecs: [(CodecPick, String)] = [(CodecPick.auto, "Auto"), (CodecPick.hevc, "HEVC"), (CodecPick.av1, "AV1")]
-        let bandwidth: [(Bool, String)] = [(false, "Auto"), (true, "Limit")]
+        let codecs: [(CodecPick, LocalizedStringKey)] = [(CodecPick.auto, "Auto"), (CodecPick.hevc, "HEVC"), (CodecPick.av1, "AV1")]
+        let bandwidth: [(Bool, LocalizedStringKey)] = [(false, "Auto"), (true, "Limit")]
         let limited: Bool = model.settings.bandwidthLimited
         return VStack(alignment: .leading, spacing: 16) {
             KitGroup {
@@ -503,8 +511,8 @@ private struct QualityTab: View {
                 }
             }
             KitGroup("On slow networks", foot: "Decided: text sharp when still, motion smooth when moving; quality drops before frame rate.") {
-                KitRow("Remote-optimised look", sub: "Under 15 Mb/s the computer swaps live blur for a cached one and pauses grain; above 25 Mb/s it comes back") {
-                    KitSwitch("Remote-optimised look", isOn: $model.settings.optimisedLook)
+                KitRow("Remote-optimized look", sub: "Under 15 Mb/s the computer swaps live blur for a cached one and pauses grain; above 25 Mb/s it comes back") {
+                    KitSwitch("Remote-optimized look", isOn: $model.settings.optimisedLook)
                 }
             }
         }
@@ -536,8 +544,8 @@ private struct InputTab: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        let keyboards: [(KeyboardMode, String)] = [(KeyboardMode.mac, "Mac keys"), (KeyboardMode.pc, "PC keys")]
-        let keyboardSub: String = model.settings.keyboard == .mac ? "⌘ acts as Ctrl, as in the table below" : "⌘ is Win; keys pass through"
+        let keyboards: [(KeyboardMode, LocalizedStringKey)] = [(KeyboardMode.mac, "Mac keys"), (KeyboardMode.pc, "PC keys")]
+        let keyboardSub: LocalizedStringKey = model.settings.keyboard == .mac ? "⌘ acts as Ctrl, as in the table below" : "⌘ is Win; keys pass through"
         return VStack(alignment: .leading, spacing: 16) {
             KitGroup {
                 KitRow("Keyboard", sub: keyboardSub) {
@@ -555,7 +563,7 @@ private struct InputMethodGroup: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        let methods: [(InputMethodChoice, String)] = [(InputMethodChoice.mac, "This Mac’s"), (InputMethodChoice.computer, "The computer’s")]
+        let methods: [(InputMethodChoice, LocalizedStringKey)] = [(InputMethodChoice.mac, "This Mac’s"), (InputMethodChoice.computer, "The computer’s")]
         return KitGroup {
             KitRow("Input method", sub: "Type Chinese with this Mac’s input method; its candidates show at the caret") {
                 Segmented(methods, selection: $model.settings.inputMethod)
@@ -585,7 +593,7 @@ private struct SettingsShortcutsRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Send system shortcuts").font(.system(size: 13)).foregroundColor(Theme.text)
                 HStack(spacing: 6) {
-                    Text("⌘Tab, ⌘Space and the like · Accessibility: \(allowed ? "allowed" : "not allowed")")
+                    (allowed ? Text("⌘Tab, ⌘Space and the like · Accessibility: allowed") : Text("⌘Tab, ⌘Space and the like · Accessibility: not allowed"))
                         .font(.system(size: 12))
                         .foregroundColor(Theme.text2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -619,7 +627,7 @@ private struct HomeTab: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        let remember: [(RememberChoice, String)] = [(RememberChoice.thisMac, "This Mac"), (RememberChoice.thisSession, "This session")]
+        let remember: [(RememberChoice, LocalizedStringKey)] = [(RememberChoice.thisMac, "This Mac"), (RememberChoice.thisSession, "This session")]
         let mode: HomeMode = model.settings.homeMode
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
@@ -650,8 +658,8 @@ private struct HomeTab: View {
 @MainActor
 private struct SettingsHomeCard: View {
     let kind: HomeMode
-    let title: String
-    let sub: String
+    let title: LocalizedStringKey
+    let sub: LocalizedStringKey
     let on: Bool
     let select: () -> Void
 
@@ -752,7 +760,7 @@ private struct AudioTab: View {
                 Picker("Output", selection: $model.settings.outputDevice) {
                     Text("System default").tag(Optional<String>.none)
                     ForEach(model.settingsInfo.outputs) { o in
-                        Text(o.name).tag(Optional(o.uid))
+                        Text(verbatim: o.name).tag(Optional(o.uid))
                     }
                 }
                 .labelsHidden()
@@ -796,13 +804,13 @@ private struct RelayGroup: View {
 
     var body: some View {
         let down: Bool = { if case .offline = model.rendezvous { return true } else { return false } }()
-        return KitGroup(String(localized: "Network")) {
-            KitRow(String(localized: "Relay"),
-                   sub: down ? String(localized: "\(server) is unreachable. Automatic uses the other paths.")
-                             : String(localized: "\(server). Always through the relay applies from the next connection.")) {
-                Picker(String(localized: "Relay"), selection: $model.settings.relay) {
-                    Text(String(localized: "Automatic: the fastest path")).tag(RelayChoice.automatic)
-                    Text(String(localized: "Always through the relay")).tag(RelayChoice.alwaysRelay)
+        return KitGroup("Network") {
+            KitRow("Relay",
+                   subText: down ? Text("\(server) is unreachable. Automatic uses the other paths.")
+                                 : Text("\(server). Always through the relay applies from the next connection.")) {
+                Picker("Relay", selection: $model.settings.relay) {
+                    Text("Automatic: the fastest path").tag(RelayChoice.automatic)
+                    Text("Always through the relay").tag(RelayChoice.alwaysRelay)
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)

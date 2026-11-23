@@ -24,9 +24,9 @@ packaging/windows/build-deps.sh
 packaging/windows/build-icu.sh
 
 # Qt for Windows. Release builds use Qt built from source on UCRT, so that no file in the package needs msvcrt:
-packaging/windows/fetch-qt.sh                  # Qt's own build: d3dcompiler_47.dll and opengl32sw.dll come from it
+packaging/windows/fetch-qt.sh                  # Qt's own build: opengl32sw.dll (and the SBOM files for the Qt attributions) come from it
 packaging/windows/build-qt-ucrt.sh             # qtbase, qtshadertools, qtdeclarative, qtsvg 6.12.0 -> build/qt-win-ucrt/6.12.0
-cp build/qt-win/6.12.0/mingw_64/{d3dcompiler_47.dll,opengl32sw.dll} build/qt-win-ucrt/6.12.0/
+cp build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
 export QT_WIN_ROOT=$PWD/build/qt-win-ucrt/6.12.0
 
 # Everything else: Sodium UI, the Rust engine, the app, the translations, the package.
@@ -39,9 +39,9 @@ packaging/windows/check-no-msvcrt.sh build/win-app/SodiumRemote
 The result:
 
 - `build/win-app/SodiumRemote/` is the staged program with its DLLs, QML, fonts, icons, translations and the license texts in `licenses/`;
-- `build/SodiumRemote-<version>-win64.zip` is the same, zipped. It is portable: there is no installer, and it is not code-signed. (The release also puts `THIRD-PARTY-NOTICES.md`, made by `cargo about`, into the folder before zipping; see [releasing](../releasing.md).)
+- `build/SodiumRemote-<version>-win64.zip` is the same, zipped. It is portable: there is no installer, and it is not code-signed. (`stage-app.sh` also writes `THIRD-PARTY-NOTICES.md`: `cargo about`'s list of the Rust libraries followed by the text of every other license, and fails when a shipped DLL lacks its text; see [releasing](../releasing.md).)
 
-`stage-app.sh` options: `--no-ui` (reuse an earlier Sodium UI build) and `--no-zip`. `JOBS` sets the parallelism.
+`stage-app.sh` options: `--no-ui` (reuse an earlier Sodium UI build), `--no-zip` and `--no-notices` (skip `cargo about`, for a local run without it). Qt's license texts come from `/usr/share/licenses/qt6-base` (`QT_LICENSES` names another folder). `JOBS` sets the parallelism.
 
 ### The software H.264 encoder
 

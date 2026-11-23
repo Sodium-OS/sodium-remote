@@ -218,6 +218,7 @@ public final class StatsRecorder {
         return (x, y)
     }
 
+    // i18n:off file and stage names in the stats files are for developers, in English
     static let stageList: [Stage] = [
         Stage(name: "host render→capture", span: { f in StatsRecorder.both(f.hostRendered, f.hostCaptured) }),
         Stage(name: "host capture→encoded", span: { f in StatsRecorder.both(f.hostCaptured, f.hostEncoded) }),
@@ -232,6 +233,7 @@ public final class StatsRecorder {
         Stage(name: "deadline→vsync", span: { f in StatsRecorder.both(f.deadline, f.targetPresent) }),
         Stage(name: "deadline→presented", span: { f in StatsRecorder.both(f.deadline, f.present) }),
     ]
+    // i18n:on
     // Indices into stageList.
     static let iRenderCapture = 0
     static let iCaptureEncoded = 1
@@ -243,7 +245,9 @@ public final class StatsRecorder {
     static let iLead = 9
     static let iDeadlineVsync = 10
 
+    // i18n:off
     static let csvHeader = "frame_id,keyframe,bytes,host_rendered_us,host_captured_us,host_converted_us,host_encoded_us,send_us,first_pkt_us,last_pkt_us,decode_start_us,decoded_us,ready_us,transfer_ms,commit_us,present_us,skipped,deadline_us,target_present_us"
+    // i18n:on
 
     /// `keep`: how many sessions' files to keep in the directory (0: all).
     public init(directory: URL, epochNs: UInt64, keep: Int = 50) throws {
@@ -252,12 +256,14 @@ public final class StatsRecorder {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         StatsRecorder.prune(directory, keep: keep)
         let unix = Int(Date().timeIntervalSince1970)
+        // i18n:off
         sessionName = "session-\(unix)"
         stages = Array(repeating: [], count: StatsRecorder.stageList.count)
         let url = directory.appendingPathComponent("\(sessionName)-frames.csv")
         FileManager.default.createFile(atPath: url.path, contents: nil)
         csv = try FileHandle(forWritingTo: url)
         write("# epoch_mono_ns=\(epochNs) (the Mac's mach_absolute_time in ns; add us*1000)\n\(StatsRecorder.csvHeader)\n")
+        // i18n:on
     }
 
     /// Keep the newest `keep - 1` sessions before a new one starts.
@@ -502,15 +508,15 @@ public final class StatsRecorder {
         var decode = median(StatsRecorder.iDecode)
         if let d = decode, let c = median(StatsRecorder.iCopy) { decode = d + max(c, 0) }
         h.stages = [
-            HudStage(label: "Input to the computer", group: .net, ms: input, estimated: true),
-            HudStage(label: "Wait for the next frame", group: .host, ms: half, estimated: true),
-            HudStage(label: "Capture", group: .host, ms: median(StatsRecorder.iRenderCapture), estimated: false),
-            HudStage(label: "Convert and encode", group: .host, ms: median(StatsRecorder.iCaptureEncoded), estimated: false),
-            HudStage(label: "Pace and send", group: .host, ms: median(StatsRecorder.iEncodedSent), estimated: false),
-            HudStage(label: "Network", group: .net, ms: median(StatsRecorder.iNetwork), estimated: false),
-            HudStage(label: "Decode", group: .mac, ms: decode, estimated: false),
-            HudStage(label: "Wait for the display", group: .mac, ms: median(StatsRecorder.iWait), estimated: false),
-            HudStage(label: "Panel scan-out", group: .mac, ms: half, estimated: true),
+            HudStage(label: String(localized: "Input to the computer"), group: .net, ms: input, estimated: true),
+            HudStage(label: String(localized: "Wait for the next frame"), group: .host, ms: half, estimated: true),
+            HudStage(label: String(localized: "Capture"), group: .host, ms: median(StatsRecorder.iRenderCapture), estimated: false),
+            HudStage(label: String(localized: "Convert and encode"), group: .host, ms: median(StatsRecorder.iCaptureEncoded), estimated: false),
+            HudStage(label: String(localized: "Pace and send"), group: .host, ms: median(StatsRecorder.iEncodedSent), estimated: false),
+            HudStage(label: String(localized: "Network"), group: .net, ms: median(StatsRecorder.iNetwork), estimated: false),
+            HudStage(label: String(localized: "Decode"), group: .mac, ms: decode, estimated: false),
+            HudStage(label: String(localized: "Wait for the display"), group: .mac, ms: median(StatsRecorder.iWait), estimated: false),
+            HudStage(label: String(localized: "Panel scan-out"), group: .mac, ms: half, estimated: true),
         ]
         var total = 0.0
         var any = false
@@ -534,6 +540,7 @@ public final class StatsRecorder {
     }
 
     /// Flush the CSV and write `summary.json`. Returns its text.
+    // i18n:off
     public func finish(extra: [(String, String)]) -> String {
         lock.lock()
         defer { lock.unlock() }
@@ -597,6 +604,7 @@ public final class StatsRecorder {
         return out
     }
 
+    // i18n:on
     /// Stage percentiles for the latency summary: (name, p50, p95, n).
     public func stageTable() -> [(name: String, p50: Double?, p95: Double?, n: Int)] {
         lock.lock()

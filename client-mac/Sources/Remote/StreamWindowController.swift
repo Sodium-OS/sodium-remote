@@ -246,13 +246,13 @@ final class StreamWindowController: NSWindowController, NSWindowDelegate, NSTool
         let item = NSToolbarItem(itemIdentifier: id)
         if id == StreamWindowController.titleItem {
             item.view = StreamUI.makeTitleItem(model: model)
-            item.label = "Computer"
+            item.label = String(localized: "Computer")
         } else if id == StreamWindowController.displayItem {
             item.view = StreamUI.makeDisplayItem(model: model)
-            item.label = "Display"
+            item.label = String(localized: "Display")
         } else if id == StreamWindowController.buttonsItem {
             item.view = StreamUI.makeButtonsItem(model: model)
-            item.label = "Controls"
+            item.label = String(localized: "Controls")
         } else {
             return nil
         }

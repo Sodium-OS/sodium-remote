@@ -42,9 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Building the menus
 
-    private func item(_ title: String, _ action: Selector?, _ key: String = "", mods: NSEvent.ModifierFlags = [.command], tag: Int = 0,
+    private func item(_ title: LocalizedStringResource, _ action: Selector?, _ key: String = "", mods: NSEvent.ModifierFlags = [.command], tag: Int = 0,
                       target: AnyObject? = nil) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        let i = NSMenuItem(title: String(localized: title), action: action, keyEquivalent: key)
         i.keyEquivalentModifierMask = mods
         i.tag = tag
         i.target = target ?? (action == nil ? nil : self)
@@ -52,30 +52,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     /// A standard item, sent down the responder chain.
-    private func std(_ title: String, _ action: Selector, _ key: String = "", mods: NSEvent.ModifierFlags = [.command]) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: action, keyEquivalent: key)
+    private func std(_ title: LocalizedStringResource, _ action: Selector, _ key: String = "", mods: NSEvent.ModifierFlags = [.command]) -> NSMenuItem {
+        let i = NSMenuItem(title: String(localized: title), action: action, keyEquivalent: key)
         i.keyEquivalentModifierMask = mods
         return i
     }
 
-    private func submenu(_ title: String, _ items: [NSMenuItem]) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        let m = NSMenu(title: title)
+    private func submenu(_ title: LocalizedStringResource, _ items: [NSMenuItem]) -> NSMenuItem {
+        let text = String(localized: title)
+        let i = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+        let m = NSMenu(title: text)
         for x in items { m.addItem(x) }
         i.submenu = m
         return i
     }
 
-    private func top(_ title: String, _ items: [NSMenuItem]) -> (NSMenuItem, NSMenu) {
-        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        let m = NSMenu(title: title)
+    private func top(_ title: LocalizedStringResource, _ items: [NSMenuItem]) -> (NSMenuItem, NSMenu) {
+        let text = String(localized: title)
+        let i = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+        let m = NSMenu(title: text)
         for x in items { m.addItem(x) }
         i.submenu = m
         return (i, m)
     }
 
     private func buildMenu() -> NSMenu {
-        let main = NSMenu(title: "Main")
+        let main = NSMenu(title: "Main")  // i18n:ok not shown
         let sep = { NSMenuItem.separator() }
 
         let remote = top("Sodium Remote", [
@@ -166,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             submenu("UI Size", uiSize),
             item("Fixed Resolution", #selector(fixedResolution(_:))),
             sep(),
-            submenu("Remote-Optimised Look", look),
+            submenu("Remote-Optimized Look", look),
         ])
         main.addItem(view.0)
 
@@ -183,7 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         main.addItem(input.0)
 
         let window = top("Window", [
-            std("Minimise", #selector(NSWindow.performMiniaturize(_:)), "m"),
+            std("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"),
             std("Zoom", #selector(NSWindow.performZoom(_:))),
             sep(),
             item("Computers", #selector(showComputers(_:)), "0"),
@@ -352,7 +354,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         case #selector(reconnect(_:)):
             return session != nil || app.model.hosts.isEmpty == false
         case #selector(fullScreen(_:)):
-            item.title = (session?.window.isFullScreen ?? false) ? "Exit Full Screen" : "Enter Full Screen"
+            item.title = (session?.window.isFullScreen ?? false) ? String(localized: "Exit Full Screen") : String(localized: "Enter Full Screen")
             return session != nil
         case #selector(inStreamMenu(_:)):
             return session?.window.isFullScreen ?? false

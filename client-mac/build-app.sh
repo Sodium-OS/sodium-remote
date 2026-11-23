@@ -118,6 +118,7 @@ plutil -lint "$APP/Contents/Info.plist" >/dev/null
 # The strings: Localizable.xcstrings → <language>.lproj/Localizable.strings (the Command Line Tools have no
 # xcstringstool; SwiftUI's Text("…") and String(localized:) read these from the main bundle).
 python3 "$HERE/Tools/check-xcstrings-languages.py" "$HERE/App/Localizable.xcstrings"
+python3 "$HERE/Tools/lint-swift-strings.py" "$HERE/App/Localizable.xcstrings" "$HERE/Sources"
 python3 "$HERE/Tools/xcstrings-to-lproj.py" "$HERE/App/Localizable.xcstrings" "$APP/Contents/Resources"
 # About › Third-party notices › Open the notices file: the acknowledgements (libopus and the others by hand) and
 # cargo-about's list of the Rust libraries, as one text file.

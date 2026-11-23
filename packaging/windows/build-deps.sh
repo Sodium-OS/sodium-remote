@@ -7,6 +7,8 @@
 #   remote/packaging/windows/build-deps.sh [step ...]
 #
 # Steps (default: all, in order): ffnvcodec amf libvpl openh264-headers opus ffmpeg licenses
+# Extra step ffmpeg-source (never in the default): copies the checked FFmpeg source tarball to $FFMPEG_SOURCE_DIR (the release
+# attaches it: the LGPL asks for the exact source of the FFmpeg DLLs).
 # Idempotent: a step whose stamp file exists is skipped (FORCE=1 redoes every step;
 # a changed version below changes the stamp). Every source archive is pinned by SHA-256
 # and checked after download and before every unpack.
@@ -201,6 +203,7 @@ main() {
       opus)      step opus "$OPUS_VER" do_opus ;;
       ffmpeg)    step ffmpeg "$FFMPEG_VER" do_ffmpeg ;;
       licenses)  do_licenses ;;
+      ffmpeg-source) mkdir -p "${FFMPEG_SOURCE_DIR:?set FFMPEG_SOURCE_DIR}" && cp "$(fetch ffmpeg "$FFMPEG_URL" "$FFMPEG_SHA")" "$FFMPEG_SOURCE_DIR/" ;;
       *) echo "unknown step: $s" >&2; exit 2 ;;
     esac
   done

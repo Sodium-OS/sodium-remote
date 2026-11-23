@@ -207,6 +207,11 @@ public enum KeyNames {
         return m
     }()
 
+    static func unnamedKey(_ usage: UInt16) -> String {
+        let hex = String(format: "%02X", usage)
+        return String(localized: "Key \(hex)")
+    }
+
     /// A usage's name on the Mac (glyphs where macOS uses them).
     public static func macKey(_ usage: UInt16) -> String {
         switch usage {
@@ -214,7 +219,7 @@ public enum KeyNames {
         case 0x29: return "⎋"
         case 0x2A: return "⌫"
         case 0x2B: return "⇥"
-        case 0x2C: return "Space"
+        case 0x2C: return String(localized: "Space")
         case 0x4C: return "⌦"
         case 0x4A: return "↖"
         case 0x4D: return "↘"
@@ -226,51 +231,51 @@ public enum KeyNames {
         case 0x52: return "↑"
         case 0x39: return "⇪"
         case KeyUsage.leftCtrl: return "⌃"
-        case KeyUsage.rightCtrl: return "⌃ (right)"
+        case KeyUsage.rightCtrl: return String(localized: "⌃ (right)")
         case KeyUsage.leftShift: return "⇧"
-        case KeyUsage.rightShift: return "⇧ (right)"
+        case KeyUsage.rightShift: return String(localized: "⇧ (right)")
         case KeyUsage.leftAlt: return "⌥"
-        case KeyUsage.rightAlt: return "⌥ (right)"
+        case KeyUsage.rightAlt: return String(localized: "⌥ (right)")
         case KeyUsage.leftGUI: return "⌘"
-        case KeyUsage.rightGUI: return "⌘ (right)"
-        case KeyUsage.globe: return "Globe (fn)"
-        default: return letters[usage] ?? String(format: "Key %02X", usage)
+        case KeyUsage.rightGUI: return String(localized: "⌘ (right)")
+        case KeyUsage.globe: return String(localized: "Globe (fn)")
+        default: return letters[usage] ?? unnamedKey(usage)
         }
     }
 
     /// A usage's name on the computer (PC words).
     public static func hostKey(_ usage: UInt16) -> String {
         switch usage {
-        case 0x28: return "Enter"
-        case 0x29: return "Esc"
+        case 0x28: return String(localized: "Enter")
+        case 0x29: return String(localized: "Esc")
         case 0x2A: return "⌫"
-        case 0x2B: return "Tab"
-        case 0x2C: return "Space"
-        case 0x4C: return "Delete"
-        case 0x49: return "Insert"
-        case 0x4A: return "Home"
-        case 0x4D: return "End"
-        case 0x4B: return "Page Up"
-        case 0x4E: return "Page Down"
+        case 0x2B: return String(localized: "Tab")
+        case 0x2C: return String(localized: "Space")
+        case 0x4C: return String(localized: "Delete")
+        case 0x49: return String(localized: "Insert")
+        case 0x4A: return String(localized: "Home")
+        case 0x4D: return String(localized: "End")
+        case 0x4B: return String(localized: "Page Up")
+        case 0x4E: return String(localized: "Page Down")
         case 0x4F: return "→"
         case 0x50: return "←"
         case 0x51: return "↓"
         case 0x52: return "↑"
-        case 0x39: return "Caps Lock"
-        case 0x46: return "Print Screen"
-        case KeyUsage.leftCtrl, KeyUsage.rightCtrl: return "Ctrl"
-        case KeyUsage.leftShift, KeyUsage.rightShift: return "Shift"
-        case KeyUsage.leftAlt, KeyUsage.rightAlt: return "Alt"
-        case KeyUsage.leftGUI, KeyUsage.rightGUI: return "Win"
-        case KeyUsage.globe: return "Globe"
-        default: return letters[usage] ?? String(format: "Key %02X", usage)
+        case 0x39: return String(localized: "Caps Lock")
+        case 0x46: return String(localized: "Print Screen")
+        case KeyUsage.leftCtrl, KeyUsage.rightCtrl: return String(localized: "Ctrl")
+        case KeyUsage.leftShift, KeyUsage.rightShift: return String(localized: "Shift")
+        case KeyUsage.leftAlt, KeyUsage.rightAlt: return String(localized: "Alt")
+        case KeyUsage.leftGUI, KeyUsage.rightGUI: return String(localized: "Win")
+        case KeyUsage.globe: return String(localized: "Globe")
+        default: return letters[usage] ?? unnamedKey(usage)
         }
     }
 
-    /// "⌘C", "⌥←", "⌘ (right)".
+    /// "⌘C", "⌥←", String(localized: "⌘ (right)").
     public static func mac(_ c: KeyChordModel) -> String {
         var s = ""
-        if c.mods & KeyMods.globe != 0 { s += "Globe " }
+        if c.mods & KeyMods.globe != 0 { s += String(localized: "Globe") + " " }
         if c.mods & KeyMods.ctrl != 0 { s += "⌃" }
         if c.mods & KeyMods.alt != 0 { s += "⌥" }
         if c.mods & KeyMods.shift != 0 { s += "⇧" }
@@ -281,11 +286,11 @@ public enum KeyNames {
     /// "Ctrl + Shift + C", "Win + S".
     public static func host(_ c: KeyChordModel) -> String {
         var parts: [String] = []
-        if c.mods & KeyMods.ctrl != 0 { parts.append("Ctrl") }
-        if c.mods & KeyMods.shift != 0 { parts.append("Shift") }
-        if c.mods & KeyMods.alt != 0 { parts.append("Alt") }
-        if c.mods & KeyMods.gui != 0 { parts.append("Win") }
-        if c.mods & KeyMods.globe != 0 { parts.append("Globe") }
+        if c.mods & KeyMods.ctrl != 0 { parts.append(String(localized: "Ctrl")) }
+        if c.mods & KeyMods.shift != 0 { parts.append(String(localized: "Shift")) }
+        if c.mods & KeyMods.alt != 0 { parts.append(String(localized: "Alt")) }
+        if c.mods & KeyMods.gui != 0 { parts.append(String(localized: "Win")) }
+        if c.mods & KeyMods.globe != 0 { parts.append(String(localized: "Globe")) }
         parts.append(hostKey(c.key))
         return parts.joined(separator: " + ")
     }
@@ -295,14 +300,14 @@ public enum KeyNames {
         let base = mac(r.from)
         switch r.when {
         case .any: return base
-        case .terminal: return base + " in a terminal"
-        case .appClass(let c): return base + " in " + c
+        case .terminal: return String(localized: "\(base) in a terminal")
+        case .appClass(let c): return String(localized: "\(base) in \(c)")
         }
     }
 
     /// A rule's "Sent as" cell: "Shift + Home, ⌫"; "Nothing" for a dropped key.
     public static func to(_ r: KeyRuleModel) -> String {
-        if r.to.isEmpty { return "Nothing" }
+        if r.to.isEmpty { return String(localized: "Nothing") }
         return r.to.map(host).joined(separator: ", ")
     }
 }

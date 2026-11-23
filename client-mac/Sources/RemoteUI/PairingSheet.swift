@@ -243,8 +243,8 @@ private struct CodeMessage: View {
     var body: some View {
         switch phase {
         case .entering:
-            Plain(text: digits.isEmpty ? "The code is on the computer, under Settings › Remote › Pair a device."
-                                       : "Paste works too. It checks by itself at the sixth digit.")
+            Plain(text: digits.isEmpty ? Text("The code is on the computer, under Settings › Remote › Pair a device.")
+                                       : Text("Paste works too. It checks by itself at the sixth digit."))
         case .checking:
             HStack(spacing: 6) {
                 Spinner(size: 14)
@@ -255,31 +255,31 @@ private struct CodeMessage: View {
         case .wrong(let left):
             Marked(symbol: "xmark.octagon", text: CodeMessage.wrongText(left), color: Theme.danger)
         case .tooMany:
-            Marked(symbol: "xmark.octagon", text: "Too many wrong codes, so the computer withdrew it. Make a new code there.", color: Theme.danger)
+            Marked(symbol: "xmark.octagon", text: Text("Too many wrong codes, so the computer withdrew it. Make a new code there."), color: Theme.danger)
         case .expired:
-            Marked(symbol: "exclamationmark.triangle", text: "This code expired. On the computer, choose New code.", color: Theme.warning)
+            Marked(symbol: "exclamationmark.triangle", text: Text("This code expired. On the computer, choose New code."), color: Theme.warning)
         case .noComputer:
-            Marked(symbol: "exclamationmark.triangle", text: "No computer has a pairing window open. On the computer, choose Pair a device.",
+            Marked(symbol: "exclamationmark.triangle", text: Text("No computer has a pairing window open. On the computer, choose Pair a device."),
                    color: Theme.warning)
         case .failed(let message):
-            Marked(symbol: "xmark.octagon", text: message, color: Theme.danger)
+            Marked(symbol: "xmark.octagon", text: Text(verbatim: message), color: Theme.danger)
         case .paired:
             EmptyView()
         }
     }
 
-    static func wrongText(_ left: Int?) -> String {
-        guard let n = left else { return "That code didn’t match. Check the computer and try again." }
-        return "That code didn’t match. Check the computer and try again: \(n) \(n == 1 ? "try" : "tries") left."
+    static func wrongText(_ left: Int?) -> Text {
+        guard let n = left else { return Text("That code didn’t match. Check the computer and try again.") }
+        return Text("That code didn’t match. Check the computer and try again. Tries left: \(n).")
     }
 }
 
 @MainActor
 private struct Plain: View {
-    let text: String
+    let text: Text
 
     var body: some View {
-        Text(text)
+        text
             .font(.system(size: 12.5))
             .foregroundColor(Theme.text2)
             .multilineTextAlignment(.center)
@@ -291,14 +291,14 @@ private struct Plain: View {
 @MainActor
 private struct Marked: View {
     let symbol: String
-    let text: String
+    let text: Text
     let color: Color
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: symbol)
                 .font(.system(size: 12.5))
-            Text(text)
+            text
                 .font(.system(size: 12.5))
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)

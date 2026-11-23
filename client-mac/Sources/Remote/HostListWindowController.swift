@@ -62,7 +62,7 @@ final class HostListWindowController: NSWindowController, NSToolbarDelegate, NSW
             item.label = "Sodium Remote"
         } else if id == HostListWindowController.pairItem {
             item.view = HostListUI.makeToolbarPairButton(model: model)
-            item.label = "Pair a computer"
+            item.label = String(localized: "Pair a computer")
         } else {
             return nil
         }

@@ -3,7 +3,9 @@
 # SPDX-FileCopyrightText: 2026 Ning Bao
 # CI recipe: builds the Qt modules the app needs from source for Windows on UCRT, into remote/build/qt-win-ucrt/<version>/.
 #
-#   remote/packaging/windows/build-qt-ucrt.sh [--print-pins]
+#   remote/packaging/windows/build-qt-ucrt.sh [--print-pins | --sources DIR]
+#     --sources DIR   only downloads the four source tarballs (checked against the pins) into DIR and stops: the release
+#                     attaches them to the GitHub release (the LGPL asks for the exact sources of the Qt DLLs)
 #   QT_SRC_DIR=/path/to/unpacked/sources remote/packaging/windows/build-qt-ucrt.sh
 #
 # Why: Qt's official mingw build is made against the msvcrt C runtime, our toolchain (Arch's
@@ -29,7 +31,7 @@
 # ICU of build-icu.sh directly, found through win-deps). QT_ICU=1 builds Qt against that ICU too.
 # Output: remote/build/qt-win-ucrt/<version>/{bin,lib,plugins,qml,...}. Use it with
 #   QT_WIN_ROOT=remote/build/qt-win-ucrt/6.12.0  (toolchain-mingw.cmake reads it)
-# d3dcompiler_47.dll and opengl32sw.dll are not Qt code: they still come from fetch-qt.sh's archives.
+# opengl32sw.dll (Mesa) is not Qt code: it still comes from fetch-qt.sh's archives.
 # Idempotent: a finished module is skipped (FORCE=1 redoes all). JOBS sets the parallelism.
 set -euo pipefail
 
@@ -71,8 +73,10 @@ if [[ ${1:-} == --print-pins ]]; then
   done
   echo "Paste these into the QT_SHA table of $(basename "${BASH_SOURCE[0]}")." >&2
   exit 0
+elif [[ ${1:-} == --sources && $# -eq 2 ]]; then
+  SOURCES_OUT=$2
 elif [[ $# -gt 0 ]]; then
-  die "usage: build-qt-ucrt.sh [--print-pins]"
+  die "usage: build-qt-ucrt.sh [--print-pins | --sources DIR]"
 fi
 
 # ---- fail closed on the pins (unless the sources are already here) ----
@@ -80,6 +84,21 @@ if [[ -z ${QT_SRC_DIR:-} ]]; then
   for m in "${MODULES[@]}"; do
     is_sha "${QT_SHA[$m]}" || die "the SHA-256 of $m is not pinned (maintainer/CI step: run build-qt-ucrt.sh --print-pins and paste the result into this script), or set QT_SRC_DIR to an unpacked source tree"
   done
+fi
+
+if [[ -n ${SOURCES_OUT:-} ]]; then
+  command -v curl >/dev/null || die "missing tool: curl"
+  mkdir -p "$SOURCES_OUT"
+  for m in "${MODULES[@]}"; do
+    f=$m-everywhere-src-$QT_VER.tar.xz
+    [[ -f $SOURCES_OUT/$f ]] && echo "${QT_SHA[$m]}  $SOURCES_OUT/$f" | sha256sum -c --status && continue
+    log "download $BASE_URL/$f"
+    curl -fL --retry 3 -o "$SOURCES_OUT/$f.part" "$BASE_URL/$f" >&2
+    mv "$SOURCES_OUT/$f.part" "$SOURCES_OUT/$f"
+    echo "${QT_SHA[$m]}  $SOURCES_OUT/$f" | sha256sum -c --status || { rm -f "$SOURCES_OUT/$f"; die "SHA-256 mismatch: $f"; }
+  done
+  ls -l "$SOURCES_OUT" >&2
+  exit 0
 fi
 
 for t in $TRIPLET-gcc $TRIPLET-g++ $TRIPLET-windres cmake ninja tar xz sha256sum pkg-config; do

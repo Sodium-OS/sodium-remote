@@ -5,8 +5,8 @@ import RemoteKit
 import SwiftUI
 
 // Small pieces for the new screens. They take `LocalizedStringKey` (or a `Text`), so a literal at the call
-// site is looked up in Localizable.xcstrings (docs/translating.md: Remote for Mac). The older components in
-// Components.swift take `String` and stay as they are.
+// site is looked up in Localizable.xcstrings. The kit components in Components.swift do the same; a string that is
+// already text goes through their `verbatim:` initialisers. Tools/lint-swift-strings.py checks every literal.
 
 /// A text button in one of the kit's kinds; the title is localised.
 struct LButton: View {

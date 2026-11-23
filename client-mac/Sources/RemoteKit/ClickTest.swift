@@ -57,6 +57,7 @@ public final class ClickTest {
         self.epochNs = epochNs
         FileManager.default.createFile(atPath: csvURL.path, contents: nil)
         csv = try? FileHandle(forWritingTo: csvURL)
+        // i18n:off the click log and its summary are files for developers, in English
         let head = "# epoch_mono_ns=\(epochNs)\nclick,t_click_us,frame_id,host_rendered_us,host_captured_us,host_encoded_us,send_us,first_pkt_us,last_pkt_us,decoded_us,ready_us,present_us,input_to_ready_ms,input_to_present_ms\n"
         csv?.write(head.data(using: .utf8) ?? Data())
     }
@@ -144,6 +145,7 @@ public final class ClickTest {
         sent += 1
     }
 
+    // i18n:on
     public func status() -> String {
         lock.lock()
         defer { lock.unlock() }
@@ -151,9 +153,11 @@ public final class ClickTest {
         let d = done.compactMap { r in r.frame.map { Double($0.ready - r.tClick) / 1e3 } }
         let fp = percentile(p, 0.5).map { String(format: "%.1f", $0) } ?? "–"
         let fd = percentile(d, 0.5).map { String(format: "%.1f", $0) } ?? "–"
-        return "Latency test \(done.count)/\(config.count) · input→decoded p50 \(fd) · input→present p50 \(fp) ms"
+        let finished = done.count, total = config.count
+        return String(localized: "Latency test \(finished)/\(total) · input→decoded p50 \(fd) · input→present p50 \(fp) ms")
     }
 
+    // i18n:off
     /// The summary in the shape of the table, plus where the click
     /// frames' time went.
     public func summary(context: String, rows: [(String, String, String)]) -> String {

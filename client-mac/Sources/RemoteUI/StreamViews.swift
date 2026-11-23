@@ -76,7 +76,8 @@ public enum StreamUI {
         NSHostingView(rootView: StreamResizeBadge(model: model))
     }
 
-    /// The HUD as plain text, for Copy.
+    /// The HUD as plain text, for Copy. It goes into bug reports, so it stays in English.
+    // i18n:off
     public static func statsText(_ h: HudData) -> String {
         var lines: [String] = []
         if let t = h.frames.totalMs {
@@ -99,6 +100,7 @@ public enum StreamUI {
         }
         return lines.joined(separator: "\n")
     }
+    // i18n:on
 }
 
 // MARK: - Toolbar
@@ -244,11 +246,11 @@ struct StreamStatsLine: View {
         let mbps: String = String(format: hud.frames.mbps < 10 ? "%.1f" : "%.0f", hud.frames.mbps)
         return HStack(spacing: 8) {
             QualityDot(warn ? .fair : hud.band)
-            Text("\(total) ms").font(.system(size: 12, weight: .semibold))
+            Text(verbatim: "\(total) ms").font(.system(size: 12, weight: .semibold))
             Rectangle().fill(separator).frame(width: 1, height: 12)
-            Text("\(hud.frames.fpsPresented) fps").font(.system(size: 12))
+            Text(verbatim: "\(hud.frames.fpsPresented) fps").font(.system(size: 12))
             Rectangle().fill(separator).frame(width: 1, height: 12)
-            Text("\(mbps) Mb/s").font(.system(size: 12))
+            Text(verbatim: "\(mbps) Mb/s").font(.system(size: 12))
             Rectangle().fill(separator).frame(width: 1, height: 12)
             HStack(spacing: 5) {
                 if let r = chip.route { RouteIcon(r, size: 13) }
@@ -360,7 +362,7 @@ struct StreamPillHost: View {
                     Spinner(size: 16)
                     Text(p.text).font(.system(size: 13, weight: .medium)).foregroundColor(Theme.text)
                     if p == .reconnecting {
-                        Text("\(Int(model.pillSince)) s").font(.system(size: 13)).foregroundColor(Theme.text2).monospacedDigit()
+                        Text(verbatim: "\(Int(model.pillSince)) s").font(.system(size: 13)).foregroundColor(Theme.text2).monospacedDigit()
                     }
                 }
                 .padding(.leading, 12)
@@ -382,7 +384,7 @@ struct StreamResizeBadge: View {
     var body: some View {
         Group {
             if let b = model.resizeBadge {
-                Text(b)
+                Text(verbatim: b)
                     .font(.system(size: 12.5, weight: .semibold))
                     .monospacedDigit()
                     .foregroundColor(Theme.text)
@@ -450,72 +452,73 @@ struct StreamCardView: View {
             case .connecting:
                 StreamConnectingCard(model: model)
             case .askTakeover(let by):
-                StreamCardParts(symbol: "laptopcomputer", title: "In use by \(by). Take over?",
-                                text: "\(by) is streaming \(host) right now. Taking over ends that stream; nothing on the computer closes.") {
+                StreamCardParts(symbol: "laptopcomputer", title: Text("In use by \(by). Take over?"),
+                                text: Text("\(by) is streaming \(host) right now. Taking over ends that stream; nothing on the computer closes.")) {
                     KitButton("Cancel", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Take over", kind: .primary, height: 32) { model.actions?.takeOver() }
                 }
             case .takenOver(let by, let at):
-                StreamCardParts(symbol: "laptopcomputer", title: "Taken over by \(by)",
-                                text: "You connected from \(by) at \(at), so this Mac was disconnected. Only one device streams at a time.") {
+                StreamCardParts(symbol: "laptopcomputer", title: Text("Taken over by \(by)"),
+                                text: Text("You connected from \(by) at \(at), so this Mac was disconnected. Only one device streams at a time.")) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Take it back", kind: .primary, height: 32) { model.actions?.takeOver() }
                 }
             case .offline(let lastSeen, let retryIn):
                 if model.serverName == nil {
                     // No server: nothing answered, and the card says where to look and offers Server settings…
-                    StreamCardParts(symbol: "network.slash", title: String(localized: "Couldn’t reach \(host)"),
-                                    text: String(localized: "Nothing answered. Check the address and that the computer is on. If it’s on another network, add a server in Settings › Server."),
+                    StreamCardParts(symbol: "network.slash", title: Text("Couldn’t reach \(host)"),
+                                    text: Text("Nothing answered. Check the address and that the computer is on. If it’s on another network, add a server in Settings › Server."),
                                     retry: retryIn) {
                         KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
-                        KitButton(String(localized: "Server settings…"), kind: .secondary, height: 32) { model.actions?.openServerSettings() }
+                        KitButton("Server settings…", kind: .secondary, height: 32) { model.actions?.openServerSettings() }
                         KitButton("Try now", kind: .primary, height: 32) { model.actions?.reconnect() }
                     }
                 } else {
-                    StreamCardParts(symbol: "network.slash", title: "\(host) isn’t online",
-                                    text: (lastSeen.map { "Last seen \($0). " } ?? "") + "It may be turned off or without internet. Remote keeps trying while this window is open.",
+                    StreamCardParts(symbol: "network.slash", title: Text("\(host) isn’t online"),
+                                    text: lastSeen.map { Text("Last seen \($0). It may be turned off or without internet. Remote keeps trying while this window is open.") }
+                                        ?? Text("It may be turned off or without internet. Remote keeps trying while this window is open."),
                                     retry: retryIn) {
                         KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                         KitButton("Try now", kind: .primary, height: 32) { model.actions?.reconnect() }
                     }
                 }
             case .asleep(let since, let retryIn):
-                StreamCardParts(symbol: "moon.fill", title: "\(host) is asleep",
-                                text: "Asleep since \(since). Remote keeps trying while this window is open.", retry: retryIn) {
+                StreamCardParts(symbol: "moon.fill", title: Text("\(host) is asleep"),
+                                text: Text("Asleep since \(since). Remote keeps trying while this window is open."), retry: retryIn) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Try now", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
             case .disconnected(let title, let text):
-                StreamCardParts(symbol: "wifi.slash", title: title, text: text) {
+                StreamCardParts(symbol: "wifi.slash", title: Text(verbatim: title), text: Text(verbatim: text)) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Reconnect", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
             case .versionMismatch(let h, let c, let updateThisMac):
                 // The side to update comes from the core (the one with the older version), never from comparing here.
                 StreamCardParts(symbol: "arrow.down.circle",
-                                title: updateThisMac ? String(localized: "Update Sodium Remote on this Mac") : String(localized: "Update Sodium Remote on \(host)"),
+                                title: updateThisMac ? Text("Update Sodium Remote on this Mac") : Text("Update Sodium Remote on \(host)"),
                                 text: updateThisMac
-                                    ? String(localized: "\(host) speaks Sodium Remote protocol \(h), which this Mac’s Sodium Remote (protocol \(c)) can’t talk to. Install the new version on this Mac.")
-                                    : String(localized: "\(host) speaks Sodium Remote protocol \(h); this Mac’s Sodium Remote speaks \(c). Update Sodium Remote on that computer.")) {
+                                    ? Text("\(host) speaks Sodium Remote protocol \(h), which this Mac’s Sodium Remote (protocol \(c)) can’t talk to. Install the new version on this Mac.")
+                                    : Text("\(host) speaks Sodium Remote protocol \(h); this Mac’s Sodium Remote speaks \(c). Update Sodium Remote on that computer.")) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("How to update", kind: .secondary, height: 32) { model.actions?.howToUpdate() }
                 }
             case .keyChanged:
-                StreamCardParts(symbol: "xmark.octagon", title: "\(host)’s key changed",
-                                text: "The computer answering as \(host) isn’t the one this Mac paired with. If it was reinstalled, forget it here, then pair it again.",
+                StreamCardParts(symbol: "xmark.octagon", title: Text("\(host)’s key changed"),
+                                text: Text("The computer answering as \(host) isn’t the one this Mac paired with. If it was reinstalled, forget it here, then pair it again."),
                                 danger: true) {
                     KitButton("Forget this computer", kind: .danger, height: 32) { model.actions?.forgetHost() }
                 }
             case .removed:
-                StreamCardParts(symbol: "lock.fill", title: "This Mac was removed",
-                                text: "\(host) no longer lists this Mac, so it won’t answer. Pair again with a new code from the computer.") {
+                StreamCardParts(symbol: "lock.fill", title: Text("This Mac was removed"),
+                                text: Text("\(host) no longer lists this Mac, so it won’t answer. Pair again with a new code from the computer.")) {
                     KitButton("Forget it", kind: .secondary, height: 32) { model.actions?.forgetHost() }
                     KitButton("Pair again…", kind: .primary, height: 32) { model.actions?.pairAgain() }
                 }
             case .macOffline:
-                StreamCardParts(symbol: "wifi.slash", title: "This Mac is offline",
-                                text: model.serverName.map { String(localized: "Sodium Remote can’t reach \($0) or find \(host) on this network. Check the Wi-Fi.") }
-                                    ?? String(localized: "Sodium Remote can’t find \(host) on this network. Check the Wi-Fi.")) {
+                StreamCardParts(symbol: "wifi.slash", title: Text("This Mac is offline"),
+                                text: model.serverName.map { Text("Sodium Remote can’t reach \($0) or find \(host) on this network. Check the Wi-Fi.") }
+                                    ?? Text("Sodium Remote can’t find \(host) on this network. Check the Wi-Fi.")) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Try again", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
@@ -529,13 +532,13 @@ struct StreamCardView: View {
                     KitButton("Try again", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
             case .controlOff(let os):
-                StreamCardParts(symbol: "lock.fill", title: String(localized: "\(host) isn’t allowing control"),
+                StreamCardParts(symbol: "lock.fill", title: Text("\(host) isn’t allowing control"),
                                 text: PermissionCardCopy.controlOffText(os: os)) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Try again", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
             case .failed(let message):
-                StreamCardParts(symbol: "exclamationmark.triangle", title: "Couldn’t connect to \(host)", text: message) {
+                StreamCardParts(symbol: "exclamationmark.triangle", title: Text("Couldn’t connect to \(host)"), text: Text(verbatim: message)) {
                     KitButton("Close", kind: .secondary, height: 32) { model.actions?.closeCard() }
                     KitButton("Try again", kind: .primary, height: 32) { model.actions?.reconnect() }
                 }
@@ -550,27 +553,27 @@ struct StreamCardView: View {
 enum PermissionCardCopy {
     private static let app = "Sodium Remote"
 
-    static func title(host: String, screenRecording: Bool) -> String {
-        if screenRecording { return String(localized: "\(host) can’t share its screen yet") }
-        return String(localized: "\(host) can’t be controlled yet")
+    static func title(host: String, screenRecording: Bool) -> Text {
+        if screenRecording { return Text("\(host) can’t share its screen yet") }
+        return Text("\(host) can’t be controlled yet")
     }
 
     /// Which permission is missing: Screen Recording, Accessibility, or both.
-    static func text(screenRecording: Bool, accessibility: Bool) -> String {
+    static func text(screenRecording: Bool, accessibility: Bool) -> Text {
         if screenRecording && accessibility {
-            return String(localized: "On that Mac, allow Screen Recording and Accessibility for \(app) in System Settings, then try again.")
+            return Text("On that Mac, allow Screen Recording and Accessibility for \(app) in System Settings, then try again.")
         }
         if screenRecording {
-            return String(localized: "On that Mac, allow Screen Recording for \(app) in System Settings, then try again.")
+            return Text("On that Mac, allow Screen Recording for \(app) in System Settings, then try again.")
         }
-        return String(localized: "On that Mac, allow Accessibility for \(app) in System Settings, then try again.")
+        return Text("On that Mac, allow Accessibility for \(app) in System Settings, then try again.")
     }
 
     /// Where to switch "Allow remote control" on, by what the computer runs (nil: not known yet).
-    static func controlOffText(os: HostOS?) -> String {
-        guard let os = os else { return String(localized: "Allow control on that computer, then try again.") }
-        if os == .sodiumOS { return String(localized: "Open Settings › Remote on that computer and allow control, then try again.") }
-        return String(localized: "Open \(app) on that computer and allow control, then try again.")
+    static func controlOffText(os: HostOS?) -> Text {
+        guard let os = os else { return Text("Allow control on that computer, then try again.") }
+        if os == .sodiumOS { return Text("Open Settings › Remote on that computer and allow control, then try again.") }
+        return Text("Open \(app) on that computer and allow control, then try again.")
     }
 }
 
@@ -627,13 +630,13 @@ struct SecureScreenCard: View {
 @MainActor
 struct StreamCardParts<Buttons: View>: View {
     let symbol: String
-    let title: String
-    let text: String
+    let title: Text
+    let text: Text
     var retry: Int? = nil
     var danger = false
     let buttons: Buttons
 
-    init(symbol: String, title: String, text: String, retry: Int? = nil, danger: Bool = false, @ViewBuilder buttons: () -> Buttons) {
+    init(symbol: String, title: Text, text: Text, retry: Int? = nil, danger: Bool = false, @ViewBuilder buttons: () -> Buttons) {
         self.symbol = symbol
         self.title = title
         self.text = text
@@ -647,12 +650,12 @@ struct StreamCardParts<Buttons: View>: View {
             HStack(alignment: .top, spacing: 14) {
                 CardIcon(symbol, bg: danger ? Theme.dangerBg : Theme.raised, fg: danger ? Theme.dangerFg : Theme.icon)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: 16, weight: .semibold)).foregroundColor(Theme.text)
-                    Text(text).font(.system(size: 13)).foregroundColor(Theme.text2).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                    title.font(.system(size: 16, weight: .semibold)).foregroundColor(Theme.text)
+                    text.font(.system(size: 13)).foregroundColor(Theme.text2).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                     if let r = retry {
                         HStack(spacing: 8) {
                             Spinner(size: 14)
-                            Text(r > 0 ? "Trying again in \(r) s" : "Trying again…").font(.system(size: 12)).foregroundColor(Theme.text2)
+                            (r > 0 ? Text("Trying again in \(r) s") : Text("Trying again…")).font(.system(size: 12)).foregroundColor(Theme.text2)
                         }
                         .padding(.top, 8)
                     }
@@ -681,7 +684,7 @@ struct StreamConnectingCard: View {
                 AppTile(size: 36)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Connecting to \(model.hostName)").font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
-                    Text(p.network.isEmpty ? "Usually under 2 s" : p.network).font(.system(size: 12)).foregroundColor(Theme.text2)
+                    (p.network.isEmpty ? Text("Usually under 2 s") : Text(verbatim: p.network)).font(.system(size: 12)).foregroundColor(Theme.text2)
                 }
             }
             .padding(.bottom, 14)
@@ -712,7 +715,7 @@ struct StreamConnectingCard: View {
 @MainActor
 struct StreamStep: View {
     let state: Int
-    let label: String
+    let label: LocalizedStringKey
     let detail: String
 
     var body: some View {
@@ -829,20 +832,25 @@ struct StreamHudStreamRows: View {
         VStack(alignment: .leading, spacing: 0) {
             StreamKV(key: "Size", value: hud.sizeText)
             StreamKV(key: "Codec", value: hud.codecText)
-            StreamKV(key: "Frames", value: "\(hud.frames.fpsPresented) fps · \(hud.frames.late) late · \(hud.frames.dropped) dropped")
-            StreamKV(key: "Loss", value: String(format: "%.1f %% · FEC %.0f %%", hud.lossPercent, hud.fecPercent))
+            StreamKV(key: "Frames", value: String(localized: "\(hud.frames.fpsPresented) fps · \(hud.frames.late) late · \(hud.frames.dropped) dropped"))
+            StreamKV(key: "Loss", value: String(format: String(localized: "%.1f %% · FEC %.0f %%"), hud.lossPercent, hud.fecPercent))
             if let host = hud.frames.host, host.readableMs > 0 {
-                let target = host.targetBps > 0 ? String(format: " · target %.0f Mb/s", Double(host.targetBps) / 1e6) : ""
+                let target: Double = Double(host.targetBps) / 1e6
+                let settled: Double = Double(host.settledMs) / 1000
                 if host.settledMs > 0 {
-                    StreamKV(key: "Text", value: String(format: "readable %d ms · settled %.1f s", host.readableMs, Double(host.settledMs) / 1000) + target)
+                    StreamKV(key: "Text", value: host.targetBps > 0
+                             ? String(format: String(localized: "readable %d ms · settled %.1f s · target %.0f Mb/s"), host.readableMs, settled, target)
+                             : String(format: String(localized: "readable %d ms · settled %.1f s"), host.readableMs, settled))
                 } else {
-                    StreamKV(key: "Text", value: "readable \(host.readableMs) ms · lossless \(host.losslessMs) ms" + target)
+                    StreamKV(key: "Text", value: host.targetBps > 0
+                             ? String(format: String(localized: "readable %d ms · lossless %d ms · target %.0f Mb/s"), host.readableMs, host.losslessMs, target)
+                             : String(format: String(localized: "readable %d ms · lossless %d ms"), host.readableMs, host.losslessMs))
                 }
             }
             if let link = linkText {
                 StreamKV(key: "Link", value: link)
             }
-            StreamKV(key: "Wi-Fi", value: hud.awdl ? "AirDrop or Handoff is active" : "no AirDrop interference", warn: hud.awdl)
+            StreamKV(key: "Wi-Fi", value: hud.awdl ? String(localized: "AirDrop or Handoff is active") : String(localized: "no AirDrop interference"), warn: hud.awdl)
         }
     }
 
@@ -850,8 +858,8 @@ struct StreamHudStreamRows: View {
     private var linkText: String? {
         guard let host = hud.frames.host else { return nil }
         var link: [String] = []
-        if host.cEstBps > 0 { link.append(String(format: "C_est %.0f Mb/s", Double(host.cEstBps) / 1e6)) }
-        if host.probeCeilingBps > 0 { link.append(String(format: "ceiling %.0f Mb/s", Double(host.probeCeilingBps) / 1e6)) }
+        if host.cEstBps > 0 { link.append(String(format: String(localized: "C_est %.0f Mb/s"), Double(host.cEstBps) / 1e6)) }
+        if host.probeCeilingBps > 0 { link.append(String(format: String(localized: "ceiling %.0f Mb/s"), Double(host.probeCeilingBps) / 1e6)) }
         return link.isEmpty ? nil : link.joined(separator: " · ")
     }
 }
@@ -863,7 +871,7 @@ struct StreamHudTotal: View {
     var body: some View {
         let total: String = hud.frames.totalMs.map { String(format: "%.0f ms", $0) } ?? "– ms"
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(total).font(.system(size: 30, weight: .semibold)).monospacedDigit().foregroundColor(Theme.text)
+            Text(verbatim: total).font(.system(size: 30, weight: .semibold)).monospacedDigit().foregroundColor(Theme.text)
             Text("input to photon, estimated").font(.system(size: 12)).foregroundColor(Theme.text2)
         }
     }
@@ -871,14 +879,15 @@ struct StreamHudTotal: View {
 
 @MainActor
 struct StreamHudSection: View {
-    let title: String
+    let title: LocalizedStringKey
 
-    init(_ title: String) {
+    init(_ title: LocalizedStringKey) {
         self.title = title
     }
 
     var body: some View {
-        Text(title.uppercased())
+        Text(title)
+            .textCase(.uppercase)
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.3)
             .foregroundColor(Theme.text3)
@@ -929,7 +938,7 @@ struct StreamStageLegend: View {
         .foregroundColor(Theme.text2)
     }
 
-    func legend(_ c: Color, _ t: String) -> some View {
+    func legend(_ c: Color, _ t: LocalizedStringKey) -> some View {
         HStack(spacing: 5) {
             RoundedRectangle(cornerRadius: 2).fill(c).frame(width: 8, height: 8)
             Text(t)
@@ -945,9 +954,9 @@ struct StreamStageRow: View {
         let value: String = stage.ms.map { String(format: "%.1f", $0) } ?? "–"
         return HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 1.5).fill(streamStageColor(stage.group)).frame(width: 3, height: 12)
-            Text(stage.label + (stage.estimated ? " (est.)" : "")).foregroundColor(Theme.text2)
+            Text(verbatim: stage.estimated ? String(localized: "\(stage.label) (est.)") : stage.label).foregroundColor(Theme.text2)
             Spacer()
-            Text(value).monospacedDigit().foregroundColor(Theme.text)
+            Text(verbatim: value).monospacedDigit().foregroundColor(Theme.text)
         }
         .font(.system(size: 12))
         .frame(height: 19)
@@ -970,7 +979,7 @@ struct StreamBitrate: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28, alignment: .bottomLeading)
-            Text(String(format: mbps < 10 ? "%.1f Mb/s" : "%.0f Mb/s", mbps))
+            Text(verbatim: String(format: mbps < 10 ? "%.1f Mb/s" : "%.0f Mb/s", mbps))
                 .font(.system(size: 12))
                 .monospacedDigit()
                 .foregroundColor(Theme.text)
@@ -980,7 +989,7 @@ struct StreamBitrate: View {
 
 @MainActor
 struct StreamKV: View {
-    let key: String
+    let key: LocalizedStringKey
     let value: String
     var warn = false
 
@@ -988,7 +997,7 @@ struct StreamKV: View {
         HStack {
             Text(key).foregroundColor(Theme.text2)
             Spacer()
-            Text(value).foregroundColor(warn ? Theme.warning : Theme.text).monospacedDigit().lineLimit(1)
+            Text(verbatim: value).foregroundColor(warn ? Theme.warning : Theme.text).monospacedDigit().lineLimit(1)
         }
         .font(.system(size: 12))
         .frame(height: 19)
@@ -1007,8 +1016,8 @@ struct StreamPathRow: View {
                 .font(.system(size: 12, weight: path.inUse ? .semibold : .regular))
                 .foregroundColor(path.inUse ? Theme.text : Theme.text2)
             Spacer()
-            Text(path.state).font(.system(size: 12)).foregroundColor(path.inUse ? Theme.text : Theme.text3)
-            Text(rtt).font(.system(size: 12)).monospacedDigit().frame(width: 42, alignment: .trailing)
+            Text(verbatim: path.state).font(.system(size: 12)).foregroundColor(path.inUse ? Theme.text : Theme.text3)
+            Text(verbatim: rtt).font(.system(size: 12)).monospacedDigit().frame(width: 42, alignment: .trailing)
         }
         .padding(.horizontal, 6)
         .frame(height: 22)
@@ -1094,7 +1103,7 @@ struct StreamRevealBar: View {
     }
 }
 
-func streamHomeLabel(_ m: HomeMode) -> String {
+func streamHomeLabel(_ m: HomeMode) -> LocalizedStringKey {
     switch m {
     case .mirror: return "Mirror"
     case .privacy: return "Privacy"
@@ -1112,7 +1121,7 @@ struct StreamRevealSeparator: View {
 @MainActor
 struct StreamRevealLabel: View {
     let symbol: String
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         HStack(spacing: 7) {
@@ -1130,14 +1139,14 @@ struct StreamRevealLabel: View {
 @MainActor
 struct StreamRevealButton: View {
     let symbol: String
-    let label: String
-    let text: String?
+    let label: LocalizedStringKey
+    let text: LocalizedStringKey?
     let on: Bool
     var danger = false
     let action: () -> Void
     @State private var hovering = false
 
-    init(symbol: String, label: String, text: String?, on: Bool, danger: Bool = false, action: @escaping () -> Void) {
+    init(symbol: String, label: LocalizedStringKey, text: LocalizedStringKey?, on: Bool, danger: Bool = false, action: @escaping () -> Void) {
         self.symbol = symbol
         self.label = label
         self.text = text

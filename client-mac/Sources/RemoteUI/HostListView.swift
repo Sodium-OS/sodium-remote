@@ -76,7 +76,7 @@ private struct ToolbarPairButton: View {
             }
             .opacity(model.page == .computers ? 1 : 0)
             .allowsHitTesting(model.page == .computers)
-            IconButton("gearshape", label: String(localized: "Settings")) {
+            IconButton("gearshape", label: "Settings") {
                 model.actions?.openSettingsSheet()
             }
         }
@@ -161,9 +161,9 @@ private struct StatusStrip: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(leftText).lineLimit(1).truncationMode(.tail)
+            Text(verbatim: leftText).lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 8)
-            Text(rightText).lineLimit(1)
+            Text(verbatim: rightText).lineLimit(1)
         }
         .font(.system(size: 12))
         .foregroundColor(Theme.text3)
@@ -175,8 +175,10 @@ private struct StatusStrip: View {
     }
 
     private var leftText: String {
-        if model.thisMacCode.isEmpty { return "This Mac: \(model.thisMacName)" }
-        return "This Mac: \(model.thisMacName) · ID \(model.thisMacCode)"
+        let name = model.thisMacName
+        if model.thisMacCode.isEmpty { return String(localized: "This Mac: \(name)") }
+        let code = model.thisMacCode
+        return String(localized: "This Mac: \(name) · ID \(code)")
     }
 
     /// Nothing with no server: not having one is a normal state, never a warning.
@@ -445,7 +447,7 @@ private struct OSChip: View {
     let os: HostOS
 
     var body: some View {
-        StatusPill(os.pillText, kind: .neutral)
+        StatusPill(verbatim: os.pillText, kind: .neutral)
             .background(Capsule().fill(Theme.toastGlass))
             .shadow(color: Theme.shadow, radius: 6, x: 0, y: 3)
     }
@@ -704,8 +706,8 @@ private struct HowToPair: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            PairStep(number: 1, text: Text("On the computer, open ") + Text("Settings › Remote").fontWeight(.semibold) + Text("."))
-            PairStep(number: 2, text: Text("Choose ") + Text("Pair a device").fontWeight(.semibold) + Text(". It shows a 6-digit code for 5 minutes."))
+            PairStep(number: 1, text: Text("On the computer, open **Settings › Remote**."))
+            PairStep(number: 2, text: Text("Choose **Pair a device**. It shows a 6-digit code for 5 minutes."))
             PairStep(number: 3, text: Text("Type the code here."))
             HStack {
                 Spacer()
@@ -730,7 +732,7 @@ private struct PairStep: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Text("\(number)")
+            Text(verbatim: String(number))
                 .font(.system(size: 11.5, weight: .bold))
                 .foregroundColor(Theme.text)
                 .frame(width: 20, height: 20)
@@ -776,11 +778,11 @@ private struct NearbyRow: View {
                 .frame(width: 30, height: 30)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.raised))
             VStack(alignment: .leading, spacing: 2) {
-                Text(host.name)
+                Text(verbatim: host.name)
                     .font(.system(size: 13))
                     .foregroundColor(Theme.text)
                     .lineLimit(1)
-                Text(sub)
+                Text(verbatim: sub)
                     .font(.system(size: 12))
                     .foregroundColor(Theme.text2)
                     .lineLimit(1)
@@ -798,7 +800,7 @@ private struct NearbyRow: View {
         if host.foundVia == "rendezvous", let name = model.serverName {
             return String(localized: "SodiumOS · found through \(name) · not paired yet")
         }
-        return "SodiumOS · found nearby · not paired yet"
+        return String(localized: "SodiumOS · found nearby · not paired yet")
     }
 }
 
@@ -810,13 +812,13 @@ private struct ForgetSheet: View {
 
     var body: some View {
         let id: String = model.forgetAskID ?? ""
-        let name: String = model.hosts.first(where: { $0.id == id })?.name ?? "this computer"
+        let name: String = model.hosts.first(where: { $0.id == id })?.name ?? String(localized: "this computer")
         return ConfirmDialogView(
             symbol: nil,
-            title: "Forget \(name)?",
-            message: "This Mac stops trusting its key and can’t connect until you pair again. \(name) still lists this Mac until you remove it there.",
-            cancel: "Cancel",
-            confirm: "Forget",
+            title: String(localized: "Forget \(name)?"),
+            message: String(localized: "This Mac stops trusting its key and can’t connect until you pair again. \(name) still lists this Mac until you remove it there."),
+            cancel: String(localized: "Cancel"),
+            confirm: String(localized: "Forget"),
             confirmKind: .dangerSolid,
             confirmIsDefault: false,
             onCancel: {
@@ -851,11 +853,11 @@ private struct ConfirmDialogView: View {
                     CardIcon(s)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
+                    Text(verbatim: title)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(Theme.text)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(message)
+                    Text(verbatim: message)
                         .font(.system(size: 13))
                         .foregroundColor(Theme.text2)
                         .lineSpacing(3)
@@ -864,7 +866,7 @@ private struct ConfirmDialogView: View {
             }
             HStack(spacing: 8) {
                 Spacer()
-                KitButton(cancel, kind: .secondary, height: 32, action: onCancel)
+                KitButton(verbatim: cancel, kind: .secondary, height: 32, action: onCancel)
                     .keyboardShortcut(.cancelAction)
                 ConfirmButton(title: confirm, kind: confirmKind, isDefault: confirmIsDefault, action: onConfirm)
             }
@@ -885,10 +887,10 @@ private struct ConfirmButton: View {
 
     var body: some View {
         if isDefault {
-            KitButton(title, kind: kind, height: 32, action: action)
+            KitButton(verbatim: title, kind: kind, height: 32, action: action)
                 .keyboardShortcut(.defaultAction)
         } else {
-            KitButton(title, kind: kind, height: 32, action: action)
+            KitButton(verbatim: title, kind: kind, height: 32, action: action)
         }
     }
 }

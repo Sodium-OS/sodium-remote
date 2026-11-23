@@ -13,7 +13,6 @@
 #
 # What is fetched (all LGPL-3 / GPL-licensed Qt modules we link dynamically, no GPL-only ones):
 #   qtbase, qtdeclarative, qtsvg, qtshadertools   the modules Sodium UI uses
-#   d3dcompiler_47.dll                            Direct3D shader compiler (Qt Quick on D3D11 compiles HLSL at run time)
 #   opengl32sw.dll                                Mesa software OpenGL, the fallback when D3D11 has no adapter
 # Qt's own MinGW 13.1 runtime archive is NOT used: the program is built with Arch's mingw-w64
 # GCC (UCRT) and ships that GCC's runtime DLLs (README.md, "Qt and the C runtime").
@@ -37,7 +36,6 @@ ARCHIVES=(
   "qt.qt6.6120.win64_mingw|qtdeclarative-$S|a567789b9c142da546db76ceaa47aa0ee92bb780d7102d1adb905d39a3bf441b"
   "qt.qt6.6120.win64_mingw|qtsvg-$S|8dd193d39e21395f8fcb802f543f6e43e13a5caf5dd6f94cab731a53c598496a"
   "qt.qt6.6120.addons.qtshadertools.win64_mingw|qtshadertools-$S|5bca307511529d5548c09ce8de11d68fc14ea1597eb1e5a219361ea24a560992"
-  "qt.qt6.6120.win64_mingw|d3dcompiler_47-x64.7z|06adfc5bb5873b177d9019f29f9be06c1530830371819b95de6bab290ee2b8a0"
   "qt.qt6.6120.win64_mingw|opengl32sw-64-mesa_11_2_2-signed_sha256.7z|f51918c465a229efb528e26ea4e74e433663fac99a9296accdfbb090e48ac3b8"
 )
 
