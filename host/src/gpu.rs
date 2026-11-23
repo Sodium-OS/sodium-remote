@@ -996,6 +996,7 @@ mod tests {
     /// The compute pass against a CPU reference, both outputs, on an odd-sized
     /// image (the edge blocks are the boundary case).
     #[test]
+    #[ignore = "needs the NVIDIA Vulkan driver; run with --ignored on a machine that has one"]
     fn convert_matches_reference() {
         let mut gpu = Gpu::new().expect("needs the NVIDIA Vulkan driver");
         let (w, h) = (70u32, 38u32);
