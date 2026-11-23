@@ -36,7 +36,7 @@ FONT_SOURCES = {
 }
 FONT_LICENCES = {
     "Inter-OFL.txt": "/usr/share/licenses/inter-font/LICENSE.txt",
-    "JetBrainsMono-OFL.txt": "/usr/share/licenses/ttf-jetbrains-mono/OFL.txt",
+    "JetBrainsMono-OFL.txt": "/usr/share/licenses/ttf-jetbrains-mono/LICENSE",
     "NotoSansCJK-OFL.txt": "/usr/share/licenses/noto-fonts-cjk/LICENSE",
 }
 QT_PLUGINS = ["platforms/qwindows.dll", "imageformats/qsvg.dll", "imageformats/qjpeg.dll", "imageformats/qgif.dll",

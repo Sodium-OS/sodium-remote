@@ -21,7 +21,7 @@ public struct ServerSettings: Equatable, Codable, Sendable {
 }
 
 /// Why a typed server address was refused.
-public enum ServerAddressError: Equatable, Sendable {
+public enum ServerAddressError: Error, Equatable, Sendable {
     /// `http://` or `ws://`: never upgraded, since the person asked for an unencrypted connection.
     case insecure
     /// Empty, or another scheme.

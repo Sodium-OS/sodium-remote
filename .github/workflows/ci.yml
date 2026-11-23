@@ -37,7 +37,7 @@ jobs:
       - name: Install build tools and libraries
         run: |
           pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja pkgconf python \
-            ffmpeg openh264 opus pipewire wayland libglvnd libxkbcommon icu \
+            ffmpeg ffnvcodec-headers openh264 opus pipewire wayland libglvnd libxkbcommon icu \
             qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools qt6-wayland \
             cage dbus mesa fcitx5 reuse cargo-deny
           rustup default stable
@@ -114,7 +114,8 @@ jobs:
       - name: Install build tools
         run: |
           pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja make nasm pkgconf curl zip p7zip python \
-            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools
+            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools \
+            inter-font ttf-jetbrains-mono noto-fonts-cjk
           rustup default stable
           rustup target add x86_64-pc-windows-gnu
 

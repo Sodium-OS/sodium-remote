@@ -1,6 +1,6 @@
+// swift-tools-version:5.9
 // SPDX-License-Identifier: AGPL-3.0-only
 // SPDX-FileCopyrightText: 2026 Ning Bao
-// swift-tools-version:5.9
 // Sodium Remote for Mac (Swift, AppKit, Metal, VideoToolbox; the
 // Rust core and the macOS host through UniFFI). `build-app.sh` builds the one static
 // library, generates `Generated/` and assembles the app; run it before any `swift`

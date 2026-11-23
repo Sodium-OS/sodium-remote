@@ -993,7 +993,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
         retryTimer?.invalidate()
         window.streamView.releaseAll()
         SecureInput.set(false)
-        app.setShortcutTap(active: false, session: self)
+        app.setShortcutTap(active: false, fullScreen: false, keepInputSwitch: macInputMethod, session: self)
         if connected || connecting { core.disconnect() }
         connected = false
         ended = true

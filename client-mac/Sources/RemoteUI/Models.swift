@@ -284,7 +284,7 @@ public struct ServerCandidate: Equatable {
 }
 
 /// Why the core refused what was typed or pasted; the sheet puts the message on the field that caused it.
-public enum ServerInputError: Equatable {
+public enum ServerInputError: Error, Equatable {
     /// `insecure`: an `http://` or `ws://` address, refused with its own words (never upgraded).
     case notALink, badAddress, insecureAddress, badCertificate
 }

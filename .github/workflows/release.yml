@@ -87,7 +87,8 @@ jobs:
       - name: Install build tools
         run: |
           pacman -Syu --noconfirm --needed base-devel git rustup cmake ninja make nasm pkgconf curl zip p7zip python \
-            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools cargo-about
+            mingw-w64-gcc mingw-w64-binutils qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools cargo-about \
+            inter-font ttf-jetbrains-mono noto-fonts-cjk
           rustup default stable
           rustup target add x86_64-pc-windows-gnu
 
