@@ -1,37 +1,119 @@
-<p align="center">
-  <img src="app/windows/icon.svg" alt="Sodium Remote" width="96" height="96">
-</p>
-
-<h1 align="center">Sodium Remote</h1>
-
-<p align="center"><strong>Remote desktop that feels like sitting there.</strong></p>
-
-<p align="center">
-  An open-source, low-latency remote desktop: its own encrypted protocol, a locally drawn cursor, adaptive quality and no port forwarding.
-</p>
+<a href="https://sodiumos.com/remote/">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/banner-light.jpg">
+    <img src="docs/assets/readme/banner-dark.jpg" alt="Sodium Remote: remote desktop that feels like sitting there." width="100%">
+  </picture>
+</a>
 
 <p align="center">
-  <a href="https://sodiumos.com/remote/">Website</a> ·
-  <a href="docs/README.md">Documentation</a> ·
-  <a href="https://github.com/sodium-os/sodium-remote/releases">Releases</a> ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="#download-and-install"><b>Download</b></a> •
+  <a href="#quick-start"><b>Quick start</b></a> •
+  <a href="#your-own-server"><b>Self-hosting</b></a> •
+  <a href="docs/README.md"><b>Documentation</b></a> •
+  <a href="#build-from-source"><b>Build</b></a> •
+  <a href="#screenshots"><b>Screenshots</b></a> •
+  <a href="https://sodiumos.com/remote/"><b>Website</b></a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/sodium-os/sodium-remote/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/sodium-os/sodium-remote/ci.yml?branch=main&style=flat-square&label=CI&labelColor=151229"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0-only" src="https://img.shields.io/badge/license-AGPL--3.0--only-ffb84d?style=flat-square&labelColor=151229"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.1.0 preview" src="https://img.shields.io/badge/version-0.1.0_preview-9aa8ff?style=flat-square&labelColor=151229"></a>
+  <a href="#platforms"><img alt="Windows, macOS and Linux" src="https://img.shields.io/badge/platforms-Windows_·_macOS_·_Linux-9aa8ff?style=flat-square&labelColor=151229"></a>
+  <a href="docs/translating.md"><img alt="Ten languages" src="https://img.shields.io/badge/languages-10-9aa8ff?style=flat-square&labelColor=151229"></a>
+</p>
+
+<p align="center">
+  An open-source, low-latency remote desktop for Windows, macOS and Linux.<br>
+  Its own encrypted protocol, a cursor drawn on your side, quality that adapts on every frame, and no port forwarding.
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/shot-main-light.jpg">
+  <img src="docs/assets/readme/shot-main-dark.jpg" alt="The Sodium Remote app, listing four paired computers with a picture of each, and one more found on the network" width="100%">
+</picture>
+
+> [!NOTE]
 > **Version 0.1.0 is a preview.** Windows and the generic Linux host have so far been tested in virtual machines, and there is no hosted relay service yet. See [Status and known limits](#status-and-known-limits).
 
 ## What it does
 
-Sodium Remote is an open-source remote desktop for Windows, macOS and Linux, and each computer can control the others. It streams over its own encrypted protocol, draws the cursor on your side and re-tunes quality on every frame.
+Each computer can control the others, and be controlled. Sodium Remote streams over its own encrypted protocol, draws the cursor on your side and re-tunes quality on every frame.
 
-- **Pair once.** Two computers pair with a six-digit code, or by typing the other one's address. From then on they find each other, and you never open a port on your router.
-- **Built for latency.** Hardware video encoding and decoding where the platform provides it, and only what changed is sent. An idle desktop costs almost nothing, and when an area stops moving, extra frames sharpen it until text is exact.
-- **The cursor is yours.** The pointer is drawn by your own computer and only its position crosses the network, so pointing never waits for video.
-- **Adapts on every frame.** Bitrate and error correction follow the measured network frame by frame. Quality gives way before smoothness does.
-- **Encrypted end to end.** Sessions use the Noise protocol with ChaCha20-Poly1305. A server that introduces your devices cannot read the stream.
-- **The things you expect.** Sound plays on your side, the clipboard is shared both ways (text and images), and when the other computer has several displays you choose which one to see.
-- **Ten languages.** The interface is available in English (US, UK, Australia), Chinese (Simplified and Traditional), Japanese, Korean, Spanish, French and German.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-Measured in November 2026 between a SodiumOS desktop with an NVIDIA graphics card and a MacBook Air M3, at 2940 × 1734 and 60 Hz: a median of 28 ms from the host drawing a frame to the Mac showing it over home Wi-Fi 6, 3.5 ms to decode a full-color frame on the M3, 9 kbit/s of bandwidth while the desktop is idle, and under 0.5 s to connect on a local network.
+**Pair once.** Two computers pair with a six-digit code, or by typing the other one's address. From then on they find each other, and you never open a port on your router.
+
+</td>
+<td width="50%" valign="top">
+
+**Built for latency.** Hardware video encoding and decoding where the platform provides it, and only what changed is sent. An idle desktop costs almost nothing, and when an area stops moving, extra frames sharpen it until text is exact.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**The cursor is yours.** The pointer is drawn by your own computer and only its position crosses the network, so pointing never waits for video.
+
+</td>
+<td valign="top">
+
+**Adapts on every frame.** Bitrate and error correction follow the measured network frame by frame. Quality gives way before smoothness does.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**Encrypted end to end.** Sessions use the Noise protocol with ChaCha20-Poly1305. A server that introduces your devices cannot read the stream.
+
+</td>
+<td valign="top">
+
+**The things you expect.** Sound plays on your side, the clipboard is shared both ways (text and images), and when the other computer has several displays you choose which one to see.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**Your own server, or none.** On your network and by address, nothing else is needed. Away from home, a rendezvous and relay server you run yourself connects you, and it can't read what passes through.
+
+</td>
+<td valign="top">
+
+**Ten languages.** English (US, UK, Australia), Chinese (Simplified and Traditional), Japanese, Korean, Spanish, French and German.
+
+</td>
+</tr>
+</table>
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/stats-light.jpg">
+  <img src="docs/assets/readme/stats-dark.jpg" alt="Measured: 28 ms median from the host drawing a frame to the Mac showing it over home Wi-Fi 6; 3.5 ms median to decode a full-color frame on an Apple M3; 9 kbit/s while the desktop is idle; under 0.5 s to connect on a local network." width="100%">
+</picture>
+
+Measured in November 2026 between a SodiumOS desktop with an NVIDIA graphics card and a MacBook Air M3, at 2940 × 1734 and 60 Hz, over home Wi-Fi 6.
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%" valign="top">
+  <img src="docs/assets/readme/shot-pairing-dark.jpg" alt="This computer: remote control switched on, and a six-digit pairing code that expires in five minutes" width="100%">
+  <p align="center"><sub><b>Pair with a code.</b> Turn on remote control and the other computer types the six digits.</sub></p>
+</td>
+<td width="50%" valign="top">
+  <img src="docs/assets/readme/shot-live-dark.jpg" alt="This computer while a MacBook Air controls it, with a Disconnect button" width="100%">
+  <p align="center"><sub><b>Always in view.</b> The computer being controlled says who is in, and one click ends it.</sub></p>
+</td>
+</tr>
+</table>
+
+The same app controls other computers and lets this one be controlled. Each card on the list keeps the last picture of its computer, so you can tell them apart at a glance (turn off **Show previews** and none is saved).
 
 ## Platforms
 
