@@ -61,6 +61,9 @@ remote-client --data DIR [connect] [--host ID] [network options] [stream options
   --fixed                fixed resolution: keep the first size and scale the picture
   --ppp F                pixels per point for the UI scale (default: the monitor's DPI; headless 1.741)
   --fullscreen           a borderless window over the monitor
+  --no-zero-copy         copy each decoded picture to system memory and upload it (default: draw it
+                         straight from the decoder's texture where the GPU allows)
+  --no-vsync             present without waiting for the vsync where DXGI allows tearing (full screen)
   --no-hud               hide the stats HUD
   --title TEXT           window title (default \"Sodium Remote\")
   --input-log FILE       log every input event sent
@@ -127,7 +130,7 @@ remote-client --data DIR [connect] [--host ID] [network options] [stream options
             max_mbps: None,
             takeover: false,
             input_log: None,
-            zero_copy: false,
+            zero_copy: true,
             codec: CodecChoice::Auto,
             script: None,
             dump_frames: None,
@@ -196,7 +199,8 @@ remote-client --data DIR [connect] [--host ID] [network options] [stream options
                 "--script" => o.script = Some(val()?.into()),
                 "--dump-frames" => dump_dir = Some(PathBuf::from(val()?)),
                 "--dump-every" => dump_every = val()?.parse().context("--dump-every N")?,
-                "--no-zero-copy" => {}
+                "--no-zero-copy" => o.zero_copy = false,
+                "--no-vsync" => client_windows::d3d::set_tearing(true),
                 "-h" | "--help" => {
                     print!("{USAGE}");
                     return Ok(0);
@@ -221,6 +225,13 @@ remote-client --data DIR [connect] [--host ID] [network options] [stream options
         o.dump_frames = dump_dir.map(|d| (d, dump_every));
         if clicks > 0 {
             o.click = Some(ClickConfig { count: clicks, marker, gap_ms: gap, timeout_ms: 1500, idle_ms, quit_when_done: !stay });
+        }
+        // Zero copy draws from the decoder's textures: nothing to draw headless, and the frame dump reads system memory.
+        if o.headless || o.dump_frames.is_some() {
+            o.zero_copy = false;
+        }
+        if o.zero_copy && !client_windows::d3d::share_with_decoder() {
+            o.zero_copy = false;
         }
         client_windows::platform::init_process();
         client::run(o, std::sync::Arc::new(client_windows::platform::Windows::new(audio)?))

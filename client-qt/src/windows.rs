@@ -165,6 +165,9 @@ pub fn start(r: &Arc<Rq>, o: &Value, _display: *mut std::ffi::c_void, hwnd: *mut
         .name("remote-session".into())
         .spawn(move || {
             client_windows::platform::init_embedded();
+            let mut opts = opts;
+            // Draw straight from the decoder's textures where the GPU allows (else pictures are copied).
+            opts.zero_copy = client_windows::d3d::share_with_decoder();
             let code = match client::run(opts, platform) {
                 Ok(c) => c,
                 Err(e) => {
