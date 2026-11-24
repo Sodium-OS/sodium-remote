@@ -3,27 +3,32 @@
 # Maintainer: Ning Bao <enterprise@sodiumos.com>
 #
 # Sodium Remote for Arch Linux, built from the release's source tarball (packaging/arch/make-source-tarball.sh) against the
-# system's Qt, FFmpeg, Opus and PipeWire. Two packages:
-#   sodium-remote         the Qt app (client): sodium-remote, its desktop entry, icon, translations and notices
-#   sodium-remote-server  the rendezvous server for self-hosting, with a systemd unit
+# system's Qt, FFmpeg, Opus and PipeWire. Three packages:
+#   sodium-remote           the Qt app (client): sodium-remote, its desktop entry, icon, translations and notices
+#   sodium-remote-server    the rendezvous server for self-hosting, with a systemd unit
+#   sodium-remote-sodiumos  the SodiumOS host: remoted, its systemd user unit (sodiumos-remoted) and D-Bus activation
+#                           file, and the fcitx5 input-method add-on. Only useful on SodiumOS (its window manager's
+#                           capture plug-in is part of SodiumOS, not of this repository).
 # The app hosts the computer itself, in its process ("This computer" on GNOME and KDE Plasma 6, through the desktop portals).
 # The standalone host program, sodium-remote-host, is not in a package: build it from source (docs/building/linux.md).
 #
 # From a release:  download PKGBUILD and sodium-remote-<version>.tar.gz from the GitHub release into one folder, then
-#                  makepkg -si        (the release's PKGBUILD has the checksum filled in)
-# From a checkout: packaging/arch/make-source-tarball.sh 0.1.0 packaging/arch, then makepkg -si in packaging/arch
+#                  makepkg -s         (the release's PKGBUILD has the checksum filled in)
+# From a checkout: packaging/arch/make-source-tarball.sh 0.1.0 packaging/arch, then makepkg -s in packaging/arch
 #                  (sha256sums is SKIP in the repository; the release workflow fills it in).
+# Then pacman -U the packages you want (makepkg -si installs all three, sodium-remote-sodiumos included).
 pkgbase=sodium-remote
-pkgname=(sodium-remote sodium-remote-server)
+pkgname=(sodium-remote sodium-remote-server sodium-remote-sodiumos)
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Remote desktop between your own computers (client and rendezvous server)'
+pkgdesc='Remote desktop between your own computers (client, rendezvous server and SodiumOS host)'
 arch=(x86_64)
 url='https://github.com/sodium-os/sodium-remote'
 license=(AGPL-3.0-only)
 makedepends=(cargo cmake ninja pkgconf
              ffmpeg ffnvcodec-headers openh264 opus pipewire wayland libglvnd libxkbcommon icu
-             qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools)
+             qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools
+             shaderc mesa fcitx5 extra-cmake-modules)
 options=(!lto)
 source=("$pkgbase-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgbase-$pkgver.tar.gz")
 sha256sums=('SKIP')
@@ -38,8 +43,15 @@ build() {
   cd "$pkgbase-$pkgver"
   export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
 
-  # The server: remote-rendezvous (binary sodium-remote-server).
-  cargo build --release --locked -p remote-rendezvous
+  # The server: remote-rendezvous (binary sodium-remote-server). The SodiumOS host: remoted (not a default member).
+  cargo build --release --locked -p remote-rendezvous -p remoted
+
+  # The SodiumOS host's fcitx5 input-method add-on.
+  cmake -S fcitx5-remote -B build-fcitx5 -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF
+  cmake --build build-fcitx5
 
   # The app. CMake builds the Rust engine (remote-qt, with cargo) and Sodium UI (sodium-ui/, vendored) as part of it.
   cmake -S app -B build -G Ninja \
@@ -56,7 +68,7 @@ build() {
 check() {
   cd "$pkgbase-$pkgver"
   export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
-  cargo test --release --locked -p remote-rendezvous
+  cargo test --release --locked -p remote-rendezvous -p remoted
   QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
 }
 
@@ -108,4 +120,28 @@ package_sodium-remote-server() {
   install -Dm644 notices/THIRD-PARTY-NOTICES-server.md "$pkgdir/usr/share/doc/sodium-remote-server/THIRD-PARTY-NOTICES.md"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/sodium-remote-server/LICENSE"
   install -Dm644 LICENSING.md TRADEMARKS.md -t "$pkgdir/usr/share/licenses/sodium-remote-server/"
+}
+
+package_sodium-remote-sodiumos() {
+  pkgdesc='Sodium Remote host for SodiumOS: remoted, its user service and the fcitx5 input-method add-on'
+  # libgbm (mesa), PipeWire and Opus are linked; Vulkan (vulkan-icd-loader), CUDA and NVENC are loaded at run time.
+  # fcitx5 for the add-on (it links libFcitx5Core); systemd for the user unit and its D-Bus activation.
+  depends=(glibc gcc-libs mesa pipewire opus vulkan-icd-loader systemd fcitx5)
+  optdepends=('nvidia-utils: the NVENC video encoder the host streams with (NVIDIA only, for now)')
+  cd "$pkgbase-$pkgver"
+
+  install -Dm755 target/release/remoted "$pkgdir/usr/bin/remoted"
+
+  # The user unit Settings › Remote and the shell expect (sodiumos-remoted), and the D-Bus activation file that
+  # starts it when something asks for org.sodiumos.Remote. Installing enables nothing (docs/hosts/sodiumos.md).
+  install -Dm644 host/systemd/sodiumos-remoted.service "$pkgdir/usr/lib/systemd/user/sodiumos-remoted.service"
+  install -Dm644 host/dbus/org.sodiumos.Remote.service "$pkgdir/usr/share/dbus-1/services/org.sodiumos.Remote.service"
+
+  # The input-method add-on: /usr/lib/fcitx5/libremote.so and /usr/share/fcitx5/addon/remote.conf.
+  DESTDIR="$pkgdir" cmake --install build-fcitx5
+
+  install -Dm644 docs/hosts/sodiumos.md -t "$pkgdir/usr/share/doc/sodium-remote-sodiumos/"
+  install -Dm644 notices/THIRD-PARTY-NOTICES-host-sodiumos.md "$pkgdir/usr/share/doc/sodium-remote-sodiumos/THIRD-PARTY-NOTICES.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/sodium-remote-sodiumos/LICENSE"
+  install -Dm644 LICENSING.md TRADEMARKS.md -t "$pkgdir/usr/share/licenses/sodium-remote-sodiumos/"
 }
