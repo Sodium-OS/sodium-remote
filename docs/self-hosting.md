@@ -119,7 +119,7 @@ Enrolment decides who may register as a **host** (a computer that can be control
 |---|---|
 | `token` (the default) | A device that presents a valid enrolment token. Hosts already registered or on the allowlist don't need one again |
 | `allowlist` | Only hosts whose device ID is on `/etc/sodium-remote-server/hosts.allow` |
-| `open` | Anyone. Use it for a private network only |
+| `open` | Anyone. Use it for a private network only: the server refuses it unless `--listen` is a loopback or private address, or you pass `--open-enrol-on-public-address` |
 
 ### Tokens
 
