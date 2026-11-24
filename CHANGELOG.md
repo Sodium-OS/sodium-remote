@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+
+- **Windows client: zero copy.** The D3D11VA decoder now decodes on the presenter's own Direct3D 11 device, and each picture is drawn straight from the decoder's texture instead of being copied to system memory and uploaded again. Where the GPU or driver can't do that, pictures are copied as before. `--no-zero-copy` turns it off for comparing.
+- **Windows client: present path timing** on stderr every 5 s and on the HUD (to the GPU, ready → drawn, drawn → shown, last packet → shown).
+- **Windows client: `--no-vsync`** presents without waiting for the vsync where DXGI allows tearing (full screen). Off by default.
+
 ### Changed
 
 - **LAN signalling** now starts with `SignalHelloV2`, and the host answers with a fresh nonce that goes into the seal context of that connection. Hosts refuse the 0.1.0 `SignalHello`, so connecting over the LAN needs both computers on this version.
