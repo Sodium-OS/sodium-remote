@@ -26,7 +26,7 @@ arch=(x86_64)
 url='https://github.com/sodium-os/sodium-remote'
 license=(AGPL-3.0-only)
 makedepends=(cargo cmake ninja pkgconf
-             ffmpeg ffnvcodec-headers openh264 opus pipewire wayland libglvnd libxkbcommon icu
+             ffmpeg 'ffnvcodec-headers>=13.1' openh264 opus pipewire wayland libglvnd libxkbcommon icu
              qt6-base qt6-declarative qt6-svg qt6-shadertools qt6-tools
              shaderc mesa fcitx5 extra-cmake-modules)
 options=(!lto)
