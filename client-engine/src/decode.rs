@@ -3,7 +3,9 @@
 //! Decoding through FFmpeg (the C shim in csrc/): NVDEC via CUDA, VA-API, or
 //! software (FFmpeg's HEVC decoder, dav1d for AV1). A picture is a reference to
 //! FFmpeg's frame, handed to the presenter without a copy: in system memory, or
-//! with `keep_cuda`, an NVDEC picture left on the GPU for CUDA → GL (`GlInterop`).
+//! with `keep_cuda`, an NVDEC picture left on the GPU for CUDA → GL (`GlInterop`),
+//! or on Windows a D3D11VA picture left in its decoder texture on the presenter's
+//! own device (`d3d11_share_device`, `Picture::d3d11`).
 
 use crate::proto::Codec;
 use anyhow::{Result, bail};
@@ -30,6 +32,11 @@ struct RcFrame {
     reference: *mut std::ffi::c_void,
     cuda: c_int,
     cuctx: *mut std::ffi::c_void,
+    d3d11: c_int,
+    texture: *mut std::ffi::c_void,
+    slice: c_int,
+    tex_width: c_int,
+    tex_height: c_int,
 }
 
 #[repr(C)]
@@ -44,6 +51,55 @@ unsafe extern "C" {
     fn rc_gl_register(g: *mut RcGl, plane: c_int, tex: u32, err: *mut c_char, errlen: c_int) -> c_int;
     fn rc_gl_copy(g: *mut RcGl, f: *const RcFrame, err: *mut c_char, errlen: c_int) -> c_int;
     fn rc_gl_close(g: *mut RcGl);
+}
+
+#[cfg(windows)]
+unsafe extern "C" {
+    fn rc_d3d11_set_device(device: *mut std::ffi::c_void) -> c_int;
+    fn rc_d3d11_lock();
+    fn rc_d3d11_unlock();
+    fn rc_d3d11_zero_copy(on: c_int);
+}
+
+/// Windows zero copy: D3D11VA decoders opened from now on decode on `device` (the
+/// presenter's `ID3D11Device`, made with video support; null stops it), into NV12
+/// textures the presenter samples. With `Decoder::keep_cuda(true)` their pictures
+/// come back as `Picture::d3d11` instead of being copied to system memory.
+///
+/// # Safety
+/// `device` is null or a live `ID3D11Device` (the shim takes its own reference).
+#[cfg(windows)]
+pub unsafe fn d3d11_share_device(device: *mut std::ffi::c_void) {
+    unsafe {
+        rc_d3d11_set_device(device);
+    }
+}
+
+/// Turns the zero-copy pictures off (false) for every decoder, e.g. when the
+/// presenter could not use the textures: pictures come in system memory again.
+#[cfg(windows)]
+pub fn d3d11_zero_copy(on: bool) {
+    unsafe { rc_d3d11_zero_copy(on as c_int) }
+}
+
+/// The lock FFmpeg takes around its use of the shared device's immediate
+/// context; the presenter holds it while it draws from a decoder texture.
+#[cfg(windows)]
+pub struct D3d11Lock(());
+
+#[cfg(windows)]
+impl D3d11Lock {
+    pub fn take() -> D3d11Lock {
+        unsafe { rc_d3d11_lock() };
+        D3d11Lock(())
+    }
+}
+
+#[cfg(windows)]
+impl Drop for D3d11Lock {
+    fn drop(&mut self) {
+        unsafe { rc_d3d11_unlock() }
+    }
 }
 
 unsafe extern "C" {
@@ -167,6 +223,11 @@ impl Decoder {
             reference: ptr::null_mut(),
             cuda: 0,
             cuctx: ptr::null_mut(),
+            d3d11: 0,
+            texture: ptr::null_mut(),
+            slice: 0,
+            tex_width: 0,
+            tex_height: 0,
         };
         let mut e = ErrBuf::new();
         if unsafe { rc_dec_frame(self.raw, &mut f, e.0.as_mut_ptr(), 256) } < 0 {
@@ -182,6 +243,12 @@ impl Decoder {
             full_range: f.full_range != 0,
             bt601: f.matrix == 5 || f.matrix == 6, // AVCOL_SPC_BT470BG, SMPTE170M
             hw: f.hw != 0,
+            d3d11: (f.d3d11 != 0).then_some(D3d11Slice {
+                texture: f.texture,
+                slice: f.slice as u32,
+                tex_width: f.tex_width as u32,
+                tex_height: f.tex_height as u32,
+            }),
             data: [ptr::null(); 3],
             strides: [0; 3],
             lens: [0; 3],
@@ -192,6 +259,16 @@ impl Decoder {
             3 => PixFmt::Yuv444p,
             x => bail!("unknown picture format {x}"),
         };
+        if p.d3d11.is_some() {
+            // A decoder texture slice: nothing in system memory.
+            if !self.backend.contains("zero-copy") {
+                self.backend = match self.backend.strip_suffix(" (shared device)") {
+                    Some(b) => format!("{b} (shared device, zero-copy)"),
+                    None => format!("{} (zero-copy)", self.backend),
+                };
+            }
+            return Ok((p, 0.0));
+        }
         let (w, h) = (p.width as usize, p.height as usize);
         let (cw, ch) = match p.format {
             PixFmt::Nv12 => (w.div_ceil(2) * 2, h.div_ceil(2)),
@@ -236,6 +313,9 @@ pub struct Picture {
     pub full_range: bool,
     pub bt601: bool,
     pub hw: bool,
+    /// Windows zero copy: the picture is this slice of a decoder texture on the
+    /// presenter's device (no planes in system memory).
+    pub d3d11: Option<D3d11Slice>,
     data: [*const u8; 3],
     /// Bytes per row of each plane (FFmpeg's linesize; two bytes per sample pair for NV12's CbCr).
     pub strides: [usize; 3],
@@ -244,6 +324,17 @@ pub struct Picture {
 
 // The frame is refcounted and only read; it may be freed on any thread.
 unsafe impl Send for Picture {}
+
+/// A picture left in its D3D11 decoder texture: an NV12 texture array on the
+/// device given to `d3d11_share_device`, padded beyond the picture's size.
+#[derive(Clone, Copy, Debug)]
+pub struct D3d11Slice {
+    /// The `ID3D11Texture2D`, kept alive by the `Picture`.
+    pub texture: *mut std::ffi::c_void,
+    pub slice: u32,
+    pub tex_width: u32,
+    pub tex_height: u32,
+}
 
 impl Drop for Picture {
     fn drop(&mut self) {
@@ -254,14 +345,14 @@ impl Drop for Picture {
 impl Picture {
     /// Plane `i` (empty when the format has fewer planes).
     pub fn plane(&self, i: usize) -> &[u8] {
-        if self.data[i].is_null() || self.cuda {
+        if self.data[i].is_null() || self.cuda || self.d3d11.is_some() {
             return &[];
         }
         unsafe { std::slice::from_raw_parts(self.data[i], self.lens[i]) }
     }
 
-    /// Mean luma (0–255) over a rectangle, clamped to the picture. For a CUDA
-    /// picture only the rectangle is copied down.
+    /// Mean luma (0–255) over a rectangle, clamped to the picture. For a CUDA or
+    /// D3D11 picture only the rectangle is copied down.
     pub fn mean_luma(&self, x: u32, y: u32, w: u32, h: u32) -> Option<f64> {
         let x1 = (x + w).min(self.width);
         let y1 = (y + h).min(self.height);

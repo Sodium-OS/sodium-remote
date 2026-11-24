@@ -3,6 +3,15 @@
 // See decode_shim.h. Low-latency settings: no frame threading (it delays output
 // by a frame per thread), AV_CODEC_FLAG_LOW_DELAY, and dav1d's frame delay at 1,
 // so every access unit in gives its picture out at once.
+//
+// Windows zero copy: the presenter shares its D3D11 device (rc_d3d11_set_device); the D3D11VA
+// decoder then decodes on it into an NV12 texture array that is also a shader resource, and a
+// picture is handed over as its texture and slice, never copied to system memory. Whatever can't
+// do that (no shared device, a format other than NV12, a driver that refuses shader-readable
+// decoder textures, the presenter turning it off) takes the copy path as before.
+#ifdef _WIN32
+#define COBJMACROS
+#endif
 #include "decode_shim.h"
 
 // ffnvcodec's loader first: it defines the CUDA types, so hwcontext_cuda.h
@@ -19,6 +28,8 @@
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <d3d11.h>
+#include <libavutil/hwcontext_d3d11va.h>
 #endif
 
 struct rc_dec {
@@ -31,6 +42,7 @@ struct rc_dec {
     AVFrame *sw;  // its copy in system memory
     int have;
     int keep_cuda;
+    int shared_d3d11; // the D3D11VA device is the presenter's (rc_d3d11_set_device)
 };
 
 // libcuda, loaded once for the GL interop and the luma probe.
@@ -73,9 +85,171 @@ static double now_ms(void) {
 #endif
 }
 
+#ifdef _WIN32
+// The presenter's device, and the lock FFmpeg and the presenter share around its immediate context.
+static ID3D11Device *g_d3d;
+static volatile LONG g_zero_copy = 1;
+static CRITICAL_SECTION g_d3d_cs;
+static INIT_ONCE g_d3d_once = INIT_ONCE_STATIC_INIT;
+// IID_ID3D10Multithread, spelled out so nothing has to link dxguid.
+static const GUID rc_IID_ID3D10Multithread = {0x9b7e4e00, 0x342c, 0x4106, {0xa1, 0x9f, 0x4f, 0x27, 0x04, 0xf6, 0x89, 0xf0}};
+
+static BOOL CALLBACK d3d_cs_init(PINIT_ONCE once, PVOID param, PVOID *ctx) {
+    (void)once;
+    (void)param;
+    (void)ctx;
+    InitializeCriticalSection(&g_d3d_cs);
+    return TRUE;
+}
+
+static void d3d_lock(void *ctx) {
+    (void)ctx;
+    InitOnceExecuteOnce(&g_d3d_once, d3d_cs_init, NULL, NULL);
+    EnterCriticalSection(&g_d3d_cs);
+}
+
+static void d3d_unlock(void *ctx) {
+    (void)ctx;
+    LeaveCriticalSection(&g_d3d_cs);
+}
+
+void rc_d3d11_lock(void) { d3d_lock(NULL); }
+void rc_d3d11_unlock(void) { d3d_unlock(NULL); }
+void rc_d3d11_zero_copy(int on) { InterlockedExchange(&g_zero_copy, on ? 1 : 0); }
+
+int rc_d3d11_set_device(void *device) {
+    d3d_lock(NULL);
+    if (g_d3d) ID3D11Device_Release(g_d3d);
+    g_d3d = device;
+    if (g_d3d) {
+        ID3D11Device_AddRef(g_d3d);
+        // The decoder thread and the window thread both use the device's immediate context.
+        ID3D10Multithread *mt = NULL;
+        if (SUCCEEDED(ID3D11Device_QueryInterface(g_d3d, &rc_IID_ID3D10Multithread, (void **)&mt)) && mt) {
+            ID3D10Multithread_SetMultithreadProtected(mt, TRUE);
+            ID3D10Multithread_Release(mt);
+        }
+    }
+    d3d_unlock(NULL);
+    return 0;
+}
+
+// A D3D11VA device context on the presenter's device; NULL when there is none or FFmpeg refuses it
+// (e.g. a device made without video support).
+static AVBufferRef *shared_d3d11_device(void) {
+    d3d_lock(NULL);
+    ID3D11Device *dev = g_d3d;
+    if (dev) ID3D11Device_AddRef(dev);
+    d3d_unlock(NULL);
+    if (!dev) return NULL;
+    AVBufferRef *ref = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA);
+    if (!ref) {
+        ID3D11Device_Release(dev);
+        return NULL;
+    }
+    AVD3D11VADeviceContext *hw = ((AVHWDeviceContext *)ref->data)->hwctx;
+    hw->device = dev; // FFmpeg releases it with the context
+    hw->lock = d3d_lock;
+    hw->unlock = d3d_unlock;
+    hw->lock_ctx = NULL;
+    if (av_hwdevice_ctx_init(ref) < 0) {
+        av_buffer_unref(&ref);
+        return NULL;
+    }
+    return ref;
+}
+
+// Decoder textures the presenter can sample: FFmpeg's own frame parameters plus
+// D3D11_BIND_SHADER_RESOURCE, NV12 only. 0 when that worked (ctx->hw_frames_ctx is set).
+static int shader_readable_frames(rc_dec *d, AVCodecContext *ctx) {
+    if (!d->shared_d3d11 || !g_zero_copy) return -1;
+    AVBufferRef *fr = NULL;
+    if (avcodec_get_hw_frames_parameters(ctx, d->hwdev, AV_PIX_FMT_D3D11, &fr) < 0) return -1;
+    AVHWFramesContext *fc = (AVHWFramesContext *)fr->data;
+    if (fc->sw_format != AV_PIX_FMT_NV12) {
+        av_buffer_unref(&fr);
+        return -1;
+    }
+    AVD3D11VAFramesContext *fh = fc->hwctx;
+    // The pool already counts extra_hw_frames: room for the picture the presenter keeps
+    // and the one waiting in the latest-frame slot.
+    fh->BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+    if (av_hwframe_ctx_init(fr) < 0) {
+        fprintf(stderr, "remote-client: shader-readable D3D11 decoder textures refused; copying pictures\n");
+        av_buffer_unref(&fr);
+        return -1;
+    }
+    av_buffer_unref(&ctx->hw_frames_ctx);
+    ctx->hw_frames_ctx = fr;
+    return 0;
+}
+
+// The frame is a slice of a shader-readable texture on the presenter's device.
+static int zero_copy_frame(const AVFrame *f) {
+    if (!g_zero_copy || f->format != AV_PIX_FMT_D3D11 || !f->hw_frames_ctx) return 0;
+    AVHWFramesContext *fc = (AVHWFramesContext *)f->hw_frames_ctx->data;
+    AVD3D11VAFramesContext *fh = fc->hwctx;
+    AVD3D11VADeviceContext *dh = fc->device_ctx->hwctx;
+    return fc->sw_format == AV_PIX_FMT_NV12 && (fh->BindFlags & D3D11_BIND_SHADER_RESOURCE) && g_d3d && dh->device == g_d3d;
+}
+
+// Mean luma over a rectangle of a D3D11 picture: that rectangle (2-aligned for NV12) through a
+// small staging texture.
+static int d3d11_luma(const rc_frame *f, int x, int y, int w, int h, uint8_t *buf, char *err, int errlen) {
+    const AVFrame *fr = f->ref;
+    AVHWFramesContext *fc = (AVHWFramesContext *)fr->hw_frames_ctx->data;
+    AVD3D11VADeviceContext *dh = fc->device_ctx->hwctx;
+    ID3D11Texture2D *tex = f->texture;
+    D3D11_TEXTURE2D_DESC td;
+    ID3D11Texture2D_GetDesc(tex, &td);
+    UINT x0 = (UINT)x & ~1u, y0 = (UINT)y & ~1u, x1 = ((UINT)(x + w) + 1) & ~1u, y1 = ((UINT)(y + h) + 1) & ~1u;
+    if (x1 > td.Width) x1 = td.Width;
+    if (y1 > td.Height) y1 = td.Height;
+    D3D11_TEXTURE2D_DESC sd = {0};
+    sd.Width = x1 - x0;
+    sd.Height = y1 - y0;
+    sd.MipLevels = 1;
+    sd.ArraySize = 1;
+    sd.Format = td.Format;
+    sd.SampleDesc.Count = 1;
+    sd.Usage = D3D11_USAGE_STAGING;
+    sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    ID3D11Texture2D *st = NULL;
+    HRESULT hr = ID3D11Device_CreateTexture2D(dh->device, &sd, NULL, &st);
+    if (FAILED(hr)) {
+        snprintf(err, errlen, "staging texture: 0x%08lx", (unsigned long)hr);
+        return -1;
+    }
+    D3D11_BOX box = {x0, y0, 0, x1, y1, 1};
+    D3D11_MAPPED_SUBRESOURCE m;
+    dh->lock(dh->lock_ctx);
+    ID3D11DeviceContext_CopySubresourceRegion(dh->device_context, (ID3D11Resource *)st, 0, 0, 0, 0, (ID3D11Resource *)tex, (UINT)f->slice, &box);
+    hr = ID3D11DeviceContext_Map(dh->device_context, (ID3D11Resource *)st, 0, D3D11_MAP_READ, 0, &m);
+    if (SUCCEEDED(hr)) {
+        for (int row = 0; row < h; row++) memcpy(buf + (size_t)row * w, (const uint8_t *)m.pData + (size_t)(y - (int)y0 + row) * m.RowPitch + (x - (int)x0), w);
+        ID3D11DeviceContext_Unmap(dh->device_context, (ID3D11Resource *)st, 0);
+    }
+    dh->unlock(dh->lock_ctx);
+    ID3D11Texture2D_Release(st);
+    if (FAILED(hr)) {
+        snprintf(err, errlen, "mapping the staging texture: 0x%08lx", (unsigned long)hr);
+        return -1;
+    }
+    return 0;
+}
+#endif
+
 static enum AVPixelFormat get_format(AVCodecContext *ctx, const enum AVPixelFormat *fmts) {
     rc_dec *d = ctx->opaque;
     const enum AVPixelFormat *p;
+#ifdef _WIN32
+    for (p = fmts; *p != AV_PIX_FMT_NONE; p++)
+        if (*p == AV_PIX_FMT_D3D11 && d->hw_fmt == AV_PIX_FMT_D3D11) {
+            // Shader-readable textures when they can be had, else FFmpeg's own (copied down).
+            if (shader_readable_frames(d, ctx) < 0) av_buffer_unref(&ctx->hw_frames_ctx);
+            return *p;
+        }
+#endif
     for (p = fmts; *p != AV_PIX_FMT_NONE; p++)
         if (d->hw_fmt != AV_PIX_FMT_NONE && *p == d->hw_fmt) return *p;
     // No hardware (or its setup failed and FFmpeg asks again): the first software format.
@@ -90,6 +264,7 @@ static void free_ctx(rc_dec *d) {
     avcodec_free_context(&d->ctx);
     av_buffer_unref(&d->hwdev);
     d->hw_fmt = AV_PIX_FMT_NONE;
+    d->shared_d3d11 = 0;
 }
 
 // One attempt: `type` is AV_HWDEVICE_TYPE_NONE for software.
@@ -121,7 +296,11 @@ static int try_open(rc_dec *d, int codec, enum AVHWDeviceType type, char *backen
             set_err(err, errlen, "decoder has no such hardware config", 0);
             return -1;
         }
-        int r = av_hwdevice_ctx_create(&d->hwdev, type, NULL, NULL, 0);
+        int r = 0;
+#ifdef _WIN32
+        if (type == AV_HWDEVICE_TYPE_D3D11VA && (d->hwdev = shared_d3d11_device())) d->shared_d3d11 = 1;
+#endif
+        if (!d->hwdev) r = av_hwdevice_ctx_create(&d->hwdev, type, NULL, NULL, 0);
         if (r < 0) {
             set_err(err, errlen, "hardware device", r);
             d->hw_fmt = AV_PIX_FMT_NONE;
@@ -155,7 +334,7 @@ static int try_open(rc_dec *d, int codec, enum AVHWDeviceType type, char *backen
         set_err(err, errlen, "avcodec_open2", r);
         return r;
     }
-    snprintf(backend, blen, "%s%s%s", c->name, d->hwdev ? "+" : "", d->hwdev ? av_hwdevice_get_type_name(type) : "");
+    snprintf(backend, blen, "%s%s%s%s", c->name, d->hwdev ? "+" : "", d->hwdev ? av_hwdevice_get_type_name(type) : "", d->shared_d3d11 ? " (shared device)" : "");
     return 0;
 }
 
@@ -264,6 +443,31 @@ int rc_dec_frame(rc_dec *d, rc_frame *o, char *err, int errlen) {
         o->ref = ref;
         return 0;
     }
+#ifdef _WIN32
+    if (d->keep_cuda && zero_copy_frame(f)) {
+        // Stay on the GPU: the texture and slice, for the presenter and rc_frame_luma.
+        AVFrame *ref = av_frame_clone(f);
+        if (!ref) {
+            set_err(err, errlen, "av_frame_clone", 0);
+            return -1;
+        }
+        D3D11_TEXTURE2D_DESC td;
+        ID3D11Texture2D_GetDesc((ID3D11Texture2D *)ref->data[0], &td);
+        o->format = RC_FMT_NV12;
+        o->width = f->width;
+        o->height = f->height;
+        o->full_range = f->color_range == AVCOL_RANGE_JPEG;
+        o->matrix = f->colorspace;
+        o->hw = 1;
+        o->d3d11 = 1;
+        o->texture = ref->data[0];
+        o->slice = (int)(intptr_t)ref->data[1];
+        o->tex_width = (int)td.Width;
+        o->tex_height = (int)td.Height;
+        o->ref = ref;
+        return 0;
+    }
+#endif
     if (f->hw_frames_ctx) {
         double t0 = now_ms();
         av_frame_unref(d->sw);
@@ -317,6 +521,15 @@ int rc_frame_luma(const rc_frame *f, int x, int y, int w, int h, double *mean, c
     }
     uint8_t *buf = malloc((size_t)w * h);
     if (!buf) return -1;
+#ifdef _WIN32
+    if (f->d3d11) {
+        int r = d3d11_luma(f, x, y, w, h, buf, err, errlen);
+        if (r < 0) {
+            free(buf);
+            return -1;
+        }
+    } else
+#endif
     if (f->cuda) {
         if (cuda_fns(err, errlen) < 0) {
             free(buf);
