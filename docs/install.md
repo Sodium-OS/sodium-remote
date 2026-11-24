@@ -45,13 +45,15 @@ Build the package from the `PKGBUILD` in `packaging/arch/`:
 ```sh
 git clone https://github.com/sodium-os/sodium-remote.git
 cd sodium-remote/packaging/arch
-makepkg -si
+makepkg -s
+sudo pacman -U sodium-remote-[0-9]*.pkg.tar.zst      # the app; add sodium-remote-server-* or sodium-remote-sodiumos-* if you want them
 ```
 
-The `PKGBUILD` makes two packages from the release's source tarball:
+The `PKGBUILD` makes three packages from the release's source tarball. Install the ones you want (`makepkg -si` installs all three):
 
 - `sodium-remote`: the Qt app (`sodium-remote`), its desktop entry, icon, translations and notices. The app can also host the computer itself from its **This computer** page, on GNOME and KDE Plasma 6.
 - `sodium-remote-server`: the rendezvous server for [self-hosting](self-hosting.md), with a systemd unit.
+- `sodium-remote-sodiumos`: the SodiumOS host, `remoted`, with its user service and the input-method add-on. Only useful on SodiumOS; see [the SodiumOS host page](hosts/sodiumos.md).
 
 The standalone host program `sodium-remote-host` is not in a package; [build it from source](building/linux.md) if you want it.
 
@@ -61,7 +63,7 @@ Build it from source: [the Linux build guide](building/linux.md). You need a Way
 
 ## SodiumOS
 
-Sodium Remote comes with SodiumOS. Turn it on in Settings › Remote and pair your first device. See [the SodiumOS host page](hosts/sodiumos.md).
+SodiumOS's Remote settings and the host's window-manager plug-in come with SodiumOS; the host itself, `remoted`, is the `sodium-remote-sodiumos` package above. Install it, turn Remote on in Settings › Remote and pair your first device. See [the SodiumOS host page](hosts/sodiumos.md).
 
 ## Updating
 

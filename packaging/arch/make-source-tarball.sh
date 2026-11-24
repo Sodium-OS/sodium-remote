@@ -3,7 +3,8 @@
 # SPDX-FileCopyrightText: 2026 Ning Bao
 # Makes the release source tarball the Arch package (packaging/arch/PKGBUILD) and the release's "Source" file are built from:
 #   sodium-remote-<version>.tar.gz   the tracked files of the checkout (git archive), under sodium-remote-<version>/, plus
-#                                    notices/THIRD-PARTY-NOTICES-app.md and notices/THIRD-PARTY-NOTICES-server.md
+#                                    notices/THIRD-PARTY-NOTICES-app.md, notices/THIRD-PARTY-NOTICES-server.md and
+#                                    notices/THIRD-PARTY-NOTICES-host-sodiumos.md
 #                                    (cargo-about, one list per shipped binary, for the Linux target)
 #
 #   packaging/arch/make-source-tarball.sh VERSION OUTDIR
@@ -24,6 +25,7 @@ cd "$root"
 about() { cargo about generate --locked about.hbs --manifest-path "$1" --target x86_64-unknown-linux-gnu --output-file "$work/notices/$2"; }
 about client-qt/Cargo.toml THIRD-PARTY-NOTICES-app.md
 about relay/Cargo.toml THIRD-PARTY-NOTICES-server.md
+about host/Cargo.toml THIRD-PARTY-NOTICES-host-sodiumos.md
 
 mkdir -p "$work/tree"
 if [[ $(git -C "$root" rev-parse --show-toplevel 2>/dev/null || true) == "$root" ]]; then
