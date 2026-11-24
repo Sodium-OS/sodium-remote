@@ -146,8 +146,10 @@ struct Encoding {
     qp_scale: i32,
     mv_block: u32,
     applied: RatePlan,
-    /// The rate controller's QP ceiling in force (0: none) and the last capture frame it follows.
+    /// The rate controller's QP ceiling in force (0: none), the one the last capture frame had,
+    /// and that frame.
     max_qp: u32,
+    held: u32,
     last: Option<Steady>,
 }
 
@@ -445,6 +447,7 @@ impl State {
             mv_block,
             applied: plan,
             max_qp: 0,
+            held: 0,
             last: None,
         });
         self.cur_slot = None;
@@ -562,12 +565,14 @@ impl State {
         }
     }
 
-    fn apply_plan(&mut self, plan: RatePlan) -> Result<()> {
+    /// The plan and the QP ceiling (0: none), by one reconfigure when either changed.
+    fn apply_plan(&mut self, plan: RatePlan, max_qp: u32) -> Result<()> {
         let e = self.enc.as_mut().unwrap();
-        if plan != e.applied {
+        if plan != e.applied || max_qp != e.max_qp {
             let split = if plan.split { nvenc::SPLIT_TWO_FORCED } else { nvenc::SPLIT_OFF };
-            e.enc.set_rate(plan.kbps, plan.vbv_pct, split)?;
+            e.enc.set_rate(plan.kbps, plan.vbv_pct, split, max_qp)?;
             e.applied = plan;
+            e.max_qp = max_qp;
             let mut s = self.shared.stats.lock().unwrap();
             (s.kbps, s.split, s.vbv_pct) = (plan.kbps, plan.split, plan.vbv_pct);
         }
@@ -678,18 +683,18 @@ impl State {
         let rate_in = self.rate_input();
         let class = self.class_now(now, &rate_in, hinted);
         let plan = rate::plan(&rate_in, class, self.cfg.fps).unwrap();
-        self.apply_plan(plan)?;
+        // no ceiling on a keyframe or while an intra refresh goes on (its frames carry the refresh)
+        let e = self.enc.as_ref().unwrap();
+        let max_qp = if idr || ir || self.ir_left > 0 {
+            0
+        } else {
+            rate::max_qp(e.last.as_ref(), e.held != 0, changed, now, self.interval_ns, &plan, self.cfg.fps, e.qp_scale)
+        };
+        self.apply_plan(plan, max_qp)?;
         let fold = class == FrameClass::Passive && self.cfg.refinement && !idr;
         let rc = self.refine_cfg(!idr && !ir && self.ir_left == 0, rate_in.user_cap);
         let pick = if fold { self.pick(&rate_in) } else { None };
         let e = self.enc.as_mut().unwrap();
-        let held = e.max_qp != 0;
-        let max_qp =
-            if idr { 0 } else { rate::max_qp(e.last.as_ref(), held, changed, now, self.interval_ns, &plan, self.cfg.fps, e.qp_scale) };
-        if max_qp != e.max_qp {
-            e.enc.set_max_qp(max_qp)?;
-            e.max_qp = max_qp;
-        }
         let map = e.grid.qp_map(&mut self.qpmap, fold, now, &rc, e.qp_scale, pick.as_ref());
         let hinted_blocks = if hinted
             && motion_field(e.width, e.height, e.mv_block, &self.motion, &mut self.mv, &mut self.mv_valid)
@@ -713,6 +718,7 @@ impl State {
         // a frame with changed cells has bytes: only a refinement frame can be empty
         let done = e.grid.commit(avg_qp, &self.qpmap, &rc, e.qp_scale, t_encoded_ns, false);
         e.last = Some(Steady { base_qp: done.base_qp, bytes: data.len(), changed, t_encoded_ns });
+        e.held = max_qp;
         let (width, height, cells) = (e.width, e.height, e.grid.len() as u32);
         self.note_settled(&done.settled);
 
@@ -782,7 +788,8 @@ impl State {
         if map.refined == 0 {
             return Ok(());
         }
-        self.apply_plan(plan)?;
+        let max_qp = rate::refine_max_qp(e.last.as_ref(), e.held, now, self.interval_ns);
+        self.apply_plan(plan, max_qp)?;
         let e = self.enc.as_mut().unwrap();
         let (out, _, enc_slot) = &e.outs[slot];
         if let Some((dir, rb)) = self.dump.as_ref().filter(|_| self.dumped_seq != Some(self.cur_seq)) {

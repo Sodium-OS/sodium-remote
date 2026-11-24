@@ -472,26 +472,11 @@ int rd_enc_set_bitrate(RdEnc *e, uint32_t kbps, char *err, int errlen)
     return 0;
 }
 
-int rd_enc_set_max_qp(RdEnc *e, uint32_t max_qp, char *err, int errlen)
-{
-    e->max_qp = max_qp;
-    e->max_qp_used |= max_qp != 0;
-    set_rc(e, e->cfg.rcParams.averageBitRate / 1000);
-    NV_ENC_RECONFIGURE_PARAMS rp = {.version = NV_ENC_RECONFIGURE_PARAMS_VER, .reInitEncodeParams = e->init};
-    rp.reInitEncodeParams.encodeConfig = &e->cfg;
-    push(e->cuda);
-    NVENCSTATUS st = e->api.nvEncReconfigureEncoder(e->enc, &rp);
-    pop(e->cuda);
-    if (st) {
-        fail(err, errlen, "nvEncReconfigureEncoder (max QP %u): %d %s", max_qp, st, last_error(e));
-        return -1;
-    }
-    return 0;
-}
-
-int rd_enc_set_rate(RdEnc *e, uint32_t kbps, uint32_t vbv_pct, int split, char *err, int errlen)
+int rd_enc_set_rate(RdEnc *e, uint32_t kbps, uint32_t vbv_pct, int split, uint32_t max_qp, char *err, int errlen)
 {
     e->p.vbv_pct = vbv_pct ? vbv_pct : 100;
+    e->max_qp = max_qp;
+    e->max_qp_used |= max_qp != 0;
     set_rc(e, kbps);
     NV_ENC_RECONFIGURE_PARAMS rp = {.version = NV_ENC_RECONFIGURE_PARAMS_VER, .reInitEncodeParams = e->init};
     rp.reInitEncodeParams.splitEncodeMode = split;
@@ -500,7 +485,8 @@ int rd_enc_set_rate(RdEnc *e, uint32_t kbps, uint32_t vbv_pct, int split, char *
     NVENCSTATUS st = e->api.nvEncReconfigureEncoder(e->enc, &rp);
     pop(e->cuda);
     if (st) {
-        fail(err, errlen, "nvEncReconfigureEncoder (split %d, VBV %u%%): %d %s", split, vbv_pct, st, last_error(e));
+        fail(err, errlen, "nvEncReconfigureEncoder (split %d, VBV %u%%, max QP %u): %d %s", split, vbv_pct, max_qp, st,
+             last_error(e));
         return -1;
     }
     e->init.splitEncodeMode = split;

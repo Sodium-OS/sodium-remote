@@ -67,11 +67,10 @@ void rd_enc_grid(RdEnc *e, uint32_t *qp_cell, uint32_t *mv_block);
 
 // New target bitrate from the next frame on: no reset, no IDR.
 int rd_enc_set_bitrate(RdEnc *e, uint32_t kbps, char *err, int errlen);
-// Bitrate, VBV (percent of one frame's budget) and split mode at once, by reconfigure
+// Bitrate, VBV (percent of one frame's budget), split mode and the rate controller's QP
+// ceiling (before the QP delta map, codec units; 0: none) at once, by reconfigure
 // (no reset, no IDR; measured to take effect on the next frame).
-int rd_enc_set_rate(RdEnc *e, uint32_t kbps, uint32_t vbv_pct, int split, char *err, int errlen);
-// The rate controller's QP ceiling, before the QP delta map (codec units); 0: none. By reconfigure.
-int rd_enc_set_max_qp(RdEnc *e, uint32_t max_qp, char *err, int errlen);
+int rd_enc_set_rate(RdEnc *e, uint32_t kbps, uint32_t vbv_pct, int split, uint32_t max_qp, char *err, int errlen);
 // The frame with this pts was lost: stop predicting from it.
 int rd_enc_invalidate(RdEnc *e, uint64_t pts, char *err, int errlen);
 void rd_enc_close(RdEnc *e);

@@ -154,7 +154,20 @@ pub fn max_qp(last: Option<&Steady>, held: bool, changed: u32, now_ns: u64, inte
     let steady = now_ns.saturating_sub(l.t_encoded_ns) <= 2 * interval_ns
         && 2 * changed as u64 <= 3 * l.changed as u64
         && l.bytes as u64 <= room;
-    if steady { (l.base_qp + STEADY_STEP * scale).max(1) as u32 } else { 0 }
+    // `base_qp` is pessimistic, and reads the codec's top QP when nearly every cell is clamped
+    // there (a small change among skipped cells): a ceiling at the top is no ceiling, never past it.
+    let top = if scale == 1 { 51 } else { 255 };
+    if steady { (l.base_qp + STEADY_STEP * scale).clamp(1, top) as u32 } else { 0 }
+}
+
+/// The ceiling for a refinement frame: the capture frames' `held` ceiling while their motion goes
+/// on (the last capture frame within two intervals), else none. A ceiling left from a scroll that
+/// has stopped would hold every refinement frame after it at that QP whatever it costs.
+pub fn refine_max_qp(last: Option<&Steady>, held: u32, now_ns: u64, interval_ns: u64) -> u32 {
+    match last {
+        Some(l) if now_ns.saturating_sub(l.t_encoded_ns) <= 2 * interval_ns => held,
+        _ => 0,
+    }
 }
 
 #[cfg(test)]
@@ -214,5 +227,32 @@ mod tests {
         assert_eq!(max_qp(Some(&Steady { bytes: 190_000, ..last }), true, 4100, now, iv, &p, 60, 1), 0);
         let split = RatePlan { vbv_pct: 50, split: true, ..p };
         assert_eq!(max_qp(Some(&big), true, 4100, now, iv, &split, 60, 1), 0);
+    }
+
+    #[test]
+    fn the_ceiling_stays_inside_the_codecs_qp_range() {
+        let p = RatePlan { kbps: 20_000, vbv_pct: 100, split: false };
+        let (ms, iv) = (1_000_000, 16_667_000);
+        // a small change every frame (a spinner) among skipped cells: base_qp reads the top QP
+        let last = Steady { base_qp: 51, bytes: 800, changed: 6, t_encoded_ns: 100 * ms };
+        assert_eq!(max_qp(Some(&last), false, 6, 116 * ms, iv, &p, 60, 1), 51);
+        assert_eq!(max_qp(Some(&Steady { base_qp: 50, ..last }), false, 6, 116 * ms, iv, &p, 60, 1), 51);
+        assert_eq!(max_qp(Some(&Steady { base_qp: 255, ..last }), false, 6, 116 * ms, iv, &p, 60, 4), 255);
+        assert_eq!(max_qp(Some(&Steady { base_qp: 250, ..last }), false, 6, 116 * ms, iv, &p, 60, 4), 255);
+        assert_eq!(max_qp(Some(&Steady { base_qp: 0, ..last }), false, 6, 116 * ms, iv, &p, 60, 1), 2);
+    }
+
+    #[test]
+    fn refinement_drops_a_ceiling_once_the_motion_has_stopped() {
+        let (ms, iv) = (1_000_000, 16_667_000);
+        let last = Steady { base_qp: 5, bytes: 60_000, changed: 4000, t_encoded_ns: 100 * ms };
+        // between frames of a scroll: the capture frames' ceiling
+        assert_eq!(refine_max_qp(Some(&last), 7, 108 * ms, iv), 7);
+        assert_eq!(refine_max_qp(Some(&last), 7, 133 * ms, iv), 7);
+        // the scroll stopped (no capture frame for over two intervals): none
+        assert_eq!(refine_max_qp(Some(&last), 7, 134 * ms, iv), 0);
+        assert_eq!(refine_max_qp(Some(&last), 7, 2_000 * ms, iv), 0);
+        assert_eq!(refine_max_qp(None, 7, 108 * ms, iv), 0);
+        assert_eq!(refine_max_qp(Some(&last), 0, 108 * ms, iv), 0);
     }
 }
