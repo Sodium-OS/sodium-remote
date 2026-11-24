@@ -2905,8 +2905,8 @@ impl ClientBrain {
                             self.emit(ClientEvent::Control(m));
                             self.finish(r);
                         }
-                        Msg::Welcome(_) => {
-                            self.on_welcome();
+                        Msg::Welcome(w) => {
+                            self.on_welcome(&w.name);
                             self.emit(ClientEvent::Control(m));
                         }
                         _ => self.emit(ClientEvent::Control(m)),
@@ -2947,9 +2947,11 @@ impl ClientBrain {
         }
     }
 
-    /// `Welcome` arrived: the connection is real. Stamp the host's `last_connected`, and when the media
+    /// `Welcome` arrived: the connection is real. Stamp the host's `last_connected`, take the host's
+    /// own name from it (the name pairing saved isn't covered by the code, so a server or LAN neighbour
+    /// could have changed it; `Welcome` comes over the authenticated session), and when the media
     /// runs over the LAN, remember that host's LAN listener address (and drop it from any other host).
-    fn on_welcome(&mut self) {
+    fn on_welcome(&mut self, host_name: &str) {
         let Some(host) = self.target.as_ref().map(|t| t.host) else { return };
         let lan = match &self.route {
             Some(r) if r.kind == PathKind::Lan => {
@@ -2961,6 +2963,10 @@ impl ClientBrain {
         let mut p = self.pairings.lock().unwrap();
         if let Some(d) = p.devices.iter_mut().find(|d| d.id == host) {
             d.last_connected = Some(unix_now());
+            let n = host_name.trim();
+            if !d.named_at_desk && (1..=64).contains(&n.len()) && d.name != n {
+                d.name = n.to_string();
+            }
         }
         if let Some(a) = lan {
             p.set_lan_addr(&host, &a.to_string());
