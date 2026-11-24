@@ -10,10 +10,18 @@ use sha1::Sha1;
 
 use crate::proto::DeviceId;
 
-pub fn credentials(secret: &[u8], device: &DeviceId, now: u64, ttl: u64) -> (String, String) {
-    let username = format!("{}:{}", now + ttl, device);
+/// The credentials, and when they expire (unix time).
+///
+/// The expiry is rounded to steps of half the TTL, so a device asking again
+/// within the same step gets the same username back. A device then holds at
+/// most two live usernames, which keeps coturn's per-user quota meaningful.
+/// The credentials stay valid for more than half and at most all of `ttl`.
+pub fn credentials(secret: &[u8], device: &DeviceId, now: u64, ttl: u64) -> (String, String, u64) {
+    let step = (ttl / 2).max(1);
+    let expires = (now / step + 2) * step;
+    let username = format!("{}:{}", expires, device);
     let mut mac = Hmac::<Sha1>::new_from_slice(secret).expect("HMAC takes any key length");
     mac.update(username.as_bytes());
     let password = STANDARD.encode(mac.finalize().into_bytes());
-    (username, password)
+    (username, password, expires)
 }

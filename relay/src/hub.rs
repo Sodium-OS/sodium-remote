@@ -719,8 +719,10 @@ impl Hub {
                 }
                 let account = inner.store.data.devices.get(&me).and_then(|r| r.account.clone());
                 self.cfg.hooks.turn_credentials(&me, account.as_deref()).map_err(denied)?;
-                let ttl = self.cfg.turn_ttl.as_secs();
-                let (username, credential) = turn::credentials(&self.cfg.turn_secret, &me, unix_now(), ttl);
+                let now = unix_now();
+                let (username, credential, expires) =
+                    turn::credentials(&self.cfg.turn_secret, &me, now, self.cfg.turn_ttl.as_secs());
+                let ttl = expires - now;
                 info!(device = %me.short(), role = ctx.role.as_str(), ttl, "turn credentials issued");
                 // Older clients read `urls` only: the plain list, else the first region's.
                 let urls = match (self.cfg.turn_urls.is_empty(), self.cfg.relays.first()) {

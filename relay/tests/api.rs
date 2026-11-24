@@ -131,12 +131,15 @@ async fn host_and_client_meet_signal_and_get_turn_credentials() {
         let (expiry, who) = user.split_once(':').unwrap();
         assert_eq!(who, dev.id);
         let left = expiry.parse::<u64>().unwrap() - remote_rendezvous::hub::unix_now();
-        assert!((595..=600).contains(&left), "{left}");
+        assert!((300..=600).contains(&left), "{left}");
         let mut mac = Hmac::<sha1::Sha1>::new_from_slice(SECRET).unwrap();
         mac.update(user.as_bytes());
         let want = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
         assert_eq!(r["credential"], want);
-        assert_eq!(r["ttl"], 600);
+        assert!(r["ttl"].as_u64().unwrap().abs_diff(left) <= 1);
+        // Asking again in the same step gives the same username, so one device can't spread over coturn's quota.
+        let again = dev.request(json!({ "t": "turn_credentials" })).await;
+        assert_eq!(again["username"], r["username"]);
     }
 
     client.request(json!({ "t": "close", "session": session })).await;
