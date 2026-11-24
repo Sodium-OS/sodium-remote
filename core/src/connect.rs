@@ -286,13 +286,24 @@ fn rdv_chan(rdv: Rendezvous, routes: &Routes, session: String, key: DeviceKey, p
 /// A signalling channel over a LAN listener connection. The connection closes
 /// when the channel is dropped. `hold` lives as long as the connection (the
 /// host's listener slot).
-fn lan_chan(stream: TcpStream, first: Option<LanFrame>, key: DeviceKey, peer: DeviceId) -> SigChan {
-    lan_chan_holding(stream, first, key, peer, ())
+fn lan_chan(stream: TcpStream, context: Vec<u8>, key: DeviceKey, peer: DeviceId) -> SigChan {
+    lan_chan_holding(stream, None, context, key, peer, ())
+}
+
+/// The client's side of a LAN signalling connection: `SignalHelloV2`, then the host's
+/// nonce, which goes into the seal context. `None` when the host doesn't answer in time.
+async fn lan_signal(mut stream: TcpStream, key: DeviceKey, host: DeviceId) -> Option<SigChan> {
+    mdns::write_frame(&mut stream, &LanFrame::SignalHelloV2 { client: key.id().0 }).await.ok()?;
+    match tokio::time::timeout(SIGNAL_TIMEOUT, mdns::read_frame(&mut stream)).await {
+        Ok(Some(LanFrame::SignalNonce { nonce })) => Some(lan_chan(stream, mdns::signal_context(&nonce), key, host)),
+        _ => None,
+    }
 }
 
 fn lan_chan_holding<H: Send + 'static>(
     stream: TcpStream,
     mut first: Option<LanFrame>,
+    context: Vec<u8>,
     key: DeviceKey,
     peer: DeviceId,
     hold: H,
@@ -329,7 +340,7 @@ fn lan_chan_holding<H: Send + 'static>(
             }
         }
     });
-    SigChan { key, peer, context: b"lan".to_vec(), out, inbox }
+    SigChan { key, peer, context, out, inbox }
 }
 
 // ---------------------------------------------------------------------------
@@ -1136,14 +1147,21 @@ fn spawn_lan_listener(
                         }
                         lan_pairing(stream, brain, slot).await
                     }
-                    LanFrame::SignalHello { client } => {
+                    LanFrame::SignalHelloV2 { client } => {
                         let client = DeviceId(client);
                         if pairings.lock().unwrap().get(&client).is_none() {
                             tracing::info!("LAN signalling from an unpaired device {} at {from}", client.short());
                             return;
                         }
-                        let chan = lan_chan_holding(stream, None, key, client, slot);
+                        let nonce: [u8; 16] = rand::random();
+                        let context = mdns::signal_context(&nonce);
+                        let chan = lan_chan_holding(stream, Some(LanFrame::SignalNonce { nonce }), context, key, client, slot);
                         wait_offer(chan, brain);
+                    }
+                    LanFrame::SignalHello { client } => {
+                        // The first version sealed every LAN connection with the same context, so a recorded
+                        // blob could be played again on a new connection. Refused: the client must update.
+                        tracing::info!("LAN signalling from {} at {from} uses the old hello; refused", DeviceId(client).short());
                     }
                     _ => {}
                 }
@@ -2999,8 +3017,10 @@ impl ClientBrain {
                     for ip in &h.addrs {
                         if let Ok(Ok(s)) = tokio::time::timeout(Duration::from_secs(2), TcpStream::connect((*ip, h.port))).await {
                             let _ = s.set_nodelay(true);
-                            chan = Some(lan_chan(s, Some(LanFrame::SignalHello { client: key.id().0 }), key.clone(), host));
-                            break;
+                            if let Some(c) = lan_signal(s, key.clone(), host).await {
+                                chan = Some(c);
+                                break;
+                            }
                         }
                     }
                 }
@@ -3061,8 +3081,10 @@ async fn dial(ctx: DialCtx) -> Result<(EndpointHandle, SigChan), ConnectError> {
             for ip in &h.addrs {
                 if let Ok(Ok(s)) = tokio::time::timeout(Duration::from_secs(3), TcpStream::connect((*ip, h.port))).await {
                     let _ = s.set_nodelay(true);
-                    chan = Some(lan_chan(s, Some(LanFrame::SignalHello { client: ctx.key.id().0 }), ctx.key.clone(), ctx.host));
-                    break;
+                    if let Some(c) = lan_signal(s, ctx.key.clone(), ctx.host).await {
+                        chan = Some(c);
+                        break;
+                    }
                 }
             }
         }
