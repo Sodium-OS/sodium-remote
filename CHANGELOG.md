@@ -9,6 +9,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - **LAN signalling** now starts with `SignalHelloV2`, and the host answers with a fresh nonce that goes into the seal context of that connection. Hosts refuse the 0.1.0 `SignalHello`, so connecting over the LAN needs both computers on this version.
 - **Server.** `--enrol open` is refused unless `--listen` is a loopback or private address, or `--open-enrol-on-public-address` is given.
 
+### Fixed
+
+- **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
+
 ### Security
 
 - The server reuses a device's TURN username for half the credential lifetime, so coturn's per-user quota limits each device.
