@@ -248,11 +248,14 @@ impl Initiator {
         if receiver != self.index {
             return None;
         }
-        let mut hs = self.state.take()?;
+        // The receiver index travels in the clear, so anyone who sees the first message can
+        // answer it. Only an authentic response ends the attempt: a forged one leaves the
+        // state as it was (snow rolls a failed read back), and the real one still completes.
         let mut payload = vec![0u8; MAX_NOISE_MSG];
-        if hs.read_message(r.rest(), &mut payload).is_err() {
+        if self.state.as_mut()?.read_message(r.rest(), &mut payload).is_err() {
             return None;
         }
+        let hs = self.state.take()?;
         self.next_send = None;
         Some(Transport {
             state: hs.into_stateless_transport_mode().ok()?,
@@ -354,6 +357,23 @@ mod tests {
 
         // A replayed first message is refused.
         assert!(resp.handle_init(&m1).is_none());
+    }
+
+    #[test]
+    fn a_forged_response_does_not_end_the_handshake() {
+        let host = StaticKeypair::generate();
+        let client = StaticKeypair::generate();
+        let mut ini = Initiator::new(client.clone(), host.public);
+        let mut resp = Responder::new(host, vec![client.public]);
+        let m1 = ini.start(Instant::now());
+        let (m2, _) = resp.handle_init(&m1).unwrap();
+        // Same header (indices are in the clear), garbage Noise payload.
+        let mut forged = m2.clone();
+        for b in &mut forged[9..] {
+            *b ^= 0x5a;
+        }
+        assert!(ini.handle_response(&forged).is_none());
+        assert!(ini.handle_response(&m2).is_some(), "the real response still completes");
     }
 
     #[test]

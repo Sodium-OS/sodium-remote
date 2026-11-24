@@ -3,7 +3,7 @@
 //! sodium-remote-server: Sodium Remote's rendezvous server (crate `remote-rendezvous`).
 //! See lib.rs and docs/reference/rendezvous-api.md.
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,7 +14,7 @@ use remote_rendezvous::hub::unix_now;
 use remote_rendezvous::{Config, Enrol, Hub, NoHooks, Notice, RelayRegion, VERSION_TEXT, server, tokens};
 use tokio::net::TcpListener;
 use tokio::signal::unix::{SignalKind, signal};
-use tracing::info;
+use tracing::{info, warn};
 
 const DEFAULT_STATE_DIR: &str = "/var/lib/sodium-remote-server";
 
@@ -117,6 +117,10 @@ struct Serve {
     /// Who may register as a host.
     #[arg(long, value_enum, default_value = "token")]
     enrol: EnrolArg,
+    /// Allow `--enrol open` on an address that isn't loopback or private. Anyone
+    /// who can reach the server could then register a host and get TURN credentials.
+    #[arg(long)]
+    open_enrol_on_public_address: bool,
     /// Host allowlist: one device ID per line. Re-read on SIGHUP.
     #[arg(long)]
     hosts_allow: Option<PathBuf>,
@@ -141,6 +145,17 @@ struct Serve {
     /// … and an optional https:// link.
     #[arg(long, requires = "notice_code")]
     notice_url: Option<String>,
+}
+
+/// A loopback or private-network address. The unspecified address (all interfaces) is not.
+fn is_private_listen(addr: SocketAddr) -> bool {
+    match addr.ip() {
+        IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
+        IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
+            Some(v4) => is_private_listen(SocketAddr::new(IpAddr::V4(v4), addr.port())),
+            None => v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local(),
+        },
+    }
 }
 
 fn relays(args: &[String]) -> anyhow::Result<Vec<RelayRegion>> {
@@ -227,6 +242,13 @@ async fn main() -> anyhow::Result<()> {
         EnrolArg::Token => Enrol::Token,
         EnrolArg::Allowlist => Enrol::Allowlist,
     };
+    if enrol == Enrol::Open && !is_private_listen(args.listen) && !args.open_enrol_on_public_address {
+        bail!(
+            "--enrol open lets anyone who reaches {} register a host and use the TURN relay; \
+             listen on a loopback or private address, use --enrol token, or pass --open-enrol-on-public-address",
+            args.listen
+        );
+    }
     if enrol == Enrol::Allowlist && args.hosts_allow.is_none() {
         bail!("--enrol allowlist needs --hosts-allow FILE");
     }
@@ -248,6 +270,9 @@ async fn main() -> anyhow::Result<()> {
         text: args.notice_text.unwrap_or_default(),
         url: args.notice_url.filter(|u| u.starts_with("https://")),
     });
+    if enrol == Enrol::Open {
+        warn!(listen = %args.listen, "open enrolment: any device that reaches this server can register a host");
+    }
     let mut cfg = Config::new(server_name, args.state_dir, secret);
     cfg.server_aliases = args.server_aliases;
     cfg.enrol = enrol;
@@ -291,4 +316,19 @@ async fn main() -> anyhow::Result<()> {
     info!(listen = %args.listen, tls = tls.is_some(), enrol = ?enrol, "listening");
     server::serve(listener, tls, server::router(hub), shutdown).await;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_private_listen;
+
+    #[test]
+    fn open_enrolment_needs_a_private_listen_address() {
+        for ok in ["127.0.0.1:8443", "10.1.2.3:8443", "192.168.1.5:8443", "[::1]:8443", "[fd00::1]:8443", "[::ffff:10.0.0.1]:8443"] {
+            assert!(is_private_listen(ok.parse().unwrap()), "{ok}");
+        }
+        for bad in ["0.0.0.0:8443", "[::]:8443", "203.0.113.7:8443", "[2001:db8::1]:8443"] {
+            assert!(!is_private_listen(bad.parse().unwrap()), "{bad}");
+        }
+    }
 }

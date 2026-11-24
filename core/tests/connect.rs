@@ -129,11 +129,13 @@ async fn send_offer(host: &Host, client: &Client, offer: &Offer) -> Option<Signa
     use remote_core::keys;
     use remote_core::mdns::{self, LanFrame};
     let mut s = tokio::net::TcpStream::connect((LO, host.lan_port().unwrap())).await.unwrap();
-    let blob = keys::seal(client.key(), &host.id(), b"lan", &msg::encode(&Signal::Offer(offer.clone()))).unwrap();
-    mdns::write_frame(&mut s, &LanFrame::SignalHello { client: client.id().0 }).await.unwrap();
+    mdns::write_frame(&mut s, &LanFrame::SignalHelloV2 { client: client.id().0 }).await.unwrap();
+    let Some(LanFrame::SignalNonce { nonce }) = mdns::read_frame(&mut s).await else { panic!("no nonce") };
+    let context = mdns::signal_context(&nonce);
+    let blob = keys::seal(client.key(), &host.id(), &context, &msg::encode(&Signal::Offer(offer.clone()))).unwrap();
     mdns::write_frame(&mut s, &LanFrame::Signal(blob)).await.unwrap();
     match tokio::time::timeout(Duration::from_secs(5), mdns::read_frame(&mut s)).await.ok()?? {
-        LanFrame::Signal(b) => Signal::decode(&keys::open(client.key(), &host.id(), b"lan", &b)?),
+        LanFrame::Signal(b) => Signal::decode(&keys::open(client.key(), &host.id(), &context, &b)?),
         _ => None,
     }
 }

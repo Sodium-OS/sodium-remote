@@ -218,6 +218,20 @@ pub enum LanFrame {
     Signal(Vec<u8>),
     /// The host's pairing outcome for this attempt when it isn't in a message.
     PairClosed,
+    /// First frame of a signalling connection (v2): who is calling. The host answers
+    /// [`LanFrame::SignalNonce`] before any signal, and both sides seal with
+    /// [`signal_context`] of that nonce, so a sealed blob recorded on an earlier
+    /// connection doesn't open on a new one. The host no longer takes `SignalHello`.
+    SignalHelloV2 { client: [u8; 32] },
+    /// The host's answer to `SignalHelloV2`: a fresh random nonce for this connection.
+    SignalNonce { nonce: [u8; 16] },
+}
+
+/// The seal context of a LAN signalling connection whose host sent `nonce`.
+pub fn signal_context(nonce: &[u8; 16]) -> Vec<u8> {
+    let mut c = b"lan v2 ".to_vec();
+    c.extend_from_slice(nonce);
+    c
 }
 
 pub async fn write_frame<W: tokio::io::AsyncWrite + Unpin>(w: &mut W, f: &LanFrame) -> std::io::Result<()> {

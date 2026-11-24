@@ -51,7 +51,7 @@ client                                         host
 
 - **Device key:** Ed25519 (`DeviceKey`). The device ID (`DeviceId`) is the 32-byte public key, shown as base64url without padding (43 characters), as on the rendezvous.
 - **One key for everything:** the X25519 key for Noise and for sealing is derived from the device key (`DeviceKey::noise_keypair()`, RFC 7748's map, as libsodium's `ed25519_sk_to_curve25519`). So the ID pinned at pairing also pins the Noise IK handshake and the signalling seals.
-- **Sealing** (`keys::seal` / `keys::open`): Noise one-way `K` (`Noise_K_25519_ChaChaPoly_BLAKE2s`), both static keys known, the rendezvous session ID (or `lan`) in the prologue. Only the pinned peer can open a blob, it can only have come from the pinned sender, and it opens only in its own session.
+- **Sealing** (`keys::seal` / `keys::open`): Noise one-way `K` (`Noise_K_25519_ChaChaPoly_BLAKE2s`), both static keys known, the rendezvous session ID (or, on the LAN, `lan v2 ` and the host's per-connection nonce) in the prologue. Only the pinned peer can open a blob, it can only have come from the pinned sender, and it opens only in its own session.
 - **Storage is pluggable:** `keys::Store` holds named blobs.
   - `FileStore` (hosts): a directory, files 0600, written by rename. `FileStore::host_default()` is `$XDG_DATA_HOME/sodium-remote/host` on Linux (default `~/.local/share/sodium-remote/host`) and `%LOCALAPPDATA%\SodiumRemote\host` on Windows.
     - `device.key`: **the contract file**, an Ed25519 private key in PKCS#8 PEM (what `openssl genpkey -algorithm ed25519` writes). Checked: `deploy.sh host-id` and `allow-host` read a key written by `keys` and derive the same ID.
@@ -89,7 +89,7 @@ H → C  M4  HMAC(K_d, T ‖ client ID)
 ## 5. LAN (`mdns`)
 
 - **Discovery:** `_sodium-remote._tcp.local.` (mdns-sd). Instance: the host's display name plus the start of its ID. TXT: `v=1`, `id`, `name`, `pair=1|0`. The SRV port is the host's **LAN listener**.
-- **The LAN listener (TCP)** carries what the rendezvous would, so a LAN pairing or connection needs no server: frames are `u32` big-endian length + postcard `LanFrame`. A connection starts with `PairHello` (one pairing attempt) or `SignalHello { client }` (one signalling session; the host only answers paired IDs, and the blobs are sealed by that ID anyway).
+- **The LAN listener (TCP)** carries what the rendezvous would, so a LAN pairing or connection needs no server: frames are `u32` big-endian length + postcard `LanFrame`. A connection starts with `PairHello` (one pairing attempt) or `SignalHelloV2 { client }` (one signalling session; the host only answers paired IDs, and the blobs are sealed by that ID anyway). The host answers it with `SignalNonce { nonce }`, 16 random bytes, before any signal, and both sides seal that connection's blobs with the nonce in the context, so a blob recorded on one connection doesn't open on another. The first version's `SignalHello`, which used one context for every connection, is refused.
 - The client keeps where each host was last seen on the LAN and uses it when mDNS has lost the host for a moment (a dropped link). `ClientConfig::lan_hints` adds known addresses (tests, or the Mac's own Bonjour browser).
 
 ## 6. The session API (`connect`)

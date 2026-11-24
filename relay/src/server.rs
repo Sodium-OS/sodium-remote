@@ -4,8 +4,9 @@
 
 use std::future::Future;
 use std::net::{IpAddr, SocketAddr};
+use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -30,6 +31,7 @@ use tower::ServiceExt;
 use tracing::{debug, info, warn};
 
 use crate::hub::{Attached, ConnCtx, Hub, Outbox, outbox};
+use crate::limits::Key;
 use crate::proto::{
     ApiError, Auth, DeviceId, ErrorCode, Event, MAX_FRAME, PROTOCOL_VERSION, Request, auth_message,
     b64, error_frame, result_frame,
@@ -39,6 +41,55 @@ const TLS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 const AUTH_TIMEOUT: Duration = Duration::from_secs(10);
 const PING_EVERY: Duration = Duration::from_secs(20);
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+/// Open connections one address (an IPv6 /64) may hold, and all addresses together.
+/// The total stays below the service's file limit (LimitNOFILE=4096), so a flood
+/// of half-open connections can't take every descriptor.
+const MAX_CONNS_PER_IP: u32 = 256;
+const MAX_CONNS: u32 = 3584;
+
+/// Counts open connections at accept, before TLS, so the limit applies to stalled
+/// handshakes too. A slot is freed when its [`ConnSlot`] drops.
+#[derive(Default)]
+struct ConnLimiter {
+    inner: Mutex<(u32, HashMap<Key, u32>)>,
+}
+
+struct ConnSlot {
+    limiter: Arc<ConnLimiter>,
+    key: Key,
+}
+
+impl ConnLimiter {
+    fn acquire(self: &Arc<Self>, ip: IpAddr, per_ip: u32, total: u32) -> Option<ConnSlot> {
+        let key = Key::ip(ip);
+        let mut g = self.inner.lock().unwrap();
+        let (all, by_ip) = &mut *g;
+        let mine = by_ip.entry(key).or_insert(0);
+        if *all >= total || *mine >= per_ip {
+            if *mine == 0 {
+                by_ip.remove(&key);
+            }
+            return None;
+        }
+        *mine += 1;
+        *all += 1;
+        Some(ConnSlot { limiter: self.clone(), key })
+    }
+}
+
+impl Drop for ConnSlot {
+    fn drop(&mut self) {
+        let mut g = self.limiter.inner.lock().unwrap();
+        let (all, by_ip) = &mut *g;
+        *all -= 1;
+        if let Some(n) = by_ip.get_mut(&self.key) {
+            *n -= 1;
+            if *n == 0 {
+                by_ip.remove(&self.key);
+            }
+        }
+    }
+}
 
 pub fn router(hub: Arc<Hub>) -> Router {
     Router::new()
@@ -72,6 +123,7 @@ pub async fn serve(
     shutdown: impl Future<Output = ()>,
 ) {
     tokio::pin!(shutdown);
+    let limiter = Arc::new(ConnLimiter::default());
     loop {
         let (tcp, peer) = tokio::select! {
             r = listener.accept() => match r {
@@ -84,10 +136,16 @@ pub async fn serve(
             },
             _ = &mut shutdown => break,
         };
+        let Some(slot) = limiter.acquire(peer.ip(), MAX_CONNS_PER_IP, MAX_CONNS) else {
+            debug!(peer = %peer.ip(), "too many open connections; refused");
+            drop(tcp);
+            continue;
+        };
         let _ = tcp.set_nodelay(true);
         let app = app.clone();
         let tls = tls.clone();
         tokio::spawn(async move {
+            let _slot = slot;
             match tls {
                 Some(acceptor) => match timeout(TLS_HANDSHAKE_TIMEOUT, acceptor.accept(tcp)).await {
                     Ok(Ok(stream)) => serve_conn(stream, peer, app).await,
@@ -297,4 +355,23 @@ async fn run_connection(hub: Arc<Hub>, mut ws: WebSocket, ip: IpAddr) {
     }
     let _ = ws.send(Message::Close(None)).await;
     hub.detach(&ctx);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_slots_are_limited_per_address_and_in_total() {
+        let l = Arc::new(ConnLimiter::default());
+        let a: IpAddr = "203.0.113.1".parse().unwrap();
+        let b: IpAddr = "203.0.113.2".parse().unwrap();
+        let first = l.acquire(a, 2, 3).unwrap();
+        let _second = l.acquire(a, 2, 3).unwrap();
+        assert!(l.acquire(a, 2, 3).is_none(), "per-address limit");
+        let _third = l.acquire(b, 2, 3).unwrap();
+        assert!(l.acquire(b, 2, 3).is_none(), "total limit");
+        drop(first);
+        assert!(l.acquire(a, 2, 3).is_some(), "a closed connection frees its slot");
+    }
 }

@@ -84,10 +84,12 @@ if [ "$(systemctl is-enabled coturn.service 2>/dev/null || true)" != masked ]; t
 fi
 if ! dpkg-query -W -f='${Status}' coturn 2>/dev/null | grep -q 'install ok installed'; then
   export DEBIAN_FRONTEND=noninteractive
-  apt-get install -y --no-install-recommends coturn >/tmp/sodium-remote-apt.log 2>&1 \
-    || { apt-get update >>/tmp/sodium-remote-apt.log 2>&1 \
-         && apt-get install -y --no-install-recommends coturn >>/tmp/sodium-remote-apt.log 2>&1; } \
-    || die "installing coturn failed; see /tmp/sodium-remote-apt.log"
+  apt_log=$(mktemp /var/tmp/sodium-remote-apt.XXXXXX.log)
+  apt-get install -y --no-install-recommends coturn >"$apt_log" 2>&1 \
+    || { apt-get update >>"$apt_log" 2>&1 \
+         && apt-get install -y --no-install-recommends coturn >>"$apt_log" 2>&1; } \
+    || die "installing coturn failed; see $apt_log"
+  rm -f "$apt_log"
   say "+ installed coturn $(dpkg-query -W -f='${Version}' coturn)"
 else
   say "= coturn $(dpkg-query -W -f='${Version}' coturn)"

@@ -286,13 +286,24 @@ fn rdv_chan(rdv: Rendezvous, routes: &Routes, session: String, key: DeviceKey, p
 /// A signalling channel over a LAN listener connection. The connection closes
 /// when the channel is dropped. `hold` lives as long as the connection (the
 /// host's listener slot).
-fn lan_chan(stream: TcpStream, first: Option<LanFrame>, key: DeviceKey, peer: DeviceId) -> SigChan {
-    lan_chan_holding(stream, first, key, peer, ())
+fn lan_chan(stream: TcpStream, context: Vec<u8>, key: DeviceKey, peer: DeviceId) -> SigChan {
+    lan_chan_holding(stream, None, context, key, peer, ())
+}
+
+/// The client's side of a LAN signalling connection: `SignalHelloV2`, then the host's
+/// nonce, which goes into the seal context. `None` when the host doesn't answer in time.
+async fn lan_signal(mut stream: TcpStream, key: DeviceKey, host: DeviceId) -> Option<SigChan> {
+    mdns::write_frame(&mut stream, &LanFrame::SignalHelloV2 { client: key.id().0 }).await.ok()?;
+    match tokio::time::timeout(SIGNAL_TIMEOUT, mdns::read_frame(&mut stream)).await {
+        Ok(Some(LanFrame::SignalNonce { nonce })) => Some(lan_chan(stream, mdns::signal_context(&nonce), key, host)),
+        _ => None,
+    }
 }
 
 fn lan_chan_holding<H: Send + 'static>(
     stream: TcpStream,
     mut first: Option<LanFrame>,
+    context: Vec<u8>,
     key: DeviceKey,
     peer: DeviceId,
     hold: H,
@@ -329,7 +340,7 @@ fn lan_chan_holding<H: Send + 'static>(
             }
         }
     });
-    SigChan { key, peer, context: b"lan".to_vec(), out, inbox }
+    SigChan { key, peer, context, out, inbox }
 }
 
 // ---------------------------------------------------------------------------
@@ -1136,14 +1147,21 @@ fn spawn_lan_listener(
                         }
                         lan_pairing(stream, brain, slot).await
                     }
-                    LanFrame::SignalHello { client } => {
+                    LanFrame::SignalHelloV2 { client } => {
                         let client = DeviceId(client);
                         if pairings.lock().unwrap().get(&client).is_none() {
                             tracing::info!("LAN signalling from an unpaired device {} at {from}", client.short());
                             return;
                         }
-                        let chan = lan_chan_holding(stream, None, key, client, slot);
+                        let nonce: [u8; 16] = rand::random();
+                        let context = mdns::signal_context(&nonce);
+                        let chan = lan_chan_holding(stream, Some(LanFrame::SignalNonce { nonce }), context, key, client, slot);
                         wait_offer(chan, brain);
+                    }
+                    LanFrame::SignalHello { client } => {
+                        // The first version sealed every LAN connection with the same context, so a recorded
+                        // blob could be played again on a new connection. Refused: the client must update.
+                        tracing::info!("LAN signalling from {} at {from} uses the old hello; refused", DeviceId(client).short());
                     }
                     _ => {}
                 }
@@ -2905,8 +2923,8 @@ impl ClientBrain {
                             self.emit(ClientEvent::Control(m));
                             self.finish(r);
                         }
-                        Msg::Welcome(_) => {
-                            self.on_welcome();
+                        Msg::Welcome(w) => {
+                            self.on_welcome(&w.name);
                             self.emit(ClientEvent::Control(m));
                         }
                         _ => self.emit(ClientEvent::Control(m)),
@@ -2947,9 +2965,11 @@ impl ClientBrain {
         }
     }
 
-    /// `Welcome` arrived: the connection is real. Stamp the host's `last_connected`, and when the media
+    /// `Welcome` arrived: the connection is real. Stamp the host's `last_connected`, take the host's
+    /// own name from it (the name pairing saved isn't covered by the code, so a server or LAN neighbour
+    /// could have changed it; `Welcome` comes over the authenticated session), and when the media
     /// runs over the LAN, remember that host's LAN listener address (and drop it from any other host).
-    fn on_welcome(&mut self) {
+    fn on_welcome(&mut self, host_name: &str) {
         let Some(host) = self.target.as_ref().map(|t| t.host) else { return };
         let lan = match &self.route {
             Some(r) if r.kind == PathKind::Lan => {
@@ -2961,6 +2981,10 @@ impl ClientBrain {
         let mut p = self.pairings.lock().unwrap();
         if let Some(d) = p.devices.iter_mut().find(|d| d.id == host) {
             d.last_connected = Some(unix_now());
+            let n = host_name.trim();
+            if !d.named_at_desk && (1..=64).contains(&n.len()) && d.name != n {
+                d.name = n.to_string();
+            }
         }
         if let Some(a) = lan {
             p.set_lan_addr(&host, &a.to_string());
@@ -2993,8 +3017,10 @@ impl ClientBrain {
                     for ip in &h.addrs {
                         if let Ok(Ok(s)) = tokio::time::timeout(Duration::from_secs(2), TcpStream::connect((*ip, h.port))).await {
                             let _ = s.set_nodelay(true);
-                            chan = Some(lan_chan(s, Some(LanFrame::SignalHello { client: key.id().0 }), key.clone(), host));
-                            break;
+                            if let Some(c) = lan_signal(s, key.clone(), host).await {
+                                chan = Some(c);
+                                break;
+                            }
                         }
                     }
                 }
@@ -3055,8 +3081,10 @@ async fn dial(ctx: DialCtx) -> Result<(EndpointHandle, SigChan), ConnectError> {
             for ip in &h.addrs {
                 if let Ok(Ok(s)) = tokio::time::timeout(Duration::from_secs(3), TcpStream::connect((*ip, h.port))).await {
                     let _ = s.set_nodelay(true);
-                    chan = Some(lan_chan(s, Some(LanFrame::SignalHello { client: ctx.key.id().0 }), ctx.key.clone(), ctx.host));
-                    break;
+                    if let Some(c) = lan_signal(s, ctx.key.clone(), ctx.host).await {
+                        chan = Some(c);
+                        break;
+                    }
                 }
             }
         }
