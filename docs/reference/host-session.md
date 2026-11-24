@@ -3,7 +3,7 @@
 The host session: the session lifecycle, the display manager, input, the IME bridge, audio, clipboard, the device key and the `org.sodiumos.Remote` D-Bus API that Settings › Remote and the shell's privacy pill use. The video path is the media module's (`video-pipeline.md`); the network and pairing are remote-core's (`protocol.md`, `session-api.md`).
 
 - **Code:** `remote/host/src/`, all in the `remoted` library (`lib.rs`); `main.rs` is the command line. `daemon.rs` (`remoted run`), `stream.rs` (the join to core and media, below), `session/` (the actor, the lifecycle state machine, settings and history), `display/` (Hyprland's socket, the scale rule, layout), `input/` (the key table, focus), `ime/`, `audio/` (with the audio shim in `remote/linux-media/csrc/audio_shim.c`, shared with the generic Linux host), `clipboard/`, `keys/`, `dbus/`, `media/`.
-- **Unit:** `remote/host/systemd/sodiumos-remoted.service`; D-Bus activation `remote/host/dbus/org.sodiumos.Remote.service` (both linked by `remote/host/install.links`, which `scripts/install.sh` reads; linking starts and enables nothing).
+- **Unit:** `host/systemd/sodiumos-remoted.service`; D-Bus activation `host/dbus/org.sodiumos.Remote.service`. The Arch package `sodium-remote-sodiumos` installs them in `/usr/lib/systemd/user/` and `/usr/share/dbus-1/services/`, with `remoted` in `/usr/bin` (installing starts and enables nothing).
 - **Tests:** `cargo test -p remoted` (28 unit tests); the host-session scripts and the whole-stack tests (`tests/e2e/`: `run.sh`, `netchange.sh`), described in section 11.
 
 ## 0. One daemon
@@ -43,7 +43,7 @@ remoted id          # this host's device ID and its code (creates device.key on 
 
 **Applying it live** (with the user present: it creates an output and moves windows):
 1. `cargo build --release -p remoted` in `remote/`, and the plugin with `compositor/plugin/build.sh` (capture IPC v4).
-2. `scripts/install.sh` links `remote/host/systemd/sodiumos-remoted.service` into `~/.config/systemd/user` and `remote/host/dbus/org.sodiumos.Remote.service` into `~/.local/share/dbus-1/services/` (`remote/host/install.links`); then `systemctl --user daemon-reload` and `systemctl --user enable --now sodiumos-remoted`. Settings › Remote starts it through the activation file when it opens, so the page works before the enable.
+2. The `sodium-remote-sodiumos` package installs the unit in `/usr/lib/systemd/user/` and the activation file in `/usr/share/dbus-1/services/`; `systemctl --user enable --now sodiumos-remoted` runs it from sign-in. (Before Sodium Remote left the SodiumOS tree, SodiumOS's `scripts/install.sh` linked both into `~/.config/systemd/user` and `~/.local/share/dbus-1/services/` from `remote/host/install.links`.) Settings › Remote starts it through the activation file when it opens, so the page works before the enable.
 3. Enrol the host with the rendezvous: `remote/relay/deploy/deploy.sh allow-host` (it reads `device.key`).
 4. Nothing changes on the desktop until a paired device connects.
 

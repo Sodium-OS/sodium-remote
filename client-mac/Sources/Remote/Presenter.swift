@@ -55,11 +55,17 @@ final class Presenter: NSObject {
     ///   it targets 3 refreshes after the update even at `preferredFrameLatency` 1, about 50 ms.
     /// - `immediate`: drawn as soon as a frame is decoded and presented at the next vsync.
     /// - `nosync`: the same with `displaySyncEnabled` off: shown at the next composite, no vsync wait.
-    /// - `paced` (the default): no vsync wait either, but the newest frame is drawn once a refresh, `RemotePaceMs` before the
-    ///   screen's next vsync (the drawing deadline the host's phase lock aims at): even pacing, one frame queued.
-    ///   `RemotePaceSweep` = 1 steps the offset through 1–9 ms, 4 s each, to find the latest that still makes it.
+    /// - `paced` (the default): the newest frame is drawn once a refresh, `RemotePaceMs` (default 5) before the screen's
+    ///   next vsync, the drawing deadline the host's phase lock aims at, and shown with vsync on: no tearing. A frame
+    ///   drawn for a vsync is shown one refresh after it, however early it is drawn (M3 Air, macOS 15.8, full screen:
+    ///   glass-to-glass rose 1 ms per ms of offset from 4 to 16 ms; at 1–3 ms frames missed one more refresh), so the
+    ///   latest offset that still makes it is the fastest. `immediate` loses a refresh more: frames come in just
+    ///   after the deadline the phase lock aims at and wait for the next one.
+    /// - `tearing`: `paced`'s timing (`RemotePaceMs` default 10) with `displaySyncEnabled` off: a refresh faster, but in
+    ///   full screen the frame is flipped as soon as it is drawn, which tears a fixed band across the screen.
+    ///   `RemotePaceSweep` = 1 steps either one's offset through 1–9 ms, 4 s each, to find the latest that still makes it.
     enum Mode: String {
-        case link, immediate, nosync, paced
+        case link, immediate, nosync, paced, tearing
     }
 
     let layer: CAMetalLayer
@@ -90,12 +96,10 @@ final class Presenter: NSObject {
         let ms = UserDefaults.standard.double(forKey: "RemoteCompositeLeadMs")
         return (ms > 0 ? ms : 10) / 1000
     }()
-    private let paceOffset: Double = {
-        // The M3 Air's window server takes a frame for a vsync about 9 ms before it (2026-11-07 sweep: 96.5 % made
-        // it at 9 ms, 36–71 % at 1–7 ms); 10 leaves a little margin.
-        let ms = UserDefaults.standard.double(forKey: "RemotePaceMs")
-        return (ms > 0 ? ms : 10) / 1000
-    }()
+    // `tearing`: the M3 Air's window server takes a frame for a vsync about 9 ms before it (2026-11-07 sweep: 96.5 %
+    // made it at 9 ms, 36–71 % at 1–7 ms); 10 leaves a little margin. `paced` (2026-11-24): 4 ms still made it, 3 did
+    // not; 5 leaves a little margin.
+    private let paceOffset: Double
     private let paceSweep = UserDefaults.standard.bool(forKey: "RemotePaceSweep")
     private var sweepStart: Double = 0
     private static let sweepMs: [Double] = [1, 2, 3, 4, 5, 6, 7, 9]
@@ -146,6 +150,8 @@ final class Presenter: NSObject {
         guard let dev = layer.device ?? MTLCreateSystemDefaultDevice(), let q = dev.makeCommandQueue() else { return nil }
         self.layer = layer
         mode = Mode(rawValue: UserDefaults.standard.string(forKey: "RemotePresentMode") ?? "") ?? .paced
+        let paceMs = UserDefaults.standard.double(forKey: "RemotePaceMs")
+        paceOffset = (paceMs > 0 ? paceMs : mode == .tearing ? 10 : 5) / 1000
         device = dev
         queue = q
         layer.device = dev
@@ -158,7 +164,7 @@ final class Presenter: NSObject {
         // taken only once one is free. The host can send two frames in a refresh (refinement passes go half an
         // interval after a frame), and three drawables then stood as a queue of three refreshes (48 ms).
         layer.maximumDrawableCount = mode == .link ? 3 : 2
-        layer.displaySyncEnabled = mode != .nosync && mode != .paced
+        layer.displaySyncEnabled = mode != .nosync && mode != .tearing
         do {
             // Compiled at run time: the Command Line Tools have no Metal compiler.
             let lib = try dev.makeLibrary(source: Presenter.shaderSource, options: nil)
@@ -232,7 +238,7 @@ final class Presenter: NSObject {
         let p = link.targetTimestamp - link.timestamp
         if p > 0.002 && p < 0.05 { period = p }
         lock.unlock()
-        guard mode == .paced else { return }
+        guard mode == .paced || mode == .tearing else { return }
         // Draw the newest frame `offset` before the next vsync; a fire time already past goes at once.
         let now = CACurrentMediaTime()
         let vsync = link.targetTimestamp
