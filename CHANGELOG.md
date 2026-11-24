@@ -18,6 +18,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Fixed
 
 - **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
+- **Linux host (NVIDIA).** Scrolling text no longer shimmers on a fast link. While content keeps moving, the encoder's quality can drop by only a small step from one frame to the next.
 
 ### Security
 
