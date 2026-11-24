@@ -40,6 +40,8 @@ struct RdEnc {
     NVENC_EXTERNAL_ME_HINT *hevc_hints;
     NVENC_EXTERNAL_ME_SB_HINT *av1_hints;
     uint32_t n_hints;
+    uint32_t max_qp; // the RC's ceiling before the delta map; 0: none
+    int max_qp_used; // a ceiling was set: enableMaxQP stays on (at the top QP for none)
 };
 
 static void fail(char *err, int errlen, const char *fmt, ...)
@@ -180,6 +182,12 @@ static void set_rc(RdEnc *e, uint32_t kbps)
     rc->maxBitRate = kbps * 1000;
     rc->vbvBufferSize = (uint32_t)((uint64_t)kbps * 10 * e->p.vbv_pct / e->p.fps);
     rc->vbvInitialDelay = rc->vbvBufferSize;
+    // Once a ceiling was set it stays enabled, at the codec's top QP for none: a reconfigure
+    // with enableMaxQP off keeps the last maxQP, and maxQP 0 (or a stale ceiling) then holds
+    // the frames at that QP whatever they cost (measured live: QP 0, 270 kB frames at 7 Mbit/s).
+    uint32_t q = e->max_qp ? e->max_qp : e->p.codec == RD_CODEC_AV1 ? 255 : 51;
+    rc->enableMaxQP = e->max_qp_used;
+    rc->maxQP = (NV_ENC_QP){q, q, q};
 }
 
 static int open_(RdCuda *c, const RdEncParams *p, RdEnc **out, char *err, int errlen)
@@ -372,6 +380,9 @@ static int encode_(RdEnc *e, int slot, uint64_t pts, const RdPicOpts *o, RdPacke
     if (o && o->qp_delta && e->p.m1) {
         pp.qpDeltaMap = (int8_t *)o->qp_delta;
         pp.qpDeltaMapSize = o->qp_delta_size;
+        // the ceiling bounds the rate controller's QP, not each cell's QP after its delta
+        if (e->max_qp_used)
+            pp.encodePicFlags |= NV_ENC_PIC_FLAG_PREQPDELTAMAXQP;
     }
     // With hints enabled at init, every P frame must carry them ("SetupCEAHints failed"
     // otherwise): blocks without a known vector are marked invalid (refidx 31), which
@@ -456,6 +467,23 @@ int rd_enc_set_bitrate(RdEnc *e, uint32_t kbps, char *err, int errlen)
     pop(e->cuda);
     if (st) {
         fail(err, errlen, "nvEncReconfigureEncoder: %d %s", st, last_error(e));
+        return -1;
+    }
+    return 0;
+}
+
+int rd_enc_set_max_qp(RdEnc *e, uint32_t max_qp, char *err, int errlen)
+{
+    e->max_qp = max_qp;
+    e->max_qp_used |= max_qp != 0;
+    set_rc(e, e->cfg.rcParams.averageBitRate / 1000);
+    NV_ENC_RECONFIGURE_PARAMS rp = {.version = NV_ENC_RECONFIGURE_PARAMS_VER, .reInitEncodeParams = e->init};
+    rp.reInitEncodeParams.encodeConfig = &e->cfg;
+    push(e->cuda);
+    NVENCSTATUS st = e->api.nvEncReconfigureEncoder(e->enc, &rp);
+    pop(e->cuda);
+    if (st) {
+        fail(err, errlen, "nvEncReconfigureEncoder (max QP %u): %d %s", max_qp, st, last_error(e));
         return -1;
     }
     return 0;

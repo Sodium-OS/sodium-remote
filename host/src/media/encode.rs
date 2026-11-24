@@ -22,7 +22,7 @@ use super::{
     Shared,
     grid::{Grid, Motion, Pick, RefineConfig, Settled, motion_field},
     ipc::{HINT_ANIM_SETTLE, HINT_ANIM_START, HINT_SCROLL, HINT_WINDOW_MOVE, Hint},
-    rate::{self, RatePlan},
+    rate::{self, RatePlan, Steady},
     wire,
 };
 use crate::{
@@ -146,6 +146,9 @@ struct Encoding {
     qp_scale: i32,
     mv_block: u32,
     applied: RatePlan,
+    /// The rate controller's QP ceiling in force (0: none) and the last capture frame it follows.
+    max_qp: u32,
+    last: Option<Steady>,
 }
 
 struct State {
@@ -441,6 +444,8 @@ impl State {
             qp_scale: if self.cfg.codec == Codec::Av1 { 4 } else { 1 },
             mv_block,
             applied: plan,
+            max_qp: 0,
+            last: None,
         });
         self.cur_slot = None;
         self.force_idr = true;
@@ -678,6 +683,13 @@ impl State {
         let rc = self.refine_cfg(!idr && !ir && self.ir_left == 0, rate_in.user_cap);
         let pick = if fold { self.pick(&rate_in) } else { None };
         let e = self.enc.as_mut().unwrap();
+        let held = e.max_qp != 0;
+        let max_qp =
+            if idr { 0 } else { rate::max_qp(e.last.as_ref(), held, changed, now, self.interval_ns, &plan, self.cfg.fps, e.qp_scale) };
+        if max_qp != e.max_qp {
+            e.enc.set_max_qp(max_qp)?;
+            e.max_qp = max_qp;
+        }
         let map = e.grid.qp_map(&mut self.qpmap, fold, now, &rc, e.qp_scale, pick.as_ref());
         let hinted_blocks = if hinted
             && motion_field(e.width, e.height, e.mv_block, &self.motion, &mut self.mv, &mut self.mv_valid)
@@ -700,6 +712,7 @@ impl State {
         let (pic_type, avg_qp, encode_ms) = (pkt.pic_type, pkt.avg_qp, pkt.ms);
         // a frame with changed cells has bytes: only a refinement frame can be empty
         let done = e.grid.commit(avg_qp, &self.qpmap, &rc, e.qp_scale, t_encoded_ns, false);
+        e.last = Some(Steady { base_qp: done.base_qp, bytes: data.len(), changed, t_encoded_ns });
         let (width, height, cells) = (e.width, e.height, e.grid.len() as u32);
         self.note_settled(&done.settled);
 

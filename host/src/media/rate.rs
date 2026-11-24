@@ -116,6 +116,47 @@ pub fn plan(input: &RateInput, class: FrameClass, fps: u32) -> Option<RatePlan> 
     Some(RatePlan { kbps: (bps / 1000).max(100) as u32, vbv_pct: if split { 50 } else { 100 }, split })
 }
 
+/// The last capture frame, for the QP ceiling of the next one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Steady {
+    /// The rate controller's base QP (codec units), as `Grid::commit` worked it out.
+    pub base_qp: i32,
+    pub bytes: usize,
+    pub changed: u32,
+    pub t_encoded_ns: u64,
+}
+
+/// How far the rate controller's QP may rise from one frame of continuous motion to the next
+/// (codec units of HEVC; AV1's are 4 to 1).
+pub const STEADY_STEP: i32 = 2;
+
+/// The rate controller's QP ceiling for a capture frame of `changed` cells (0: none); `held`:
+/// the last frame had one.
+///
+/// NVENC's one-pass rate controller lifts the QP of a frame in continuous motion (a scroll, a
+/// video) by 6 to 17 for a frame or a few, then drops it back, though the frames use a third of
+/// their budget: lines of text alternate sharp and soft at the frame rate. A larger VBV doesn't
+/// stop it (measured: 13 % of frames at 3 frames' VBV, 6 % at 10). So while the motion goes on
+/// the QP may rise only `STEADY_STEP` a frame:
+/// - the last capture frame was encoded within two intervals (`interval_ns`), and this one
+///   changes at most half as many cells again (not a new page after a small change);
+/// - the ceiling starts once a frame takes at most half a frame's budget (`plan`'s rate at
+///   `fps`), so it never starts on a link the stream fills (a cap, a bottleneck), where the rate
+///   controller holds the QP steady itself;
+/// - it holds while the frames still fit their VBV, which bounds what a frame coded finer than
+///   the rate controller wanted can cost. Ending where it starts would switch it on and off
+///   around the threshold, each switch a swing (measured: 49 % of frames).
+#[allow(clippy::too_many_arguments)]
+pub fn max_qp(last: Option<&Steady>, held: bool, changed: u32, now_ns: u64, interval_ns: u64, plan: &RatePlan, fps: u32, scale: i32) -> u32 {
+    let Some(l) = last else { return 0 };
+    let budget = plan.kbps as u64 * 1000 / 8 / fps.max(1) as u64;
+    let room = if held { budget * plan.vbv_pct as u64 / 100 } else { budget / 2 };
+    let steady = now_ns.saturating_sub(l.t_encoded_ns) <= 2 * interval_ns
+        && 2 * changed as u64 <= 3 * l.changed as u64
+        && l.bytes as u64 <= room;
+    if steady { (l.base_qp + STEADY_STEP * scale).max(1) as u32 } else { 0 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +193,26 @@ mod tests {
         r.interval_remaining_bytes = 50_000;
         assert_eq!(plan(&r, FrameClass::Refine, 60), Some(RatePlan { kbps: 4000, vbv_pct: 100, split: false }));
         assert_eq!(plan(&r, FrameClass::Passive, 60), Some(RatePlan { kbps: 4000, vbv_pct: 100, split: false }));
+    }
+
+    #[test]
+    fn continuous_motion_inside_its_budget_caps_the_qp_rise() {
+        let p = RatePlan { kbps: 90_000, vbv_pct: 100, split: false }; // 187.5 kB a frame
+        let (ms, iv) = (1_000_000, 16_667_000);
+        let last = Steady { base_qp: 5, bytes: 60_000, changed: 4000, t_encoded_ns: 100 * ms };
+        let now = 117 * ms;
+        assert_eq!(max_qp(Some(&last), false, 4100, now, iv, &p, 60, 1), 7);
+        assert_eq!(max_qp(Some(&last), false, 4100, now, iv, &p, 60, 4), 13); // AV1
+        // no last frame, motion stopped, or a much larger change: the rate controller's own QP
+        assert_eq!(max_qp(None, false, 4100, now, iv, &p, 60, 1), 0);
+        assert_eq!(max_qp(Some(&last), true, 4100, 140 * ms, iv, &p, 60, 1), 0);
+        assert_eq!(max_qp(Some(&Steady { changed: 40, ..last }), true, 4100, now, iv, &p, 60, 1), 0);
+        // starts under half the budget, holds while the frame fits its VBV (half a frame's when split)
+        let big = Steady { bytes: 120_000, ..last };
+        assert_eq!(max_qp(Some(&big), false, 4100, now, iv, &p, 60, 1), 0);
+        assert_eq!(max_qp(Some(&big), true, 4100, now, iv, &p, 60, 1), 7);
+        assert_eq!(max_qp(Some(&Steady { bytes: 190_000, ..last }), true, 4100, now, iv, &p, 60, 1), 0);
+        let split = RatePlan { vbv_pct: 50, split: true, ..p };
+        assert_eq!(max_qp(Some(&big), true, 4100, now, iv, &split, 60, 1), 0);
     }
 }

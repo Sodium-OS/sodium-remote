@@ -135,6 +135,7 @@ unsafe extern "C" {
     fn rd_enc_grid(e: *mut RdEnc, qp_cell: *mut u32, mv_block: *mut u32);
     fn rd_enc_set_bitrate(e: *mut RdEnc, kbps: u32, err: *mut c_char, errlen: c_int) -> c_int;
     fn rd_enc_set_rate(e: *mut RdEnc, kbps: u32, vbv_pct: u32, split: c_int, err: *mut c_char, errlen: c_int) -> c_int;
+    fn rd_enc_set_max_qp(e: *mut RdEnc, max_qp: u32, err: *mut c_char, errlen: c_int) -> c_int;
     fn rd_enc_invalidate(e: *mut RdEnc, pts: u64, err: *mut c_char, errlen: c_int) -> c_int;
     fn rd_enc_close(e: *mut RdEnc);
 }
@@ -309,6 +310,14 @@ impl Encoder {
     pub fn set_rate(&mut self, kbps: u32, vbv_pct: u32, split: c_int) -> Result<()> {
         let mut e = Err::new();
         let r = unsafe { rd_enc_set_rate(self.0, kbps, vbv_pct, split, e.ptr(), 512) };
+        e.check(r)
+    }
+
+    /// The rate controller's QP ceiling, before the QP delta map (codec units; 0: none), by
+    /// reconfigure: takes effect on the next frame.
+    pub fn set_max_qp(&mut self, max_qp: u32) -> Result<()> {
+        let mut e = Err::new();
+        let r = unsafe { rd_enc_set_max_qp(self.0, max_qp, e.ptr(), 512) };
         e.check(r)
     }
 
