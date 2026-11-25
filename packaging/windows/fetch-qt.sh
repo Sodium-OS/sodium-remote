@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 # SPDX-FileCopyrightText: 2026 Ning Bao
-# Fetches Qt 6.12.0 for Windows (the official mingw x64 build) from download.qt.io's online
-# repository, checks every archive, and unpacks it into remote/build/qt-win/6.12.0/mingw_64/.
+# Fetches Qt 6.12.1 for Windows (the official mingw x64 build) from download.qt.io's online
+# repository, checks every archive, and unpacks it into remote/build/qt-win/6.12.1/mingw_64/.
 #
 #   remote/packaging/windows/fetch-qt.sh
 #
@@ -21,22 +21,22 @@ set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REMOTE=$(cd "$HERE/../.." && pwd)
 QT_DIR=${QT_WIN_DIR:-$REMOTE/build/qt-win}
-QT_VER=6.12.0
+QT_VER=6.12.1
 DL=$QT_DIR/dl
 ROOT=$QT_DIR/$QT_VER/mingw_64
 STAMP=$QT_DIR/.stamp-$QT_VER
 
-BASE=https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6120/qt6_6120_mingw
-V=6.12.0-0-202609280346
+BASE=https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6121/qt6_6121_mingw
+V=6.12.1-0-202611180427
 S=Windows-Windows_11_24H2-Mingw-Windows-Windows_11_24H2-X86_64.7z
 
 # package directory | archive name | sha256
 ARCHIVES=(
-  "qt.qt6.6120.win64_mingw|qtbase-$S|3356346505113242a4f7c0b09ba46188424ee7938232166655f794c28a3477fc"
-  "qt.qt6.6120.win64_mingw|qtdeclarative-$S|a567789b9c142da546db76ceaa47aa0ee92bb780d7102d1adb905d39a3bf441b"
-  "qt.qt6.6120.win64_mingw|qtsvg-$S|8dd193d39e21395f8fcb802f543f6e43e13a5caf5dd6f94cab731a53c598496a"
-  "qt.qt6.6120.addons.qtshadertools.win64_mingw|qtshadertools-$S|5bca307511529d5548c09ce8de11d68fc14ea1597eb1e5a219361ea24a560992"
-  "qt.qt6.6120.win64_mingw|opengl32sw-64-mesa_11_2_2-signed_sha256.7z|f51918c465a229efb528e26ea4e74e433663fac99a9296accdfbb090e48ac3b8"
+  "qt.qt6.6121.win64_mingw|qtbase-$S|3331d18efd754166872246e04e32e25809f748a487f04cf2ca3d7d37945e21ae"
+  "qt.qt6.6121.win64_mingw|qtdeclarative-$S|e281137356b62dbb84eb8eaf52a6829a7ba16797965d89b1ac6c8586ccf41fe5"
+  "qt.qt6.6121.win64_mingw|qtsvg-$S|e270a1f19a031429c2c717a63ddb2d2190f6ac78b25705eb9014c2e45915ea43"
+  "qt.qt6.6121.addons.qtshadertools.win64_mingw|qtshadertools-$S|b21447c1e97990ae4270241778557dded8432af67956ddb469b68a398c1539df"
+  "qt.qt6.6121.win64_mingw|opengl32sw-64-mesa_11_2_2-signed_sha256.7z|781b7d02cf8972df9a1e072520bf9a4923337b5a8cf3d128a84389760c0a2e91"
 )
 
 [[ -f $STAMP && -z ${FORCE:-} ]] && { echo "qt $QT_VER: already unpacked ($ROOT)"; exit 0; }
