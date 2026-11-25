@@ -4,13 +4,22 @@ SodiumOS is the desktop Sodium Remote was built with, and it has the deepest hos
 
 ## What you need
 
-- **SodiumOS**, with its window manager, `sodiumwm`. The host (`remoted`) takes frames from the window manager's capture plug-in over a socket. **The plug-in is not part of this repository**, and the SodiumOS host is **off by default in the build**: it is only useful on SodiumOS, so you build it deliberately (`cargo build --release -p remoted`). On a SodiumOS install it ships already built.
+- **SodiumOS**, with its window manager, `sodiumwm`. The host (`remoted`) takes frames from the window manager's capture plug-in over the socket `$XDG_RUNTIME_DIR/sodiumos/remote-capture.sock`. **The plug-in is not part of this repository**, and the SodiumOS host is **off by default in the build**: it is only useful on SodiumOS, so you build it deliberately (`cargo build --release -p remoted`).
+- **The host package.** On Arch (SodiumOS is built on it), the `sodium-remote-sodiumos` package from [`packaging/arch/`](../../packaging/arch/PKGBUILD) installs `remoted` in `/usr/bin`, its systemd user unit `sodiumos-remoted.service`, the D-Bus activation file for `org.sodiumos.Remote`, and the fcitx5 input-method add-on ([install](../install.md#arch-linux)).
 - **An NVIDIA graphics card.** The host's encoder is NVENC.
-- On a SodiumOS install, nothing else: Sodium Remote comes with SodiumOS. For other Linux desktops, see [the Linux page](linux.md).
+- Nothing else. For other Linux desktops, see [the Linux page](linux.md).
 
 ## Turning it on
 
-Open Settings › Remote and turn on the switch. Settings › Remote is a view of the host: it shows the state (off, ready, connected, reconnecting), the computer's name and ID, the paired devices, and the server's state. **Pair a device** opens a pairing window and shows the code ([user guide](../user-guide.md)).
+Open Settings › Remote and turn on the switch. Opening the page starts `remoted` (through its D-Bus activation file); installing the package enables nothing. To have Remote running from sign-in, so this computer can be reached before anyone opens Settings, enable the user unit once:
+
+```sh
+systemctl --user enable --now sodiumos-remoted
+```
+
+After an upgrade, `systemctl --user restart sodiumos-remoted` starts the new `remoted` (it ends a session in progress). fcitx5 loads the input-method add-on the next time it starts.
+
+ Settings › Remote is a view of the host: it shows the state (off, ready, connected, reconnecting), the computer's name and ID, the paired devices, and the server's state. **Pair a device** opens a pairing window and shows the code ([user guide](../user-guide.md)).
 
 ## What the host does
 
@@ -24,7 +33,7 @@ Open Settings › Remote and turn on the switch. Settings › Remote is a view o
 
 ## Files
 
-The host's data is in `~/.local/share/sodium-remote/host` ([configuration](../configuration.md)). Its D-Bus name is `org.sodiumos.Remote`, and its unit is `sodiumos-remoted.service`.
+The host's data is in `~/.local/share/sodium-remote/host` ([configuration](../configuration.md)). Its D-Bus name is `org.sodiumos.Remote`, and its unit is `sodiumos-remoted.service` (`/usr/lib/systemd/user/`). To run a `remoted` built in a checkout instead of the packaged one, override the unit's `ExecStart` in a drop-in (`systemctl --user edit sodiumos-remoted`: an empty `ExecStart=` line, then `ExecStart=/path/to/sodium-remote/target/release/remoted run`). A unit or D-Bus file of the same name in `~/.config/systemd/user` or `~/.local/share/dbus-1/services` (an older SodiumOS install linked them there) takes precedence over the packaged ones.
 
 ## Limits
 

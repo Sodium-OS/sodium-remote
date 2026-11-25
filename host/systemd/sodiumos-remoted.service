@@ -1,7 +1,12 @@
-# remoted, Remote's host daemon, as a systemd user
-# service in the graphical session. Not installed or enabled by the build: the
-# the installer links it into ~/.config/systemd/user (install.links) with the user
-# present, after `cargo build --release -p remoted` in remote/.
+# remoted, Remote's host daemon on SodiumOS, as a systemd user service in the graphical
+# session. The Arch package sodium-remote-sodiumos installs it as
+# /usr/lib/systemd/user/sodiumos-remoted.service, with remoted in /usr/bin and the D-Bus
+# activation file (../dbus/org.sodiumos.Remote.service). Installing starts and enables
+# nothing: Settings › Remote starts it through the activation file when it opens, and
+# `systemctl --user enable --now sodiumos-remoted` runs it from sign-in.
+# To run a remoted built in a checkout instead, override ExecStart in a drop-in
+# (`systemctl --user edit sodiumos-remoted`): an empty `ExecStart=`, then
+# `ExecStart=/path/to/sodium-remote/target/release/remoted run`.
 #
 # - It reads HYPRLAND_INSTANCE_SIGNATURE and WAYLAND_DISPLAY from the user manager
 #   (Hyprland imports both at start), and owns org.sodiumos.Remote on the session
@@ -15,7 +20,7 @@
 #   runtime files.
 [Unit]
 Description=Remote host daemon (remoted)
-Documentation=file://%h/Code/SodiumOS/remote/docs/reference/host-session.md
+Documentation=https://github.com/sodium-os/sodium-remote/blob/main/docs/hosts/sodiumos.md
 PartOf=graphical-session.target
 After=graphical-session.target pipewire.service wireplumber.service
 Requisite=graphical-session.target
@@ -25,7 +30,7 @@ StartLimitBurst=3
 [Service]
 Type=dbus
 BusName=org.sodiumos.Remote
-ExecStart=%h/Code/SodiumOS/remote/target/release/remoted run
+ExecStart=/usr/bin/remoted run
 Restart=on-failure
 RestartSec=2
 TimeoutStopSec=15

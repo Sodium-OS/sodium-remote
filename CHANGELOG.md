@@ -6,14 +6,22 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
+- **Arch package `sodium-remote-sodiumos`**: the SodiumOS host, `remoted`, in `/usr/bin`, with its systemd user unit (`sodiumos-remoted.service`), the D-Bus activation file for `org.sodiumos.Remote` and the fcitx5 input-method add-on. Installing enables nothing; Settings › Remote starts it when it opens.
 - **Windows client: zero copy.** The D3D11VA decoder now decodes on the presenter's own Direct3D 11 device, and each picture is drawn straight from the decoder's texture instead of being copied to system memory and uploaded again. Where the GPU or driver can't do that, pictures are copied as before. `--no-zero-copy` turns it off for comparing.
 - **Windows client: present path timing** on stderr every 5 s and on the HUD (to the GPU, ready → drawn, drawn → shown, last packet → shown).
 - **Windows client: `--no-vsync`** presents without waiting for the vsync where DXGI allows tearing (full screen). Off by default.
 
 ### Changed
 
+- The `sodiumos-remoted` unit runs `/usr/bin/remoted` instead of a SodiumOS checkout's build, and `host/install.links` is gone (SodiumOS no longer carries Sodium Remote in its tree).
+
 - **LAN signalling** now starts with `SignalHelloV2`, and the host answers with a fresh nonce that goes into the seal context of that connection. Hosts refuse the 0.1.0 `SignalHello`, so connecting over the LAN needs both computers on this version.
 - **Server.** `--enrol open` is refused unless `--listen` is a loopback or private address, or `--open-enrol-on-public-address` is given.
+
+### Fixed
+
+- **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
+- **Linux host (NVIDIA).** Scrolling text no longer shimmers on a fast link. While content keeps moving, the encoder's quality can drop by only a small step from one frame to the next.
 
 ### Security
 
