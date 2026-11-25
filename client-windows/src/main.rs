@@ -230,6 +230,8 @@ remote-client --data DIR [connect] [--host ID] [network options] [stream options
         if o.headless || o.dump_frames.is_some() {
             o.zero_copy = false;
         }
+        // Decode on the GPU that has a video decoder, which may not be the one driving the display.
+        client_windows::d3d::decode_adapter();
         if o.zero_copy && !client_windows::d3d::share_with_decoder() {
             o.zero_copy = false;
         }

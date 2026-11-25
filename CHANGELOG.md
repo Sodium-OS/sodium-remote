@@ -8,6 +8,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - **Arch package `sodium-remote-sodiumos`**: the SodiumOS host, `remoted`, in `/usr/bin`, with its systemd user unit (`sodiumos-remoted.service`), the D-Bus activation file for `org.sodiumos.Remote` and the fcitx5 input-method add-on. Installing enables nothing; Settings › Remote starts it when it opens.
 - **Windows client: zero copy.** The D3D11VA decoder now decodes on the presenter's own Direct3D 11 device, and each picture is drawn straight from the decoder's texture instead of being copied to system memory and uploaded again. Where the GPU or driver can't do that, pictures are copied as before. `--no-zero-copy` turns it off for comparing.
+- **Windows client: picks the GPU that decodes.** It decodes (and, with zero copy, presents) on the first GPU that has a hardware video decoder, the display's GPU when it has one, instead of always the display's GPU, which left PCs whose display adapter has no video decoder on software decoding.
 - **Windows client: present path timing** on stderr every 5 s and on the HUD (to the GPU, ready → drawn, drawn → shown, last packet → shown).
 - **Windows client: `--no-vsync`** presents without waiting for the vsync where DXGI allows tearing (full screen). Off by default.
 

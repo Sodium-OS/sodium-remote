@@ -69,6 +69,8 @@ void rc_d3d11_lock(void);
 void rc_d3d11_unlock(void);
 // 0: hand every picture back in system memory again (the presenter could not use the textures).
 void rc_d3d11_zero_copy(int on);
+// The DXGI adapter the decoder uses when it makes its own D3D11VA device (no shared device), by index.
+void rc_d3d11_set_adapter(int index);
 #endif
 
 #ifdef __cplusplus

@@ -14,6 +14,10 @@
 //! system memory (software decode, 4:4:4, a driver that refuses shader-readable
 //! decoder textures, `--no-zero-copy`) is uploaded as before; if the views can't
 //! be made, zero copy is turned off for the session and the decoder copies again.
+//!
+//! **Which GPU:** `decode_adapter` picks the first hardware adapter that has a
+//! video decoder, the display's GPU when it has one, and both the shared device
+//! and the decoder's own device (`--no-zero-copy`) use it.
 
 use anyhow::{Context, Result, anyhow, bail};
 use remote_engine::decode::{D3d11Lock, D3d11Slice, Picture, PixFmt};
@@ -22,7 +26,7 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use windows::Win32::Foundation::{HANDLE, HMODULE, HWND};
 use windows::Win32::Graphics::Direct3D::{
-    D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, D3D11_SRV_DIMENSION_TEXTURE2DARRAY, ID3DBlob,
+    D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_UNKNOWN, D3D_DRIVER_TYPE_WARP, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, D3D11_SRV_DIMENSION_TEXTURE2DARRAY, ID3DBlob,
 };
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
@@ -169,13 +173,65 @@ unsafe impl Sync for Shared {}
 static SHARED: OnceLock<Option<Shared>> = OnceLock::new();
 static TEARING: AtomicBool = AtomicBool::new(false);
 
+/// The DXGI adapter that decodes video, by `EnumAdapters1` index: the first
+/// hardware adapter whose D3D11 video device lists a decoder profile. Adapters
+/// come in DXGI's order, the one driving the primary display first, so a PC
+/// that decodes on its display GPU keeps it (no copy between adapters to
+/// present). Where that GPU has no video decoder (a virtual display, a second
+/// GPU kept for compute, a display-only adapter) the next one that has one is
+/// used. `None` when no adapter decodes: the default adapter is used, as before.
+/// Picked once; the decoder is told (`d3d11_set_adapter`) for when it makes its
+/// own device.
+pub fn decode_adapter() -> Option<u32> {
+    static PICKED: OnceLock<Option<u32>> = OnceLock::new();
+    *PICKED.get_or_init(|| {
+        let picked = pick_decode_adapter();
+        if let Some((i, name)) = &picked {
+            eprintln!("remote-client: decoding on GPU {i} ({name})");
+            remote_engine::decode::d3d11_set_adapter(*i);
+        }
+        picked.map(|(i, _)| i)
+    })
+}
+
+fn pick_decode_adapter() -> Option<(u32, String)> {
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        for i in 0.. {
+            let Ok(adapter) = factory.EnumAdapters1(i) else { break };
+            let Ok(desc) = adapter.GetDesc1() else { continue };
+            // The Basic Render Driver (WARP) and other software adapters.
+            if desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0 {
+                continue;
+            }
+            let Ok(a) = adapter.cast::<IDXGIAdapter>() else { continue };
+            let Ok((dev, _)) = create_device_on(Some(&a), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_VIDEO_SUPPORT) else { continue };
+            let Ok(vd) = dev.cast::<ID3D11VideoDevice>() else { continue };
+            if vd.GetVideoDecoderProfileCount() > 0 {
+                let n = desc.Description.iter().position(|&c| c == 0).unwrap_or(desc.Description.len());
+                return Some((i, String::from_utf16_lossy(&desc.Description[..n])));
+            }
+        }
+        None
+    }
+}
+
+/// The adapter `decode_adapter` picked, or `None` for the default one.
+fn decode_adapter_handle() -> Option<IDXGIAdapter> {
+    let i = decode_adapter()?;
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        factory.EnumAdapters1(i).ok()?.cast().ok()
+    }
+}
+
 /// Zero copy: make the hardware device (with video support) now, before the
 /// decoder opens, and have the D3D11VA decoder decode on it. The window's `Gfx`
 /// then presents on the same device. False (and nothing shared) when there is
 /// no hardware device with video support; the session then copies as before.
 pub fn share_with_decoder() -> bool {
     SHARED
-        .get_or_init(|| match create_device(D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT) {
+        .get_or_init(|| match create_device_on(decode_adapter_handle().as_ref(), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT) {
             Ok((d, c)) => {
                 // SAFETY: a live device; the shim takes its own reference.
                 unsafe { remote_engine::decode::d3d11_share_device(d.as_raw()) };
@@ -222,10 +278,20 @@ pub struct Gfx {
 }
 
 fn create_device(driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE, flags: D3D11_CREATE_DEVICE_FLAG) -> Result<(ID3D11Device, ID3D11DeviceContext)> {
+    create_device_on(None, driver, flags)
+}
+
+/// `create_device` on a given adapter (the driver type is then `UNKNOWN`, as D3D11 requires).
+fn create_device_on(
+    adapter: Option<&IDXGIAdapter>,
+    driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE,
+    flags: D3D11_CREATE_DEVICE_FLAG,
+) -> Result<(ID3D11Device, ID3D11DeviceContext)> {
+    let driver = if adapter.is_some() { D3D_DRIVER_TYPE_UNKNOWN } else { driver };
     let (mut dev, mut ctx) = (None, None);
     unsafe {
         D3D11CreateDevice(
-            None::<&IDXGIAdapter>,
+            adapter,
             driver,
             HMODULE::default(),
             flags,
@@ -247,26 +313,10 @@ fn swap_flags(tearing: bool) -> DXGI_SWAP_CHAIN_FLAG {
     DXGI_SWAP_CHAIN_FLAG(f)
 }
 
-/// Does the GPU decode AV1 (VLD profile 0)? The FFmpeg here has no software AV1.
+/// Does the decoding GPU (`decode_adapter`) decode AV1 (VLD profile 0)? The FFmpeg here has no software AV1.
 pub fn hardware_av1() -> bool {
     unsafe {
-        let (mut dev, mut ctx) = (None, None);
-        if D3D11CreateDevice(
-            None::<&IDXGIAdapter>,
-            D3D_DRIVER_TYPE_HARDWARE,
-            HMODULE::default(),
-            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-            None,
-            D3D11_SDK_VERSION,
-            Some(&mut dev),
-            None,
-            Some(&mut ctx),
-        )
-        .is_err()
-        {
-            return false;
-        }
-        let Some(dev) = dev else { return false };
+        let Ok((dev, _)) = create_device_on(decode_adapter_handle().as_ref(), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_VIDEO_SUPPORT) else { return false };
         let Ok(vd) = dev.cast::<ID3D11VideoDevice>() else { return false };
         // D3D11_DECODER_PROFILE_AV1_VLD_PROFILE0
         let av1 = windows::core::GUID::from_u128(0xb8be4ccb_cf53_46ba_8d59_d6b8a6da5d2a);

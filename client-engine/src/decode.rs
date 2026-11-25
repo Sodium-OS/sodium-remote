@@ -59,6 +59,7 @@ unsafe extern "C" {
     fn rc_d3d11_lock();
     fn rc_d3d11_unlock();
     fn rc_d3d11_zero_copy(on: c_int);
+    fn rc_d3d11_set_adapter(index: c_int);
 }
 
 /// Windows zero copy: D3D11VA decoders opened from now on decode on `device` (the
@@ -80,6 +81,13 @@ pub unsafe fn d3d11_share_device(device: *mut std::ffi::c_void) {
 #[cfg(windows)]
 pub fn d3d11_zero_copy(on: bool) {
     unsafe { rc_d3d11_zero_copy(on as c_int) }
+}
+
+/// Decode on this DXGI adapter (by `EnumAdapters1` index) when the decoder
+/// makes its own D3D11VA device, that is when no device is shared.
+#[cfg(windows)]
+pub fn d3d11_set_adapter(index: u32) {
+    unsafe { rc_d3d11_set_adapter(index as c_int) }
 }
 
 /// The lock FFmpeg takes around its use of the shared device's immediate

@@ -89,6 +89,8 @@ static double now_ms(void) {
 // The presenter's device, and the lock FFmpeg and the presenter share around its immediate context.
 static ID3D11Device *g_d3d;
 static volatile LONG g_zero_copy = 1;
+// The DXGI adapter index to decode on when the decoder makes its own device (-1: the default adapter).
+static volatile LONG g_d3d_adapter = -1;
 static CRITICAL_SECTION g_d3d_cs;
 static INIT_ONCE g_d3d_once = INIT_ONCE_STATIC_INIT;
 // IID_ID3D10Multithread, spelled out so nothing has to link dxguid.
@@ -116,6 +118,7 @@ static void d3d_unlock(void *ctx) {
 void rc_d3d11_lock(void) { d3d_lock(NULL); }
 void rc_d3d11_unlock(void) { d3d_unlock(NULL); }
 void rc_d3d11_zero_copy(int on) { InterlockedExchange(&g_zero_copy, on ? 1 : 0); }
+void rc_d3d11_set_adapter(int index) { InterlockedExchange(&g_d3d_adapter, index); }
 
 int rc_d3d11_set_device(void *device) {
     d3d_lock(NULL);
@@ -300,7 +303,16 @@ static int try_open(rc_dec *d, int codec, enum AVHWDeviceType type, char *backen
 #ifdef _WIN32
         if (type == AV_HWDEVICE_TYPE_D3D11VA && (d->hwdev = shared_d3d11_device())) d->shared_d3d11 = 1;
 #endif
-        if (!d->hwdev) r = av_hwdevice_ctx_create(&d->hwdev, type, NULL, NULL, 0);
+        const char *dev_name = NULL;
+#ifdef _WIN32
+        // FFmpeg's D3D11VA device string is the DXGI adapter index.
+        char adapter[16];
+        if (type == AV_HWDEVICE_TYPE_D3D11VA && g_d3d_adapter >= 0) {
+            snprintf(adapter, sizeof adapter, "%ld", (long)g_d3d_adapter);
+            dev_name = adapter;
+        }
+#endif
+        if (!d->hwdev) r = av_hwdevice_ctx_create(&d->hwdev, type, dev_name, NULL, 0);
         if (r < 0) {
             set_err(err, errlen, "hardware device", r);
             d->hw_fmt = AV_PIX_FMT_NONE;
