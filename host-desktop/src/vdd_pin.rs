@@ -29,12 +29,12 @@ pub const CAT: &str = "sodiumremotedisplay.cat";
 pub const CER: &str = "sodium-remote-driver-signing.cer";
 
 /// SHA-256 of each file, 64 hex digits (`pin.sh`).
-pub const INF_SHA256: &str = "";
-pub const DLL_SHA256: &str = "";
-pub const CAT_SHA256: &str = "";
-pub const CER_SHA256: &str = "";
+pub const INF_SHA256: &str = "a7a375dba5d69dc5cd8281ba4f0d9a0b58c4cbae230955ab79a4f6a5811c6cdb";
+pub const DLL_SHA256: &str = "5b82297361969b6eac623e94cc5667191075ff2cb53c62a54bc7a15066129eec";
+pub const CAT_SHA256: &str = "5e64902fc617e472dded8c546a1d5e53522fde8c8e309782977a490df4713218";
+pub const CER_SHA256: &str = "8382cd192562d8c109cc221d02589f9853617d4385bcda6dab6b001d07920e92";
 /// The certificate's SHA-1 thumbprint, 40 hex digits: how it is found again to be deleted.
-pub const CER_SHA1: &str = "";
+pub const CER_SHA1: &str = "497f2f8bc68bdee0694fb11281c573def71deab6";
 
 fn parse<const N: usize>(s: &str) -> Option<[u8; N]> {
     let s = s.trim();
