@@ -10,8 +10,12 @@ AppWindow {
     id: win
 
     title: qsTr("Remote")
-    width: 760
-    height: 620
+    // 760x620, or less on a small screen at a large scale (at most 90% of the primary screen's available area), centred.
+    readonly property var openRect: Remote.fittedWindowRect(null, 760, 620)
+    x: openRect.x
+    y: openRect.y
+    width: openRect.width
+    height: openRect.height
     minimumWidth: 480
     minimumHeight: 420
     visible: true
@@ -212,6 +216,7 @@ AppWindow {
 
     StreamWindow {
         id: stream
+        anchor: win
         onPairRequested: id => { add.begin(); add.startPairing(id, Remote.computers.get(id).name ?? "", "") }
         onSettingsRequested: { win.raise(); win.requestActivate(); settings.open() }
         onServerSettingsRequested: { win.raise(); win.requestActivate(); settings.openServer() }

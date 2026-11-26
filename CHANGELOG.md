@@ -14,6 +14,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Changed
 
+- **Windows, Mac and Linux-desktop hosts follow the client's window.** When the client resizes its window or goes full screen, the host re-encodes the stream at the largest size with the display's aspect that fits the window (never above the display's own size), about 150 ms after the resizing stops. The client shows it 1:1 instead of scaling the host's full-size picture. Shrunk text stays clean (area scaling).
 - **Windows app:** built with Qt 6.12.1 (was 6.12.0), the version Arch now ships for the host tools the cross build needs.
 - The `sodiumos-remoted` unit runs `/usr/bin/remoted` instead of a SodiumOS checkout's build, and `host/install.links` is gone (SodiumOS no longer carries Sodium Remote in its tree).
 
@@ -22,6 +23,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 
+- **Hosts.** Switching a host off and straight back on no longer fails with "address already in use": switching off now waits until the LAN port is released.
+- **Windows app.** The session window opens fitted to and centred on its screen at any display scale, instead of wider than a 150–200% laptop screen and partly off it. Its edges resize it, it maximises and snaps, it follows a move to a monitor with another scale, and full screen goes in and out with the previous size restored.
 - **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
 - **Linux host (NVIDIA).** Scrolling text no longer shimmers on a fast link. While content keeps moving, the encoder's quality can drop by only a small step from one frame to the next.
 

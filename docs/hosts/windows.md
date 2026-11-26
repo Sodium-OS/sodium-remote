@@ -20,7 +20,7 @@ The host is a per-user program in your interactive session. It doesn't run as a 
 ## What the host shows
 
 - **Displays.** The host streams your real screen. When there are several displays, the controlling computer chooses which to see. One display at a time.
-- **Resolution.** The host does not resize or create displays. The picture is the display's own size, scaled down only to fit the other computer's window.
+- **Resolution.** The host does not resize or create displays. The picture follows the controlling computer's window: when that window is resized or goes full screen, the host re-encodes at the largest size with the display's shape that fits it, so the other computer shows it pixel for pixel (with bars only where the shapes differ). It is never larger than the display's own size. The stream changes about 150 ms after the window stops changing, with one keyframe.
 - **Video.** The host uses a hardware encoder when there is one: NVENC, AMD's AMF or Intel's Quick Sync for HEVC, and the GPU's Media Foundation encoder for H.264. Without any of those it falls back to a software H.264 encoder. HEVC is used when a hardware HEVC encoder works and the client decodes HEVC; otherwise H.264.
 - **Sound.** The default output device is shared (48 kHz stereo, Opus). If you change the default device, sharing follows it.
 - **Clipboard.** Text, HTML and images, both ways. Entries that a password manager marks as concealed are kept out of the clipboard history on the receiving side.

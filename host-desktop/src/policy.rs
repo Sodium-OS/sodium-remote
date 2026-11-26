@@ -37,12 +37,20 @@ pub fn choose_codec(caps: EncoderCaps, decode: &DecodeSupport, choice: CodecChoi
 /// only to fit the client's decoder (`max_width`/`max_height`, 0 = no limit), aspect
 /// kept, even (4:2:0).
 pub fn fit(width: u32, height: u32, max_width: u32, max_height: u32) -> (u32, u32) {
+    stream_size((width, height), (0, 0), (max_width, max_height))
+}
+
+/// The stream's size for a display shown in a client window: the largest even size with
+/// the display's aspect that fits inside the window (physical pixels, 0 = unknown, no
+/// limit) and the decoder's maximum (0 = no limit), never larger than the display's own
+/// size (the client scales up, so a bigger stream would only cost bits).
+pub fn stream_size(display: (u32, u32), window: (u32, u32), max: (u32, u32)) -> (u32, u32) {
+    let (width, height) = (display.0.max(2), display.1.max(2));
     let mut s = 1.0f64;
-    if max_width > 0 && width > max_width {
-        s = s.min(max_width as f64 / width as f64);
-    }
-    if max_height > 0 && height > max_height {
-        s = s.min(max_height as f64 / height as f64);
+    for (limit, native) in [(window.0, width), (window.1, height), (max.0, width), (max.1, height)] {
+        if limit > 0 && native > limit {
+            s = s.min(limit as f64 / native as f64);
+        }
     }
     let even = |v: f64| ((v.floor() as u32) & !1).max(2);
     (even(width as f64 * s), even(height as f64 * s))
@@ -216,6 +224,25 @@ pub fn virtual_desk_abs(x: i32, y: i32, left: i32, top: i32, width: i32, height:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_stream_follows_the_window_without_upscaling() {
+        let display = (2560, 1440);
+        // A smaller window of the same aspect: the window's size.
+        assert_eq!(stream_size(display, (1280, 720), (0, 0)), (1280, 720));
+        // A larger window or full screen on a bigger display: never above native.
+        assert_eq!(stream_size(display, (3840, 2160), (0, 0)), (2560, 1440));
+        // A different aspect: letterbox, the display's aspect inside the window.
+        assert_eq!(stream_size(display, (1000, 1000), (0, 0)), (1000, 562));
+        assert_eq!(stream_size(display, (500, 900), (0, 0)), (500, 280));
+        // An odd window size gives even stream sizes that still fit.
+        assert_eq!(stream_size(display, (1001, 601), (0, 0)), (1000, 562));
+        // The decoder's maximum wins over a larger window.
+        assert_eq!(stream_size(display, (3840, 2160), (1920, 1080)), (1920, 1080));
+        // No window known: the old rule (native, shrunk to the decoder).
+        assert_eq!(stream_size(display, (0, 0), (1920, 1080)), (1920, 1080));
+        assert_eq!(stream_size(display, (0, 0), (0, 0)), (2560, 1440));
+    }
 
     fn d(hevc: bool, h264: bool) -> DecodeSupport {
         DecodeSupport { hevc, h264, hevc_444: false, av1: false, max_width: 0, max_height: 0 }

@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QMetaObject>
 #include <QSet>
+#include <QScreen>
 #include <QWindow>
 #ifdef Q_OS_WIN
 #include "streamframe.h"
@@ -494,6 +495,35 @@ void RemoteController::rename(const QString &hostId, const QString &name)
     setHostInfo(hostId, QStringLiteral("name"), name.trimmed());
     if (!m_lastHosts.isEmpty())
         onHosts(m_lastHosts);
+}
+
+QRect RemoteController::fitWindow(const QRect &avail, const QSize &want)
+{
+    const int w = qMin(want.width(), avail.width() * 9 / 10);
+    const int h = qMin(want.height(), avail.height() * 9 / 10);
+    return QRect(avail.x() + (avail.width() - w) / 2, avail.y() + (avail.height() - h) / 2, w, h);
+}
+
+QVariantMap RemoteController::fittedWindowRect(QWindow *anchor, int width, int height) const
+{
+    QScreen *screen = anchor ? anchor->screen() : nullptr;
+    if (!screen)
+        screen = QGuiApplication::primaryScreen();
+    const QRect r = screen ? fitWindow(screen->availableGeometry(), QSize(width, height)) : QRect(0, 0, width, height);
+    return {{QStringLiteral("x"), r.x()}, {QStringLiteral("y"), r.y()}, {QStringLiteral("width"), r.width()}, {QStringLiteral("height"), r.height()}};
+}
+
+void RemoteController::placeStreamWindow(QWindow *window, int x, int y, int width, int height)
+{
+    if (!window)
+        return;
+#ifdef Q_OS_WIN
+    if (m_frame) {
+        m_frame->place(QRect(x, y, width, height));
+        return;
+    }
+#endif
+    window->setGeometry(x, y, width, height);
 }
 
 bool RemoteController::connectTo(const QString &hostId, QWindow *window, bool takeover, bool fullscreen, int videoY)

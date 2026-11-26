@@ -86,7 +86,7 @@ The frames:
 **Pictures:**
 
 - **Zero copy:** the ScreenCaptureKit buffer (IOSurface NV12) is encoded as it is.
-- **Other sizes:** when the stream is scaled down to the client's maximum, a `VTPixelTransferSession` scales it into a buffer from the session's own pool.
+- **Other sizes:** when the stream is scaled down to the client's window or maximum, a `VTPixelTransferSession` scales it into a buffer from the session's own pool.
 - **CPU pictures:** BGRA pictures (the fake backend) are copied into a pixel buffer and converted the same way.
 
 **Out:** each `encode` completes its frame (`CompleteFrames`). The length-prefixed NAL units become Annex B, with the parameter sets in front of every keyframe.
@@ -183,10 +183,10 @@ While a session is live, an IOKit `PreventUserIdleDisplaySleep` assertion is hel
 
 - **Fields:**
   - `host_os` Mac and `display_mode` Physical;
-  - `live_resize` false, with no UI scales;
+  - `live_resize` true (the stream follows the client's window), with no UI scales;
   - the displays as above, and the current one.
 - **Display choice:** the primary display unless the client chose another.
-- **Downscaling:** the picture is the display's backing pixels, scaled down only to fit the client's `max_width` and `max_height`.
+- **Stream size:** the display's backing pixels, scaled down to fit the client's window and its `max_width` and `max_height` (never up), as `policy::stream_size` says in [host-desktop.md](host-desktop.md).
 - **Name:** the Sharing name (`SCDynamicStoreCopyComputerName`), unless renamed.
 
 ## Permissions
@@ -341,7 +341,7 @@ The user has to be at the Mac for the Allow clicks. Everything else can go over 
   - the scroll phases' feel in apps;
   - whether pinch as a magnify gesture (the undocumented fields) zooms in Safari, Chrome, Preview and Maps, and whether Cmd + scroll zooms where the gesture doesn't.
 - **One display at a time.** A second client takes over.
-- **No virtual display or resize**.
+- **No virtual display, and the display is never resized**; the stream follows the client's window.
 - **No login-window access** (next milestone).
 - **The host key is in the Keychain** when the host runs inside the app; run as a program it is a file in the data folder.
 - **Pinch** is a magnify gesture event by default, with Cmd + scroll behind `SODIUM_REMOTE_PINCH=cmd-scroll`; neither has run on a Mac.

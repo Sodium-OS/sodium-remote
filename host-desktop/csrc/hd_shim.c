@@ -476,7 +476,9 @@ int hd_enc_open(const hd_enc_config *cfg, hd_enc **out, char *err, int errlen) {
 
 static int convert(hd_enc *e, const uint8_t *bgra, int w, int h, int stride, char *err, int errlen) {
     if (!e->sws || w != e->src_w || h != e->src_h) {
-        int flags = (w == e->width && h == e->height) ? SWS_POINT : SWS_BILINEAR;
+        // Same size: a copy. Smaller (the stream follows the client's window): area averaging keeps text
+        // clean. Larger: bilinear.
+        int flags = (w == e->width && h == e->height) ? SWS_POINT : (w > e->width || h > e->height) ? SWS_AREA : SWS_BILINEAR;
         e->sws = sws_getCachedContext(e->sws, w, h, AV_PIX_FMT_BGRA, e->width, e->height, e->fmt, flags, NULL, NULL, NULL);
         if (!e->sws) {
             set_err(err, errlen, "swscale: no conversion to the encoder's format%s%s", "", 0);

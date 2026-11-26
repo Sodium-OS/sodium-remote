@@ -144,6 +144,9 @@ struct Win {
     hook: Option<HHOOK>,
     embed: Option<Arc<Embed>>,
     embed_rev: u64,
+    /// The picture's box in the frame when it was last placed: the frame can change size on its own (full screen,
+    /// maximise, a monitor's scale) before Qt reports anything.
+    embed_box: (i32, i32, i32, i32),
     /// The keyboard goes to the host (embedded: the leave chord turns it off).
     capture: bool,
     /// An app menu is open over the picture: only key-ups and button-ups go to the host (embedded).
@@ -186,6 +189,41 @@ fn sy(v: isize) -> i32 {
     ((v >> 16) & 0xFFFF) as u16 as i16 as i32
 }
 
+/// The picture's child window in the frame's client, physical pixels: Qt's logical origin scaled by the frame's DPI,
+/// reaching to the client's right and bottom edges (so no rounding of a logical size leaves a gap).
+fn embed_box(e: &Embed) -> (i32, i32, i32, i32) {
+    let parent = HWND(e.parent as *mut c_void);
+    let st = e.get();
+    let k = unsafe { GetDpiForWindow(parent) }.max(96) as f64 / 96.0;
+    let (x, y) = ((st.origin.0 as f64 * k).round() as i32, (st.origin.1 as f64 * k).round() as i32);
+    let mut cr = RECT::default();
+    unsafe {
+        let _ = GetClientRect(parent, &mut cr);
+    }
+    if cr.right <= x || cr.bottom <= y {
+        return (x, y, ((st.size.0 as f64 * k).round() as i32).max(1), ((st.size.1 as f64 * k).round() as i32).max(1));
+    }
+    (x, y, cr.right - x, cr.bottom - y)
+}
+
+/// The frame's resize edge under a point of the picture window (`w`x`h`, physical pixels), as a hit-test code
+/// (`HTLEFT`...), or 0. The picture covers the frame, so the frame's own edges are a band at its left, right and
+/// bottom (the top is the bar's); a cross-thread `HTTRANSPARENT` would not reach the frame, so the picture hands the
+/// press over itself.
+fn edge_hit(w: i32, h: i32, x: i32, y: i32, band: i32, corner: i32) -> u32 {
+    let (left, right, bottom) = (x < band, x >= w - band, y >= h - band);
+    match (left, right, bottom) {
+        (true, _, true) => HTBOTTOMLEFT,
+        (_, true, true) => HTBOTTOMRIGHT,
+        (true, _, _) => HTLEFT,
+        (_, true, _) => HTRIGHT,
+        (_, _, true) if x < corner => HTBOTTOMLEFT,
+        (_, _, true) if x >= w - corner => HTBOTTOMRIGHT,
+        (_, _, true) => HTBOTTOM,
+        _ => 0,
+    }
+}
+
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
@@ -210,9 +248,8 @@ pub fn run_with(app: Arc<App>, rx: Receiver<WinMsg>, opts: WindowOptions, wake: 
         };
         RegisterClassExW(&wc);
         let (style, x, y, cw, ch) = if let Some(e) = &embed {
-            let st = e.get();
-            let k = GetDpiForWindow(HWND(e.parent as *mut c_void)).max(96) as f64 / 96.0;
-            (WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, (st.origin.0 as f64 * k) as i32, (st.origin.1 as f64 * k) as i32, ((st.size.0 as f64 * k) as i32).max(1), ((st.size.1 as f64 * k) as i32).max(1))
+            let (x, y, w, h) = embed_box(e);
+            (WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, x, y, w, h)
         } else if opts.fullscreen {
             let (sw, sh) = (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
             (WS_POPUP | WS_VISIBLE, 0, 0, sw, sh)
@@ -248,6 +285,7 @@ pub fn run_with(app: Arc<App>, rx: Receiver<WinMsg>, opts: WindowOptions, wake: 
             mouse_in: false,
             hook: None,
             embed_rev: embed.as_ref().map_or(0, |e| e.rev()),
+            embed_box: (0, 0, 0, 0),
             capture: embed.as_ref().is_none_or(|e| e.get().capture),
             blocked: false,
             embed,
@@ -348,14 +386,15 @@ impl Win {
     fn sync_embed(&mut self) {
         let Some(e) = self.embed.clone() else { return };
         let rev = e.rev();
-        if rev == self.embed_rev {
+        let b = embed_box(&e);
+        if rev == self.embed_rev && b == self.embed_box {
             return;
         }
         self.embed_rev = rev;
+        self.embed_box = b;
         let st = e.get();
         unsafe {
-            let k = GetDpiForWindow(HWND(e.parent as *mut c_void)).max(96) as f64 / 96.0;
-            let _ = SetWindowPos(self.hwnd, Some(HWND_TOP), (st.origin.0 as f64 * k).round() as i32, (st.origin.1 as f64 * k).round() as i32, ((st.size.0 as f64 * k).round() as i32).max(1), ((st.size.1 as f64 * k).round() as i32).max(1), SWP_NOACTIVATE);
+            let _ = SetWindowPos(self.hwnd, Some(HWND_TOP), b.0, b.1, b.2, b.3, SWP_NOACTIVATE);
         }
         if st.blocked != self.blocked {
             // Held keys and buttons go up on the computer the moment a menu opens.
@@ -413,6 +452,16 @@ impl Win {
         // Ctrl, Alt, Shift (either side) by HID usage: E0/E4, E2/E6, E1/E5
         let h = |a: u16, b: u16| self.keys_down.contains(&a) || self.keys_down.contains(&b);
         h(0xE0, 0xE4) && h(0xE2, 0xE6) && h(0xE1, 0xE5)
+    }
+
+    /// Embedded and windowed: the resize edge (`HT*`) under a client point of the picture window, or 0.
+    fn frame_edge(&self, x: i32, y: i32) -> u32 {
+        if self.embed.is_none() || self.opts.fullscreen || self.blocked || unsafe { IsZoomed(self.root) }.as_bool() {
+            return 0;
+        }
+        let k = unsafe { GetDpiForWindow(self.root) }.max(96) as f64 / 96.0;
+        let (w, h) = self.client_size();
+        edge_hit(w as i32, h as i32, x, y, (6.0 * k) as i32, (12.0 * k) as i32)
     }
 
     fn client_size(&self) -> (u32, u32) {
@@ -924,6 +973,20 @@ impl Win {
                 }
                 WM_SETCURSOR => {
                     if loword(lpi) as u32 == HTCLIENT {
+                        let mut p = POINT::default();
+                        let _ = GetCursorPos(&mut p);
+                        let _ = ScreenToClient(hwnd, &mut p);
+                        let id = match self.frame_edge(p.x, p.y) {
+                            HTLEFT | HTRIGHT => Some(IDC_SIZEWE),
+                            HTBOTTOM => Some(IDC_SIZENS),
+                            HTBOTTOMLEFT => Some(IDC_SIZENESW),
+                            HTBOTTOMRIGHT => Some(IDC_SIZENWSE),
+                            _ => None,
+                        };
+                        if let Some(id) = id {
+                            SetCursor(LoadCursorW(None, id).ok());
+                            return LRESULT(1);
+                        }
                         SetCursor(if self.cursor == 0 { None } else { Some(HCURSOR(self.cursor as *mut c_void)) });
                         return LRESULT(1);
                     }
@@ -955,6 +1018,16 @@ impl Win {
                         WM_MBUTTONDOWN => (4, Button::Middle, true),
                         _ => (4, Button::Middle, false),
                     };
+                    if m == WM_LBUTTONDOWN {
+                        let edge = self.frame_edge(sx(lpi), sy(lpi));
+                        if edge != 0 {
+                            // The frame's edge: its sizing loop takes the press (posted, the frame is another thread's).
+                            let mut p = POINT { x: sx(lpi), y: sy(lpi) };
+                            let _ = ClientToScreen(hwnd, &mut p);
+                            let _ = PostMessageW(Some(self.root), WM_NCLBUTTONDOWN, WPARAM(edge as usize), LPARAM(((p.y as isize & 0xFFFF) << 16) | (p.x as isize & 0xFFFF)));
+                            return LRESULT(0);
+                        }
+                    }
                     if self.blocked {
                         // A press in the video closes the app's menu and goes no further.
                         if down {
@@ -1186,5 +1259,23 @@ fn make_cursor(img: &CursorImage, k: f64) -> Option<isize> {
         let _ = DeleteObject(color.into());
         let _ = DeleteObject(mask.into());
         icon.ok().map(|h| h.0 as isize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_edges_are_a_band_on_the_left_right_and_bottom() {
+        let (w, h, b, c) = (1000, 600, 6, 12);
+        assert_eq!(edge_hit(w, h, 500, 300, b, c), 0);
+        assert_eq!(edge_hit(w, h, 500, 0, b, c), 0, "the top belongs to the bar");
+        assert_eq!(edge_hit(w, h, 0, 300, b, c), HTLEFT);
+        assert_eq!(edge_hit(w, h, 999, 300, b, c), HTRIGHT);
+        assert_eq!(edge_hit(w, h, 500, 599, b, c), HTBOTTOM);
+        assert_eq!(edge_hit(w, h, 5, 599, b, c), HTBOTTOMLEFT);
+        assert_eq!(edge_hit(w, h, 990, 599, b, c), HTBOTTOMRIGHT);
+        assert_eq!(edge_hit(w, h, 0, 0, b, c), HTLEFT);
     }
 }

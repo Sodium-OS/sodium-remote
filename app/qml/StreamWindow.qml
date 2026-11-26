@@ -17,6 +17,8 @@ Window {
     readonly property real barHeight: Math.round(bar.height)
     property string pendingHost: ""
     property bool pendingTakeover: false
+    /// The main window: the stream window opens on its screen, fitted to it.
+    property var anchor: null
     readonly property bool fullscreen: visibility === Window.FullScreen
     /// Stats on in the bar (screenshots and tests drive it from the script).
     property alias statsOn: bar.statsOn
@@ -43,7 +45,14 @@ Window {
     function begin(hostId, takeover, fullscreenOn) {
         pendingHost = hostId
         pendingTakeover = takeover
-        visibility = fullscreenOn ? Window.FullScreen : Window.Windowed
+        // 1100x760, or less when the screen's available area is smaller (at most 90% of it), centred there.
+        visibility = Window.Windowed
+        const r = Remote.fittedWindowRect(anchor, 1100, 760)
+        minimumWidth = Math.min(640, r.width)
+        minimumHeight = Math.min(420, r.height)
+        Remote.placeStreamWindow(win, r.x, r.y, r.width, r.height)
+        if (fullscreenOn)
+            visibility = Window.FullScreen
         show()
         startTimer.restart()
     }

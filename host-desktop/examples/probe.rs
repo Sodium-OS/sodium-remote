@@ -11,7 +11,7 @@
 //!
 //! Steps run in order once the first frame is in, 300 ms apart:
 //!   --wait MS  --type TEXT  --key USAGE  --commit TEXT  --click X,Y  --move X,Y
-//!   --scroll N  --clip-text TEXT  --clip-png FILE  --select-display ID  --keyframe
+//!   --scroll N  --clip-text TEXT  --clip-png FILE  --select-display ID  --resize WxH  --keyframe
 //!   --key-table mac|pc  --disconnect
 //! Other options: --h264-only, --size WxH, --dump FILE, --save-clip DIR, --no-mdns,
 //!   --takeover, --name NAME
@@ -42,6 +42,7 @@ enum Step {
     ClipText(String),
     ClipPng(PathBuf),
     SelectDisplay(u32),
+    Resize(u32, u32),
     Keyframe,
     KeyTable(Vec<KeyRule>),
     Disconnect,
@@ -126,6 +127,11 @@ fn run() -> Result<()> {
             "--clip-text" => o.steps.push(Step::ClipText(val()?)),
             "--clip-png" => o.steps.push(Step::ClipPng(val()?.into())),
             "--select-display" => o.steps.push(Step::SelectDisplay(val()?.parse()?)),
+            "--resize" => {
+                let v = val()?;
+                let (w, h) = v.split_once('x').context("--resize WxH")?;
+                o.steps.push(Step::Resize(w.parse()?, h.parse()?));
+            }
             "--keyframe" => o.steps.push(Step::Keyframe),
             "--key-table" => {
                 let t = match val()?.as_str() {
@@ -346,7 +352,16 @@ async fn session(client: Client, mut events: tokio::sync::mpsc::UnboundedReceive
                                 clip_serial += 1;
                             }
                             Step::SelectDisplay(id) => client.send(Msg::SelectDisplay(id)),
-                            Step::Keyframe => client.send(Msg::KeyframeRequest),
+                            Step::Resize(w, h) => client.send(Msg::Resize(msg::ClientDisplay {
+                width: w,
+                height: h,
+                pixels_per_point: 1.0,
+                refresh_mhz: 60_000,
+                fullscreen: false,
+                display_width: o.size.0,
+                display_height: o.size.1,
+            })),
+            Step::Keyframe => client.send(Msg::KeyframeRequest),
                             Step::KeyTable(t) => client.send(Msg::KeyTable(t)),
                             Step::Disconnect => {
                                 client.disconnect();

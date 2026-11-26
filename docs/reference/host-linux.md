@@ -204,7 +204,7 @@ Evidence: `remote/build/e2e-linux/v1/` (per-run logs, the probe and witness outp
   - X11: not supported.
   - On SodiumOS, remoted is the host.
 - **When it works.** No access before login. Lock screen: on GNOME the portal ends the session when the screen locks (client: "is locked"), and a connection to a locked GNOME gets the same card; on KDE the session continues and shows the lock screen (the password can be typed from the client). Nothing reports a secure screen.
-- **Display.** One display, chosen in the dialog (GNOME); KDE with several screens shares them all as one picture. No switching from the device, no resize.
+- **Display.** One display, chosen in the dialog (GNOME); KDE with several screens shares them all as one picture. No switching from the device, and the display is never resized; the stream follows the client's window.
 - **Someone must be at the computer once.** The first connection on GNOME needs a person to answer the dialog, and to turn on Allow Remote Interaction. After that the restore token lets devices connect alone, until the token is revoked or forgotten.
 - **Text.** On GNOME, typed characters must exist on the computer's keyboard layout (mutter has no `ei_text`); KDE types any character. There is no pinch zoom.
 - **Speed.** The CPU path copies each frame once out of PipeWire's shared memory and converts it with swscale.

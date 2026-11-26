@@ -126,7 +126,7 @@ pub trait Capture: Send {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EncoderConfig {
     pub codec: msg::Codec,
-    /// The encoded size (even): the display's, or smaller to fit the client.
+    /// The encoded size (even): the display's, or smaller to fit the client's window.
     pub width: u32,
     pub height: u32,
     pub fps: u32,
@@ -277,6 +277,11 @@ pub trait Backend: Send + Sync {
     /// its rate, as ScreenCaptureKit's, delivers no faster).
     fn open_capture(&self, display: u32, fps: u32) -> anyhow::Result<Box<dyn Capture>>;
     fn encoder_caps(&self) -> EncoderCaps;
+    /// Whether the encoder scales any picture to any even size, so the stream can follow
+    /// the client's window (`Welcome.live_resize`). Every backend's does.
+    fn live_resize(&self) -> bool {
+        true
+    }
     fn open_encoder(&self, cfg: &EncoderConfig) -> anyhow::Result<Box<dyn Encoder>>;
     fn input(&self) -> anyhow::Result<Box<dyn Input>>;
     fn audio(&self) -> anyhow::Result<Box<dyn AudioSource>>;

@@ -39,6 +39,7 @@ private Q_SLOTS:
     void aServerIsSavedExportedImportedAndRemoved();
     void withNoServerNoRelayStateIsShown();
     void aServersRefusalIsReadFromItsCodeNeverItsText();
+    void theStreamWindowFitsTheScreenItOpensOn();
     void theFirewallAllowsTheProgramOnPrivateUnlessABlockRuleNamesIt();
 #ifdef REMOTE_LINUX_HOST
     void theDesktopsPermissionStatesMapToThePanesState();
@@ -303,6 +304,15 @@ void TstRemote::aServersRefusalIsReadFromItsCodeNeverItsText()
     c.handleEvent(parse(R"j({"ev":"rendezvous","online":true,"error":null})j"));
     QCOMPARE(c.serverState(), QStringLiteral("online"));
     c.removeServer();
+}
+
+void TstRemote::theStreamWindowFitsTheScreenItOpensOn()
+{
+    // A roomy screen keeps the default size, centred; a 150% laptop (1280x680 available) shrinks it to 90%; the screen's own origin counts.
+    QCOMPARE(RemoteController::fitWindow(QRect(0, 0, 2560, 1400), QSize(1100, 760)), QRect(730, 320, 1100, 760));
+    QCOMPARE(RemoteController::fitWindow(QRect(0, 0, 1280, 680), QSize(1100, 760)), QRect(90, 34, 1100, 612));
+    const QRect r = RemoteController::fitWindow(QRect(-1280, 0, 1280, 680), QSize(1100, 760));
+    QVERIFY(QRect(-1280, 0, 1280, 680).contains(r));
 }
 
 void TstRemote::theFirewallAllowsTheProgramOnPrivateUnlessABlockRuleNamesIt()
