@@ -18,8 +18,9 @@ $ErrorActionPreference = 'Stop'
 # Keep these in step with host-desktop/src/vdd_pin.rs (COMMIT) and packaging/windows/sudovda/UPSTREAM.
 $Repo = 'https://github.com/SudoMaker/SudoVDA.git'
 $Commit = 'a4b09fa2aa731a964d0cb5d139cb1e6240e4da12'
-# The Windows Driver Kit and SDK from NuGet: one version for all three.
-$KitVersion = '10.0.28000.2526'
+# The Windows Driver Kit and SDK from NuGet: one version for all three. 10.0.26100.x is the line whose build tasks load in
+# Visual Studio 2022 (MSBuild 17); 10.0.28000.x ships tasks for Visual Studio 2026 only.
+$KitVersion = '10.0.26100.6584'
 $Name = 'SodiumRemoteDisplay'
 $Cat = 'sodiumremotedisplay.cat'
 if (-not $Out) { $Out = Join-Path $Work 'out' }
