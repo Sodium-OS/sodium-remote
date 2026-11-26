@@ -15,7 +15,7 @@
 //! - `clipboard`: the Win32 clipboard: text, HTML, PNG (DIB converted).
 //! - `desktop`: the foreground app's process name, the input desktop's name.
 //! - `sudovda`, `topology`: the matched display (`vdisplay`): the SudoVDA driver's IOCTLs, and
-//!   `SetDisplayConfig` without saving.
+//!   `SetDisplayConfig` without saving; `vdd_install`: the driver's install and removal (elevated).
 
 pub mod audio;
 pub mod capture;
@@ -25,6 +25,7 @@ pub mod display;
 pub mod input;
 pub mod sudovda;
 pub mod topology;
+pub mod vdd_install;
 
 use std::sync::Arc;
 

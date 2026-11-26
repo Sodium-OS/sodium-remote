@@ -143,6 +143,8 @@ pub unsafe extern "C" fn rh_new(data_dir: *const c_char, cb: EventFn, user: *mut
     };
     #[cfg(not(windows))]
     let soft = SoftwareVideo::system();
+    // A matched display left up by a host that stopped (a crash, a sign-out): the displays as they were, before anything else.
+    host_desktop::recover_matched_display(&data);
     Box::into_raw(Box::new(Arc::new(Rh { rt, data, sink, gate, session: Mutex::new(None), soft })))
 }
 
@@ -320,6 +322,54 @@ pub unsafe extern "C" fn rh_software_video(p: *mut Arc<Rh>) -> c_int {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rh_codec_retry(p: *mut Arc<Rh>) {
     unsafe { rh(p) }.soft.retry();
+}
+
+/// "Match the display to the connecting computer" (`settings.json` `matched_display`, default off): 1 on, 0 off.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_matched_display(p: *mut Arc<Rh>) -> c_int {
+    host_desktop::vdisplay::wanted(&unsafe { rh(p) }.data) as c_int
+}
+
+/// Saves "Match the display to the connecting computer". The app installs (on) or removes (off) the driver first, in an
+/// elevated copy of itself (`rh_matched_display_admin`), and saves only when that worked. A running host uses the setting
+/// from its next connection. When a connection with it on can't get the virtual display, the session shows the physical
+/// display and this event comes:
+///
+///     {"ev":"host_matched","state":"failed"}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_set_matched_display(p: *mut Arc<Rh>, on: c_int) {
+    host_desktop::vdisplay::set_wanted(&unsafe { rh(p) }.data, on != 0);
+}
+
+/// The elevated side of the setting (`SodiumRemote.exe --matched-display install|uninstall --log FILE`, Windows):
+/// `action` "install" checks the driver files beside the program against their pins, imports the certificate, creates the
+/// device and installs the driver; "uninstall" removes them. 0: done; 1: failed (`log`, when not empty, gets the reason in
+/// English); 2: not on this OS or an unknown action.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_matched_display_admin(action: *const c_char, log: *const c_char) -> c_int {
+    let (action, log) = (unsafe { cstr(action) }, unsafe { cstr(log) });
+    #[cfg(windows)]
+    {
+        use host_desktop::win::vdd_install;
+        let r = match action.as_str() {
+            "install" => vdd_install::install(None),
+            "uninstall" => vdd_install::uninstall(),
+            _ => return 2,
+        };
+        let line = match &r {
+            Ok(()) => format!("{action}: done\n"),
+            Err(e) => format!("{action}: {e:#}\n"),
+        };
+        if !log.is_empty() {
+            let _ = std::fs::write(&log, line);
+        }
+        return if r.is_ok() { 0 } else { 1 };
+    }
+    #[allow(unreachable_code)]
+    {
+        let _ = (action, log);
+        2
+    }
 }
 
 #[allow(dead_code)]

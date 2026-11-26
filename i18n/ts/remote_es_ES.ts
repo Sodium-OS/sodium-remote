@@ -1858,61 +1858,61 @@
 <context>
     <name>StreamWindow</name>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="39"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="41"/>
         <source>Remote</source>
         <translation>Acceso remoto</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Connection lost · retrying</source>
         <translation>Conexión perdida · reintentando</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Reconnecting…</source>
         <translation>Reconectando…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="222"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="234"/>
         <source>%1 is showing a secure screen</source>
         <translation>%1 muestra una pantalla segura</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="231"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="243"/>
         <source>Its lock screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Su pantalla de bloqueo no se puede mostrar ni controlar desde aquí. La sesión continúa cuando vuelva el escritorio.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="232"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="244"/>
         <source>Its lock, sign-in or UAC screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Sus pantallas de bloqueo, inicio de sesión o UAC no se pueden mostrar ni controlar desde aquí. La sesión continúa cuando vuelva el escritorio.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="239"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="251"/>
         <source>Waiting for the desktop…</source>
         <translation>Esperando al escritorio…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="245"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="257"/>
         <source>Disconnect</source>
         <translation>Desconectar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="265"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="277"/>
         <source>Back on %1’s desktop</source>
         <translation>De vuelta en el escritorio de %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="285"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="297"/>
         <source>Press %1 to leave the stream.</source>
         <translation>Pulsa %1 para salir de la transmisión.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2259,7 +2259,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="377"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="569"/>
         <source>Remove</source>
         <translation>Quitar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2283,183 +2283,201 @@
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="397"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="404"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="399"/>
+        <source>Match the display to the connecting computer</source>
+        <translation>Ajustar la pantalla al equipo que se conecta</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="400"/>
+        <source>While someone is connected, Windows uses a virtual display the size of their window, and this computer’s screens turn off. This needs a display driver, installed once with administrator permission.</source>
+        <translation>Mientras alguien está conectado, Windows usa una pantalla virtual del tamaño de su ventana y las pantallas de este equipo se apagan. Hace falta un controlador de pantalla, que se instala una sola vez con permiso de administrador.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <source>The virtual display couldn’t start. Showing this computer’s screen instead.</source>
+        <translation>No se pudo iniciar la pantalla virtual. Se muestra la pantalla de este equipo en su lugar.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="417"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="424"/>
         <source>Name shown to other computers</source>
         <translation>Nombre que ven los demás equipos</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
         <source>Network</source>
         <translation>Red</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="418"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="438"/>
         <source>This network is Public</source>
         <translation>Esta red es pública</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
         <source>Remote control needs a Private network. Set this network to Private in Windows network settings.</source>
         <translation>El control remoto necesita una red privada. Cambia esta red a privada en la configuración de red de Windows.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="420"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
         <source>Network settings</source>
         <translation>Configuración de red</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="425"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
         <source>The firewall is blocking %1</source>
         <translation>El firewall está bloqueando %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="426"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
         <source>Other computers on your network can’t reach this one until you allow it.</source>
         <translation>Los demás equipos de tu red no podrán acceder a este hasta que lo permitas.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="427"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="447"/>
         <source>Allow…</source>
         <translation>Permitir…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="432"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
         <source>Waiting for Windows to ask…</source>
         <translation>Esperando a que Windows pregunte…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
         <source>Allowed on private networks</source>
         <translation>Permitido en redes privadas</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
         <source>Address for connecting directly</source>
         <translation>Dirección para conectar directamente</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
         <source>Copy</source>
         <translation>Copiar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="467"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="487"/>
         <source>Limits</source>
         <translation>Límites</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="491"/>
         <source>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</source>
         <translation>Este equipo mantiene su propia resolución. La imagen se ajusta a la ventana del otro equipo.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="475"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="495"/>
         <source>Your desktop shows its own indicator while the screen is shared.</source>
         <translation>Su escritorio muestra su propio indicador mientras se comparte la pantalla.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="476"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="496"/>
         <source>Remote control works only while %1 is open.</source>
         <translation>El control remoto solo funciona mientras %1 está abierto.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="489"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="509"/>
         <source>To share without keeping the app open, see the Linux guide.</source>
         <translation>Para compartir sin tener la aplicación abierta, consulte la guía de Linux.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="490"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="510"/>
         <source>Open guide</source>
         <translation>Abrir guía</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="523"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="543"/>
         <source>Copy %1</source>
         <translation>Copiar %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="529"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
         <source>Copy full address</source>
         <translation>Copiar la dirección completa</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="518"/>
         <source>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</source>
         <translation>Las pantallas de bloqueo, de inicio de sesión y de UAC no se pueden ver ni controlar de forma remota.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="460"/>
         <source>Windows Firewall allows it. Public networks stay blocked.</source>
         <translation>El firewall de Windows lo permite. Las redes públicas siguen bloqueadas.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="473"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
         <source>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</source>
         <translation>Mientras este equipo está bloqueado, un dispositivo emparejado ve la pantalla de bloqueo y puede desbloquearla con su contraseña. Nadie puede conectarse antes de que inicie sesión.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="474"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="494"/>
         <source>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</source>
         <translation>Al bloquear este equipo termina la sesión. Nadie puede conectarse mientras esté bloqueado ni antes de que inicie sesión.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="478"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
         <source>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</source>
         <translation>Desde el otro equipo solo se pueden escribir los caracteres de la distribución de teclado de este equipo. Pegue otro texto en su lugar.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="535"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
         <source>Forget the screen sharing permission?</source>
         <translation>¿Olvidar el permiso para compartir la pantalla?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="536"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="556"/>
         <source>Your desktop asks again the next time a paired device connects.</source>
         <translation>Su escritorio volverá a preguntar la próxima vez que se conecte un dispositivo emparejado.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="538"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="558"/>
         <source>Forget permission</source>
         <translation>Olvidar permiso</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="546"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="566"/>
         <source>Remove %1?</source>
         <translation>¿Quitar %1?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="547"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="567"/>
         <source>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</source>
         <translation>No podrá volver a conectarse a este equipo hasta que lo empareje de nuevo. Si está conectado ahora, se desconectará.</translation>
         <extra-sodium-review>machine</extra-sodium-review>

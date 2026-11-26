@@ -43,6 +43,12 @@ class HostController : public QObject
     Q_PROPERTY(QString desktop READ desktop CONSTANT)
     // desktopId is "gnome", "kde" or "other" (machine-readable; the pane's limits text depends on it); "" on Windows.
     Q_PROPERTY(QString desktopId READ desktopId CONSTANT)
+    // "Match the display to the connecting computer" (Windows; settings.json, default off). While the elevated helper installs
+    // or removes the driver, matchedBusy is true and matchedDisplay is what was asked for. matchedFailed: the current session
+    // couldn't get the virtual display and shows this computer's screen instead (until it ends).
+    Q_PROPERTY(bool matchedDisplay READ matchedDisplay NOTIFY matchedChanged)
+    Q_PROPERTY(bool matchedBusy READ matchedBusy NOTIFY matchedChanged)
+    Q_PROPERTY(bool matchedFailed READ matchedFailed NOTIFY matchedChanged)
 
 public:
     HostController(const QString &dataDir, QObject *parent = nullptr);
@@ -71,6 +77,9 @@ public:
     QVariantMap codec() const { return m_codec; }
 
     QString consent() const { return m_consent; }
+    bool matchedDisplay() const;
+    bool matchedBusy() const { return m_matchedBusy; }
+    bool matchedFailed() const { return m_matchedFailed; }
     QString desktop() const;
     QString desktopId() const;
     /// The id for a colon-separated XDG_CURRENT_DESKTOP (case-insensitive).
@@ -102,11 +111,14 @@ public Q_SLOTS:
     void restartForServer();
     /// Linux: forgets the saved permission; the desktop asks again at the next connection.
     void forgetConsent();
+    /// Windows: installs (on) or removes (off) the virtual display driver with one UAC prompt, then saves the setting.
+    void setMatchedDisplay(bool on);
     /// Screenshots and tests (--script `host-event`): handle an engine event as if it had come from the host.
     void injectEvent(const QString &json);
 
 Q_SIGNALS:
     void consentChanged();
+    void matchedChanged();
     void codecChanged();
     /// The download started for the first time ever: the one-time notice.
     void codecNoticeRequested();
@@ -154,5 +166,6 @@ private:
     QTimer m_tick;
     QTimer m_netTimer;
     QString m_lastControllerName;
+    bool m_matchedBusy = false, m_matchedWant = false, m_matchedFailed = false;
     bool m_serverPending = false;
 };

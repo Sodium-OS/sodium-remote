@@ -1858,61 +1858,61 @@
 <context>
     <name>StreamWindow</name>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="39"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="41"/>
         <source>Remote</source>
         <translation>Remote</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Connection lost · retrying</source>
         <translation>Connection lost · retrying</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Reconnecting…</source>
         <translation>Reconnecting…</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="222"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="234"/>
         <source>%1 is showing a secure screen</source>
         <translation>%1 is showing a secure screen</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="231"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="243"/>
         <source>Its lock screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Its lock screen can’t be shown or controlled from here. The session resumes when the desktop is back.</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="232"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="244"/>
         <source>Its lock, sign-in or UAC screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Its lock, sign-in or UAC screen can’t be shown or controlled from here. The session resumes when the desktop is back.</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="239"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="251"/>
         <source>Waiting for the desktop…</source>
         <translation>Waiting for the desktop…</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="245"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="257"/>
         <source>Disconnect</source>
         <translation>Disconnect</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="265"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="277"/>
         <source>Back on %1’s desktop</source>
         <translation>Back on %1’s desktop</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="285"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="297"/>
         <source>Press %1 to leave the stream.</source>
         <translation>Press %1 to leave the stream.</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
@@ -2259,7 +2259,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="377"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="569"/>
         <source>Remove</source>
         <translation>Remove</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2283,183 +2283,201 @@
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="397"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="404"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="399"/>
+        <source>Match the display to the connecting computer</source>
+        <translation>Match the display to the connecting computer</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="400"/>
+        <source>While someone is connected, Windows uses a virtual display the size of their window, and this computer’s screens turn off. This needs a display driver, installed once with administrator permission.</source>
+        <translation>While someone is connected, Windows uses a virtual display the size of their window, and this computer’s screens turn off. This needs a display driver, installed once with administrator permission.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <source>The virtual display couldn’t start. Showing this computer’s screen instead.</source>
+        <translation>The virtual display couldn’t start. Showing this computer’s screen instead.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="417"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="424"/>
         <source>Name shown to other computers</source>
         <translation>Name shown to other computers</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
         <source>Network</source>
         <translation>Network</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="418"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="438"/>
         <source>This network is Public</source>
         <translation>This network is Public</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
         <source>Remote control needs a Private network. Set this network to Private in Windows network settings.</source>
         <translation>Remote control needs a Private network. Set this network to Private in Windows network settings.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="420"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
         <source>Network settings</source>
         <translation>Network settings</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="425"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
         <source>The firewall is blocking %1</source>
         <translation>The firewall is blocking %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="426"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
         <source>Other computers on your network can’t reach this one until you allow it.</source>
         <translation>Other computers on your network can’t reach this one until you allow it.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="427"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="447"/>
         <source>Allow…</source>
         <translation>Allow…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="432"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
         <source>Waiting for Windows to ask…</source>
         <translation>Waiting for Windows to ask…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
         <source>Allowed on private networks</source>
         <translation>Allowed on private networks</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
         <source>Address for connecting directly</source>
         <translation>Address for connecting directly</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
         <source>Copy</source>
         <translation>Copy</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="467"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="487"/>
         <source>Limits</source>
         <translation>Limits</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="491"/>
         <source>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</source>
         <translation>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="475"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="495"/>
         <source>Your desktop shows its own indicator while the screen is shared.</source>
         <translation>Your desktop shows its own indicator while the screen is shared.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="476"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="496"/>
         <source>Remote control works only while %1 is open.</source>
         <translation>Remote control works only while %1 is open.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="489"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="509"/>
         <source>To share without keeping the app open, see the Linux guide.</source>
         <translation>To share without keeping the app open, see the Linux guide.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="490"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="510"/>
         <source>Open guide</source>
         <translation>Open guide</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="523"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="543"/>
         <source>Copy %1</source>
         <translation>Copy %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="529"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
         <source>Copy full address</source>
         <translation>Copy full address</translation>
         <extra-sodium-review>reviewed</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="518"/>
         <source>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</source>
         <translation>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="460"/>
         <source>Windows Firewall allows it. Public networks stay blocked.</source>
         <translation>Windows Firewall allows it. Public networks stay blocked.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="473"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
         <source>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</source>
         <translation>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="474"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="494"/>
         <source>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</source>
         <translation>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="478"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
         <source>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</source>
         <translation>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="535"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
         <source>Forget the screen sharing permission?</source>
         <translation>Forget the screen sharing permission?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="536"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="556"/>
         <source>Your desktop asks again the next time a paired device connects.</source>
         <translation>Your desktop asks again the next time a paired device connects.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="538"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="558"/>
         <source>Forget permission</source>
         <translation>Forget permission</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="546"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="566"/>
         <source>Remove %1?</source>
         <translation>Remove %1?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="547"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="567"/>
         <source>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</source>
         <translation>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</translation>
         <extra-sodium-review>machine</extra-sodium-review>

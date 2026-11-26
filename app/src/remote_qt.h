@@ -85,6 +85,16 @@ void rh_set_software_video(RhHandle *, int on);
 int rh_software_video(RhHandle *);
 void rh_codec_retry(RhHandle *);
 
+// "Match the display to the connecting computer" (Windows): the setting lives in settings.json (default off).
+// rh_set_matched_display only saves it; the app first runs rh_matched_display_admin in an elevated copy of itself
+// (SodiumRemote.exe --matched-display install|uninstall --log FILE) and saves only when that returned 0.
+// rh_matched_display_admin returns 0 done, 1 failed (FILE has the reason, in English), 2 not on this OS.
+// When a connection can't get the virtual display it shows the physical one, and this event comes:
+//   {"ev":"host_matched","state":"failed"}
+int rh_matched_display(RhHandle *);
+void rh_set_matched_display(RhHandle *, int on);
+int rh_matched_display_admin(const char *action, const char *log);
+
 #ifdef __cplusplus
 }
 #endif
