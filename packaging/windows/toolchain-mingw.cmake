@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # SPDX-FileCopyrightText: 2026 Ning Bao
-# CMake toolchain for Windows x64 from Linux: Arch's mingw-w64 GCC (UCRT), Qt 6.12.0's official
+# CMake toolchain for Windows x64 from Linux: Arch's mingw-w64 GCC (UCRT), Qt 6.12.1's official
 # mingw x64 build (fetch-qt.sh) and the dependencies of build-icu.sh / build-deps.sh.
 #
 #   cmake -S ui -B build -DCMAKE_TOOLCHAIN_FILE=remote/packaging/windows/toolchain-mingw.cmake ...
@@ -21,7 +21,7 @@ set(CMAKE_AR ${_triplet}-ar)
 set(CMAKE_RANLIB ${_triplet}-ranlib)
 
 if(NOT DEFINED ENV{QT_WIN_ROOT})
-    set(_qt_root "${_remote}/build/qt-win/6.12.0/mingw_64")
+    set(_qt_root "${_remote}/build/qt-win/6.12.1/mingw_64")
 else()
     set(_qt_root "$ENV{QT_WIN_ROOT}")
 endif()
@@ -40,6 +40,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # Qt's cross-compiling support: the host Qt (same version) provides the build tools.
 if(NOT DEFINED QT_HOST_PATH)
-    set(QT_HOST_PATH /usr CACHE PATH "Linux Qt 6.12.0 for the host tools")
+    set(QT_HOST_PATH /usr CACHE PATH "Linux Qt 6.12.1 for the host tools")
     set(QT_HOST_PATH_CMAKE_DIR /usr/lib/cmake CACHE PATH "")
 endif()

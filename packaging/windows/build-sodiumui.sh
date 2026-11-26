@@ -6,7 +6,7 @@
 #
 #   remote/packaging/windows/build-sodiumui.sh [--no-stage]
 #
-# Needs: the mingw-w64 toolchain (pacman: mingw-w64-gcc), Linux Qt 6.12.0 (qt6-base,
+# Needs: the mingw-w64 toolchain (pacman: mingw-w64-gcc), Linux Qt 6.12.1 (qt6-base,
 # qt6-declarative, qt6-shadertools: moc, rcc, qsb and qmlimportscanner run on this PC), cmake,
 # ninja, curl, 7z. It fetches Qt for Windows (fetch-qt.sh) and builds ICU (build-icu.sh) first
 # when they are missing. Nothing is installed anywhere: all output is under remote/build/.
@@ -21,7 +21,7 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REMOTE=$(cd "$HERE/../.." && pwd)
 REPO=$REMOTE
 export WIN_DEPS=${WIN_DEPS:-$REMOTE/build/win-deps}
-export QT_WIN_ROOT=${QT_WIN_ROOT:-$REMOTE/build/qt-win/6.12.0/mingw_64}
+export QT_WIN_ROOT=${QT_WIN_ROOT:-$REMOTE/build/qt-win/6.12.1/mingw_64}
 BUILD=${SODIUMUI_WIN_BUILD:-$REMOTE/build/sodiumui-win}
 OUT=${SODIUMUI_WIN_OUT:-$REMOTE/build/win-gallery}
 JOBS=${JOBS:-8}
@@ -32,7 +32,7 @@ done
 
 # the host Qt must be the same version as Qt for Windows, or moc/qsb output would not match
 host_ver=$(/usr/lib/qt6/moc --version | awk '{print $NF}')
-[[ $host_ver == 6.12.0 ]] || { echo "the Linux Qt is $host_ver; Qt for Windows is 6.12.0 (QT_HOST_PATH must match)" >&2; exit 1; }
+[[ $host_ver == 6.12.1 ]] || { echo "the Linux Qt is $host_ver; Qt for Windows is 6.12.1 (QT_HOST_PATH must match)" >&2; exit 1; }
 
 "$HERE/fetch-qt.sh"
 JOBS=$JOBS "$HERE/build-icu.sh"

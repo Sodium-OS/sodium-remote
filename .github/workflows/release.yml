@@ -156,8 +156,8 @@ jobs:
       - name: Build Qt on UCRT
         run: |
           packaging/windows/build-qt-ucrt.sh
-          cp build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
-          echo "QT_WIN_ROOT=$GITHUB_WORKSPACE/build/qt-win-ucrt/6.12.0" >> "$GITHUB_ENV"
+          cp build/qt-win/6.12.1/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.1/
+          echo "QT_WIN_ROOT=$GITHUB_WORKSPACE/build/qt-win-ucrt/6.12.1" >> "$GITHUB_ENV"
       - name: Save Qt built on UCRT
         if: always() && steps.qtucrt.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
