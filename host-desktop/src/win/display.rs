@@ -33,13 +33,13 @@ pub struct Output {
     pub output: IDXGIOutput,
 }
 
-fn wide(s: &[u16]) -> String {
+pub(crate) fn wide(s: &[u16]) -> String {
     let n = s.iter().position(|&c| c == 0).unwrap_or(s.len());
     String::from_utf16_lossy(&s[..n])
 }
 
 /// `\\.\DISPLAY3` → 3.
-fn number(gdi: &str) -> Option<u32> {
+pub(crate) fn number(gdi: &str) -> Option<u32> {
     gdi.trim_start_matches(r"\\.\DISPLAY").parse().ok()
 }
 

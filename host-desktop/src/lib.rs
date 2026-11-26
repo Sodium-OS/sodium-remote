@@ -12,6 +12,8 @@
 //! - `encode`, `opus`: the C shim (FFmpeg, OpenH264 loaded at run time, swscale, Opus).
 //! - `softvideo`, `openh264_pin`, `bunzip`, `winhttp`: software H.264 from Cisco's DLL, fetched on first need.
 //! - `hid`: HID usages → PC scan codes.
+//! - `vdisplay`: the matched display (a virtual monitor the size of the client's window), behind
+//!   the `VirtualDisplay` and `Topology` traits; `settings`: the app's `settings.json`.
 //! - `win`: the Windows backend; `mac`: the macOS backend;
 //!   `linux`: the generic Linux backend through the desktop portal
 //!   (`docs/reference/host-linux.md`, feature `linux-portal`); `fake`: synthetic frames for tests.
@@ -39,8 +41,10 @@ pub mod openh264_pin;
 pub mod opus;
 pub mod policy;
 pub mod session;
+pub mod settings;
 #[cfg(not(target_os = "macos"))]
 pub mod softvideo;
+pub mod vdisplay;
 #[cfg(windows)]
 pub mod win;
 

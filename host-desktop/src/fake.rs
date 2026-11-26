@@ -272,3 +272,83 @@ impl Clipboard for FakeClipboard {
         *self.0.lock().unwrap() = entry;
     }
 }
+
+/// A fake virtual display driver and display configuration, for the matched display's
+/// tests: a monitor shows as display `100 + target` once it is `appear` old (never with
+/// None); `only`, `restore`, removals, rescues and pings are recorded.
+pub struct FakeDisplays {
+    pub state: Mutex<FakeDisplayState>,
+    appear: Option<Duration>,
+}
+
+#[derive(Default)]
+pub struct FakeDisplayState {
+    /// The monitors that exist, with when each was made.
+    pub monitors: Vec<(crate::vdisplay::Monitor, Instant)>,
+    next_target: u32,
+    /// The monitor made the only display, until a restore.
+    pub only: Option<crate::vdisplay::Key>,
+    pub restored: Vec<Vec<u8>>,
+    pub removed: Vec<crate::vdisplay::Key>,
+    pub rescued: u32,
+    pub pings: u32,
+}
+
+impl FakeDisplays {
+    /// What `save` returns: the physical topology.
+    pub const PHYSICAL: &'static [u8] = b"physical";
+
+    pub fn new(appear: Option<Duration>) -> Arc<FakeDisplays> {
+        Arc::new(FakeDisplays { state: Mutex::new(FakeDisplayState::default()), appear })
+    }
+
+    pub fn display_id(&self, m: &crate::vdisplay::Monitor) -> u32 {
+        100 + m.target
+    }
+}
+
+impl crate::vdisplay::VirtualDisplay for FakeDisplays {
+    fn create(&self, key: crate::vdisplay::Key, mode: crate::vdisplay::Mode) -> Result<crate::vdisplay::Monitor> {
+        let mut s = self.state.lock().unwrap();
+        s.next_target += 1;
+        let m = crate::vdisplay::Monitor { key, target: s.next_target, adapter: 1, mode };
+        s.monitors.push((m, Instant::now()));
+        Ok(m)
+    }
+    fn set_mode(&self, _m: &crate::vdisplay::Monitor, _mode: crate::vdisplay::Mode) -> Result<bool> {
+        Ok(false)
+    }
+    fn remove(&self, key: crate::vdisplay::Key) {
+        let mut s = self.state.lock().unwrap();
+        s.monitors.retain(|(m, _)| m.key != key);
+        s.removed.push(key);
+    }
+    fn keep_alive(&self) -> Result<()> {
+        self.state.lock().unwrap().pings += 1;
+        Ok(())
+    }
+}
+
+impl crate::vdisplay::Topology for FakeDisplays {
+    fn display_of(&self, m: &crate::vdisplay::Monitor) -> Option<u32> {
+        let appear = self.appear?;
+        let s = self.state.lock().unwrap();
+        s.monitors.iter().any(|(x, at)| x.key == m.key && at.elapsed() >= appear).then(|| self.display_id(m))
+    }
+    fn save(&self) -> Result<Vec<u8>> {
+        Ok(Self::PHYSICAL.to_vec())
+    }
+    fn only(&self, m: &crate::vdisplay::Monitor) -> Result<()> {
+        self.state.lock().unwrap().only = Some(m.key);
+        Ok(())
+    }
+    fn restore(&self, saved: &[u8]) -> Result<()> {
+        let mut s = self.state.lock().unwrap();
+        s.restored.push(saved.to_vec());
+        s.only = None;
+        Ok(())
+    }
+    fn rescue_windows(&self) {
+        self.state.lock().unwrap().rescued += 1;
+    }
+}

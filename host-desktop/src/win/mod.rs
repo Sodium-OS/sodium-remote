@@ -14,6 +14,8 @@
 //! - `audio`: WASAPI loopback of the default render endpoint, 48 kHz stereo.
 //! - `clipboard`: the Win32 clipboard: text, HTML, PNG (DIB converted).
 //! - `desktop`: the foreground app's process name, the input desktop's name.
+//! - `sudovda`, `topology`: the matched display (`vdisplay`): the SudoVDA driver's IOCTLs, and
+//!   `SetDisplayConfig` without saving.
 
 pub mod audio;
 pub mod capture;
@@ -21,6 +23,8 @@ pub mod clipboard;
 pub mod desktop;
 pub mod display;
 pub mod input;
+pub mod sudovda;
+pub mod topology;
 
 use std::sync::Arc;
 
@@ -87,5 +91,11 @@ impl Backend for WinBackend {
     }
     fn foreground(&self) -> Foreground {
         desktop::foreground()
+    }
+    fn topology(&self) -> Option<Arc<dyn crate::vdisplay::Topology>> {
+        Some(Arc::new(topology::WinTopology::new()))
+    }
+    fn virtual_display(&self) -> Result<Arc<dyn crate::vdisplay::VirtualDisplay>> {
+        Ok(Arc::new(sudovda::SudoVda::open()?))
     }
 }

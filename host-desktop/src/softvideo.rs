@@ -182,20 +182,6 @@ pub fn codec_dir_for(data: &Path) -> PathBuf {
     }
 }
 
-fn read_settings(data: &Path) -> Value {
-    std::fs::read(data.join("settings.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).filter(Value::is_object).unwrap_or_else(|| json!({}))
-}
-
-fn write_setting(data: &Path, key: &str, value: Value) {
-    let mut s = read_settings(data);
-    s[key] = value;
-    let _ = std::fs::create_dir_all(data);
-    let tmp = data.join(".settings.json.tmp");
-    if std::fs::write(&tmp, serde_json::to_vec_pretty(&s).expect("json")).and_then(|_| std::fs::rename(&tmp, data.join("settings.json"))).is_err() {
-        eprintln!("sodium-remote-host: could not write {}", data.join("settings.json").display());
-    }
-}
-
 impl SoftwareVideo {
     /// The system's OpenH264 (Linux, tests): always on, nothing downloaded.
     pub fn system() -> Arc<SoftwareVideo> {
@@ -204,7 +190,7 @@ impl SoftwareVideo {
 
     /// Cisco's DLL, downloaded into `codec_dir`; the setting lives in `data/settings.json`.
     pub fn downloaded(data: &Path, codec_dir: PathBuf, fetcher: Arc<dyn Fetch>, sink: EventSink) -> Arc<SoftwareVideo> {
-        let s = read_settings(data);
+        let s = crate::settings::read(data);
         let enabled = s.get(KEY_ON).and_then(Value::as_bool).unwrap_or(true);
         let shown = s.get(KEY_SHOWN).and_then(Value::as_bool).unwrap_or(false);
         Self::make(Source::Download { dir: codec_dir }, data.to_path_buf(), fetcher, sink, enabled, shown)
@@ -250,7 +236,7 @@ impl SoftwareVideo {
                 i.cancel.store(true, Ordering::SeqCst);
             }
         }
-        write_setting(&self.data, KEY_ON, json!(on));
+        crate::settings::write(&self.data, KEY_ON, json!(on));
         self.reconcile();
     }
 
@@ -350,7 +336,7 @@ impl SoftwareVideo {
             (i.cancel.clone(), show)
         };
         if show {
-            write_setting(&self.data, KEY_SHOWN, json!(true));
+            crate::settings::write(&self.data, KEY_SHOWN, json!(true));
             self.emit(CodecEvent::new("needed", 0));
         }
         let me = self.clone();
