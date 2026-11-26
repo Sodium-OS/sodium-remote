@@ -47,13 +47,10 @@ Window {
         pendingTakeover = takeover
         // 1100x760, or less when the screen's available area is smaller (at most 90% of it), centred there.
         visibility = Window.Windowed
-        const r = Remote.streamWindowRect(anchor, 1100, 760)
+        const r = Remote.fittedWindowRect(anchor, 1100, 760)
         minimumWidth = Math.min(640, r.width)
         minimumHeight = Math.min(420, r.height)
-        x = r.x
-        y = r.y
-        width = r.width
-        height = r.height
+        Remote.placeStreamWindow(win, r.x, r.y, r.width, r.height)
         if (fullscreenOn)
             visibility = Window.FullScreen
         show()

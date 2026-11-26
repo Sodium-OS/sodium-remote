@@ -77,6 +77,9 @@ struct Win {
     hook: Option<HHOOK>,
     embed: Option<Arc<Embed>>,
     embed_rev: u64,
+    /// The picture's box in the frame when it was last placed: the frame can change size on its own (full screen,
+    /// maximise, a monitor's scale) before Qt reports anything.
+    embed_box: (i32, i32, i32, i32),
     /// The keyboard goes to the host (embedded: the leave chord turns it off).
     capture: bool,
     /// An app menu is open over the picture: only key-ups and button-ups go to the host (embedded).
@@ -214,6 +217,7 @@ pub fn run_with(app: Arc<App>, rx: Receiver<WinMsg>, opts: WindowOptions, wake: 
             mouse_in: false,
             hook: None,
             embed_rev: embed.as_ref().map_or(0, |e| e.rev()),
+            embed_box: (0, 0, 0, 0),
             capture: embed.as_ref().is_none_or(|e| e.get().capture),
             blocked: false,
             embed,
@@ -313,14 +317,15 @@ impl Win {
     fn sync_embed(&mut self) {
         let Some(e) = self.embed.clone() else { return };
         let rev = e.rev();
-        if rev == self.embed_rev {
+        let b = embed_box(&e);
+        if rev == self.embed_rev && b == self.embed_box {
             return;
         }
         self.embed_rev = rev;
+        self.embed_box = b;
         let st = e.get();
         unsafe {
-            let (x, y, w, h) = embed_box(&e);
-            let _ = SetWindowPos(self.hwnd, Some(HWND_TOP), x, y, w, h, SWP_NOACTIVATE);
+            let _ = SetWindowPos(self.hwnd, Some(HWND_TOP), b.0, b.1, b.2, b.3, SWP_NOACTIVATE);
         }
         if st.blocked != self.blocked {
             // Held keys and buttons go up on the computer the moment a menu opens.
