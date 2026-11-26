@@ -788,6 +788,8 @@ pub struct Host {
     pairings: Arc<Mutex<Pairings>>,
     rdv: Arc<RdvShared>,
     lan_port: Option<u16>,
+    /// The LAN listener's task: shutdown waits for it, so the port is free when shutdown returns.
+    lan_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 impl Host {
@@ -819,12 +821,13 @@ impl Host {
             });
         }
         let mut lan_port = None;
+        let mut lan_task = None;
         let mut advertiser = None;
         if cfg.lan {
             let listener = TcpListener::bind(cfg.lan_bind).await?;
             let port = listener.local_addr()?.port();
             lan_port = Some(port);
-            spawn_lan_listener(listener, key.clone(), pairings.clone(), brain_tx.clone());
+            lan_task = Some(spawn_lan_listener(listener, key.clone(), pairings.clone(), brain_tx.clone()));
             if cfg.mdns {
                 match Advertiser::start(key.id(), &cfg.name, port, false) {
                     Ok(a) => advertiser = Some(a),
@@ -841,6 +844,7 @@ impl Host {
             pairings: pairings.clone(),
             rdv: rdv.clone(),
             lan_port,
+            lan_task: Arc::new(Mutex::new(lan_task)),
         };
         let brain = HostBrain {
             key,
@@ -1099,6 +1103,13 @@ impl Host {
         if let Some(r) = self.rdv.rdv.lock().unwrap().take() {
             r.close();
         }
+        // The listener would also go once the brain is gone, but on its own time: a start right after this
+        // would find the port still taken.
+        let task = self.lan_task.lock().unwrap().take();
+        if let Some(t) = task {
+            t.abort();
+            let _ = t.await;
+        }
     }
 }
 
@@ -1107,7 +1118,7 @@ fn spawn_lan_listener(
     key: DeviceKey,
     pairings: Arc<Mutex<Pairings>>,
     brain: mpsc::UnboundedSender<HostIn>,
-) {
+) -> tokio::task::JoinHandle<()> {
     let slots = lanlimit::Slots::default();
     let pair_rate = Arc::new(Mutex::new(lanlimit::PairRate::new(Instant::now())));
     tokio::spawn(async move {
@@ -1167,7 +1178,7 @@ fn spawn_lan_listener(
                 }
             });
         }
-    });
+    })
 }
 
 /// One LAN pairing connection: its frames go to the brain until either side

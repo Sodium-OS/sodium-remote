@@ -23,6 +23,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 
+- **Hosts.** Switching a host off and straight back on no longer fails with "address already in use": switching off now waits until the LAN port is released.
 - **Windows app.** The session window opens fitted to and centred on its screen at any display scale, instead of wider than a 150–200% laptop screen and partly off it. Its edges resize it, it maximises and snaps, it follows a move to a monitor with another scale, and full screen goes in and out with the previous size restored.
 - **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
 - **Linux host (NVIDIA).** Scrolling text no longer shimmers on a fast link. While content keeps moving, the encoder's quality can drop by only a small step from one frame to the next.
