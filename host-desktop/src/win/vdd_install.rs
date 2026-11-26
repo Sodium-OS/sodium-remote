@@ -10,8 +10,9 @@
 //! node is created the way Nefarius' nefconc does it (`SetupDiCreateDeviceInfo`, the
 //! hardware ID, `DIF_REGISTERDEVICE`; this Windows' pnputil has no `/add-device`), and the
 //! driver installed on it (`UpdateDriverForPlugAndPlayDevices`). What was made is written to
-//! [`KEY`], so removal touches only that. A SudoVDA device that another program installed
-//! (Apollo's, say) is left alone: installing stops instead.
+//! [`KEY`], so removal touches only that. The driver has its own hardware ID
+//! ([`vdd_pin::HARDWARE_ID`]), so another program's SudoVDA (Apollo's, say) is a different
+//! device that neither step sees.
 //!
 //! **Uninstall**: the device node removed (`DiUninstallDevice`), the staged package deleted
 //! (`SetupUninstallOEMInf`), the certificate deleted from both stores by its thumbprint, the
@@ -242,13 +243,12 @@ pub fn install(dir: Option<&Path>) -> Result<()> {
         None => driver_dir()?,
     };
     let thumb = check_files(&dir)?;
-    let mine = reg_get("Device");
-    {
+    // Our device from an earlier install (recorded, else any with our hardware ID), else a new one.
+    let existing = {
         let d = ours()?;
-        if let Some((other, _)) = d.found.iter().find(|(id, _)| mine.as_deref().is_none_or(|m| !id.eq_ignore_ascii_case(m))) {
-            bail!("another program's SudoVDA device is installed ({other}); not touching it");
-        }
-    }
+        let mine = reg_get("Device");
+        d.found.iter().find(|(id, _)| mine.as_deref().is_some_and(|m| id.eq_ignore_ascii_case(m))).or(d.found.first()).map(|(id, _)| id.clone())
+    };
     let der = std::fs::read(dir.join(vdd_pin::CER))?;
     import_cert(&der)?;
     let inf = dir.join(vdd_pin::INF);
@@ -259,7 +259,7 @@ pub fn install(dir: Option<&Path>) -> Result<()> {
     unsafe { SetupCopyOEMInfW(PCWSTR(inf_w.as_ptr()), PCWSTR::null(), SPOST_PATH, SP_COPY_STYLE(0), Some(&mut oem), None, Some(&mut part)) }
         .context("staging the driver package")?;
     let oem_name = if part.is_null() { String::new() } else { unsafe { part.to_string() }.unwrap_or_default() };
-    let (device, created) = match mine.filter(|m| ours().is_ok_and(|d| d.found.iter().any(|(id, _)| id.eq_ignore_ascii_case(m)))) {
+    let (device, created) = match existing {
         Some(m) => (m, false),
         None => (create_device()?, true),
     };

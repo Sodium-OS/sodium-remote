@@ -45,14 +45,14 @@ python3 -I "$HERE/stage-sodiumui.py" --build "$UI_BUILD" --exe-from "$APP_BUILD/
 mkdir -p "$OUT/licenses"
 cp -r "$HERE/licenses/." "$OUT/licenses/"
 cp "$REMOTE/LICENSE" "$REMOTE/LICENSING.md" "$REMOTE/TRADEMARKS.md" "$OUT/licenses/"
-# The matched display's driver, when a signed build is there (sudovda/build-sign.ps1 in a VM, copied back, then
-# sudovda/pin.sh): SudoVDA.inf, SudoVDA.dll, sudovda.cat and our certificate, as drivers\sudovda\. The app checks
+# The matched display's driver, when a signed build is there (sudovda/build.ps1 in CI, then sudovda/sign.sh and
+# sudovda/pin.sh): SodiumRemoteDisplay.inf/.dll, sodiumremotedisplay.cat and our certificate, as drivers\sudovda\. The app checks
 # each file against the pins in host-desktop/src/vdd_pin.rs before installing anything.
 SUDOVDA=${SUDOVDA_DIR:-$REMOTE/build/sudovda}
 rm -rf "$OUT/drivers/sudovda"
-if [[ -f $SUDOVDA/sudovda.cat && -f $HERE/sudovda/sodium-remote-driver-signing.cer ]]; then
+if [[ -f $SUDOVDA/sodiumremotedisplay.cat && -f $HERE/sudovda/sodium-remote-driver-signing.cer ]]; then
   mkdir -p "$OUT/drivers/sudovda"
-  cp "$SUDOVDA/SudoVDA.inf" "$SUDOVDA/SudoVDA.dll" "$SUDOVDA/sudovda.cat" "$HERE/sudovda/sodium-remote-driver-signing.cer" "$OUT/drivers/sudovda/"
+  cp "$SUDOVDA/SodiumRemoteDisplay.inf" "$SUDOVDA/SodiumRemoteDisplay.dll" "$SUDOVDA/sodiumremotedisplay.cat" "$HERE/sudovda/sodium-remote-driver-signing.cer" "$OUT/drivers/sudovda/"
   echo "staged the virtual display driver from $SUDOVDA"
 fi
 QT_VER=$(sed -n 's/^QT_VER=//p' "$HERE/build-qt-ucrt.sh" | head -1)
@@ -83,8 +83,8 @@ SodiumRemote.exe: Intel libvpl, NVIDIA codec         MIT                        
 SodiumRemote.exe: OpenH264 headers                   BSD-2-Clause                                     openh264-headers-BSD-2-Clause.txt
 fonts: Inter, JetBrains Mono, Noto Sans CJK          SIL OFL 1.1                                      Inter-OFL.txt, JetBrainsMono-OFL.txt,
                                                                                                       NotoSansCJK-OFL.txt
-drivers\sudovda\ (when present): SudoVDA, the        MIT and CC0 (SudoMaker, VirtualDrivers), MS-PL   SudoVDA-MIT.txt, SudoVDA-MS-PL.txt
-  virtual display driver, a separate program         (Microsoft's IddSampleDriver)
+drivers\sudovda\ (when present): Sodium Remote      MIT and CC0 (SudoMaker, VirtualDrivers), MS-PL   SudoVDA-MIT.txt, SudoVDA-MS-PL.txt
+  Display (SudoVDA, patched), a separate program     (Microsoft's IddSampleDriver)
 
 Not in this package:
   OpenH264 Video Codec provided by Cisco Systems, Inc. Cisco's own prebuilt DLL is downloaded when it is first needed

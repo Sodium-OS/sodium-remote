@@ -35,7 +35,7 @@ use windows::core::BOOL;
 use super::display::{number, wide};
 use crate::vdisplay::{Monitor, Topology};
 
-/// The monitor name SudoVDA puts in the virtual monitor's EDID (`sudovda::DEVICE_NAME`).
+/// The monitor name the host gives the virtual monitor's EDID (`sudovda`; EDID names are at most 13 characters).
 pub const MONITOR_NAME: &str = "Sodium Remote";
 
 /// The saved topology's header: "SRTP", then the version.

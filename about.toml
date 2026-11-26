@@ -20,9 +20,9 @@ private = { ignore = true }
 ignore-dev-dependencies = true
 ignore-build-dependencies = true
 workarounds = ["ring"]
-# Not a crate, so not in this list: the Windows package's matched display driver (SudoVDA, drivers\sudovda\) is a
-# separate binary under MIT and CC0 (SudoMaker, VirtualDrivers) and MS-PL (Microsoft's IddSampleDriver), built by
-# packaging/windows/sudovda/. Its texts, packaging/windows/licenses/SudoVDA-*.txt, follow this list in
+# Not a crate, so not in this list: the Windows package's matched display driver (Sodium Remote Display: SudoVDA with
+# our MIT patches, drivers\sudovda\) is a separate binary under MIT and CC0 (SudoMaker, VirtualDrivers) and MS-PL
+# (Microsoft's IddSampleDriver), built by packaging/windows/sudovda/. Its texts, packaging/windows/licenses/SudoVDA-*.txt, follow this list in
 # THIRD-PARTY-NOTICES.md (package-licenses.py append).
 targets = [
     "x86_64-unknown-linux-gnu",

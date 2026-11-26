@@ -1,9 +1,11 @@
-SudoVDA, the virtual display driver of the matched display. Not in this repository: build-sign.ps1 fetches the
-source at this commit, builds it, makes the catalog and signs it with our certificate.
+Sodium Remote Display, the virtual display driver of the matched display: SudoVDA with our patches. Not in this
+repository: build.ps1 (in .github/workflows/sudovda.yml) fetches the source at this commit, applies patches/ (MIT, ours:
+our own hardware ID, interface, names and the in-place mode IOCTL), builds it and makes the catalog; sign.sh signs it
+with our certificate and adds a "signed build" line below.
 repository https://github.com/SudoMaker/SudoVDA
 commit a4b09fa2aa731a964d0cb5d139cb1e6240e4da12 (2025-04-14, the newest; the repository has no tags or releases)
 licence: no LICENSE file. README.md: "MIT and CC0 or Public Domain (for changes I made, please consult Microsoft for
-  their license), choose the least restrictive option." (checked 2026-11-27; build-sign.ps1 checks it is still there)
+  their license), choose the least restrictive option." (checked 2026-11-27; build.ps1 checks it is still there)
 fork of https://github.com/VirtualDrivers/Virtual-Display-Driver: MIT, "Copyright (c) 2024 Virtual Display"
 based on Microsoft's IddSampleDriver, https://github.com/microsoft/Windows-driver-samples: MS-PL, "Copyright (c)
   2015 Microsoft" (Driver.cpp keeps "Copyright (c) Microsoft Corporation")
