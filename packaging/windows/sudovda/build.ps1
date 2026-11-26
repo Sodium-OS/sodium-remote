@@ -76,6 +76,10 @@ foreach ($kind in 'props', 'targets') {
 $inf2cat = Get-ChildItem -Recurse (Join-Path $src 'packages') -Filter 'Inf2Cat.exe' | Where-Object FullName -match '\\x86\\' | Select-Object -First 1
 if (-not $inf2cat) { throw 'Inf2Cat.exe is not in the kit packages.' }
 "Kit: $KitVersion; Inf2Cat: $($inf2cat.FullName)"
+# The NuGet WDK does not put its tools on the build's path: stampinf (the project's INF stamping) is found through PATH.
+$stampinf = Get-ChildItem -Recurse (Join-Path $src 'packages') -Filter 'stampinf.exe' | Where-Object FullName -match '\\x64\\' | Select-Object -First 1
+if (-not $stampinf) { throw 'stampinf.exe is not in the kit packages.' }
+$env:PATH = "$($stampinf.DirectoryName);$($inf2cat.DirectoryName);$env:PATH"
 
 # 5. Build: Release x64, the WDK's test signing off.
 $sln = Join-Path $src 'Virtual Display Driver (HDR)\SudoVDA.sln'
