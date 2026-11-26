@@ -44,7 +44,7 @@ const MIN_BPS: u64 = 300_000;
 #[derive(Clone, Debug, PartialEq)]
 pub struct StreamSetup {
     pub display: Display,
-    /// The encoded size (the display's, or smaller to fit the client).
+    /// The encoded size (the display's, or smaller to fit the client's window).
     pub width: u32,
     pub height: u32,
     pub fps: u32,
@@ -91,6 +91,8 @@ enum In {
     Keyframe,
     /// Core's reference hint.
     Hint(RefHint),
+    /// The client's window changed: encode at this size from now on (a new encoder).
+    Resize(u32, u32),
     Stop,
 }
 
@@ -99,7 +101,8 @@ pub struct Media {
     stop: Arc<AtomicBool>,
     threads: Vec<JoinHandle<()>>,
     pub acc: Arc<Mutex<Acc>>,
-    pub setup: StreamSetup,
+    /// The stream now; the loop updates it when a resize takes effect.
+    setup: Arc<Mutex<StreamSetup>>,
 }
 
 impl Media {
@@ -112,27 +115,38 @@ impl Media {
         let (tx, rx) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
         let acc = Arc::new(Mutex::new(Acc::default()));
+        let shared = Arc::new(Mutex::new(setup.clone()));
         let capture = {
             let (backend, tx, stop, id) = (backend.clone(), tx.clone(), stop.clone(), setup.display.info.id);
             let fps = setup.fps;
             std::thread::Builder::new().name("capture".into()).spawn(move || capture_loop(backend, id, fps, tx, stop))?
         };
         let media = {
-            let (acc, setup, stop) = (acc.clone(), setup.clone(), stop.clone());
+            let (acc, setup, stop, shared) = (acc.clone(), setup.clone(), stop.clone(), shared.clone());
             std::thread::Builder::new().name("media".into()).spawn(move || {
-                let mut m = Loop::new(backend, host, setup, acc, stop, events.clone());
+                let mut m = Loop::new(backend, host, setup, shared, acc, stop, events.clone());
                 if let Err(e) = m.run(rx) {
                     eprintln!("sodium-remote-host: media: {e:#}");
                     events(MediaEvent::Failed(format!("{e:#}")));
                 }
             })?
         };
-        Ok(Media { tx, stop, threads: vec![capture, media], acc, setup })
+        Ok(Media { tx, stop, threads: vec![capture, media], acc, setup: shared })
     }
 
     /// The client asked for a keyframe (`Msg::KeyframeRequest`).
     pub fn request_keyframe(&self) {
         let _ = self.tx.send(In::Keyframe);
+    }
+
+    /// The stream's setup now.
+    pub fn setup(&self) -> StreamSetup {
+        self.setup.lock().unwrap().clone()
+    }
+
+    /// Encode at another size, on the same capture: a new encoder, a new `Format` and a keyframe.
+    pub fn resize(&self, width: u32, height: u32) {
+        let _ = self.tx.send(In::Resize(width, height));
     }
 
     /// Core's hint that the client lost frames (`LinkStatus::ref_hint`).
@@ -189,6 +203,7 @@ struct Loop {
     backend: Arc<dyn Backend>,
     host: Host,
     setup: StreamSetup,
+    shared: Arc<Mutex<StreamSetup>>,
     acc: Arc<Mutex<Acc>>,
     stop: Arc<AtomicBool>,
     events: Arc<dyn Fn(MediaEvent) + Send + Sync>,
@@ -208,6 +223,8 @@ struct Loop {
     last_sent: Option<Instant>,
     pointer: Option<crate::backend::PointerState>,
     shape: u64,
+    /// The last pointer shape, in display pixels: sent again at a new stream size.
+    last_shape: Option<CursorShape>,
     capture_error: Option<String>,
 }
 
@@ -216,6 +233,7 @@ impl Loop {
         backend: Arc<dyn Backend>,
         host: Host,
         setup: StreamSetup,
+        shared: Arc<Mutex<StreamSetup>>,
         acc: Arc<Mutex<Acc>>,
         stop: Arc<AtomicBool>,
         events: Arc<dyn Fn(MediaEvent) + Send + Sync>,
@@ -224,6 +242,7 @@ impl Loop {
             backend,
             host,
             setup,
+            shared,
             acc,
             stop,
             events,
@@ -241,6 +260,7 @@ impl Loop {
             last_sent: None,
             pointer: None,
             shape: 0,
+            last_shape: None,
             capture_error: None,
         }
     }
@@ -317,6 +337,7 @@ impl Loop {
                             self.capture_error = Some(e);
                         }
                     }
+                    In::Resize(w, h) => self.resize(w, h)?,
                     In::Update(u) => self.merge(u),
                 }
             }
@@ -331,6 +352,29 @@ impl Loop {
             } else if !self.dirty && self.refresh.take(now) {
                 self.send(Class::Refine)?;
             }
+        }
+        Ok(())
+    }
+
+    /// A new stream size on the same capture: the setup, then `Format`, then a new encoder
+    /// whose first frame is a keyframe of the latest picture at the new size.
+    fn resize(&mut self, width: u32, height: u32) -> Result<()> {
+        if (width, height) == (self.setup.width, self.setup.height) {
+            return Ok(());
+        }
+        self.setup.width = width;
+        self.setup.height = height;
+        *self.shared.lock().unwrap() = self.setup.clone();
+        eprintln!("sodium-remote-host: stream now {width}x{height}");
+        self.host.send(&Msg::Format(stream_format(&self.setup)));
+        let bps = self.target_bps();
+        self.open_encoder(bps)?;
+        self.full = true;
+        self.dirty = self.picture.is_some();
+        if let Some(s) = self.last_shape.clone() {
+            self.send_shape(s);
+        } else {
+            self.send_pointer();
         }
         Ok(())
     }
@@ -381,6 +425,7 @@ impl Loop {
     }
 
     fn send_shape(&mut self, s: CursorShape) {
+        self.last_shape = Some(s.clone());
         let (sx, sy) = self.scale();
         let image = if (sx - 1.0).abs() < 1e-6 && (sy - 1.0).abs() < 1e-6 {
             CursorImage { width: s.width, height: s.height, hot_x: s.hot_x, hot_y: s.hot_y, scale: 1.0, pixels: s.pixels }

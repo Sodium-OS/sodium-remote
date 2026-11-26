@@ -212,6 +212,7 @@ AppWindow {
 
     StreamWindow {
         id: stream
+        anchor: win
         onPairRequested: id => { add.begin(); add.startPairing(id, Remote.computers.get(id).name ?? "", "") }
         onSettingsRequested: { win.raise(); win.requestActivate(); settings.open() }
         onServerSettingsRequested: { win.raise(); win.requestActivate(); settings.openServer() }

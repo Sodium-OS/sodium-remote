@@ -40,10 +40,12 @@ echo "--- probe:"
 cargo run -q --manifest-path "$R/Cargo.toml" -p host-desktop --example probe -- \
     --data "$OUT/client" --lan-hint "$HINT" --no-mdns --secs 10 --dump "$OUT/probe.bit" --save-clip "$OUT/clip" \
     --type "Hello, Windows!" --commit "日本語" --click 400,300 --scroll 3 --clip-text "from the probe" \
-    --select-display 2 --wait 1500 --select-display 1 2>"$OUT/probe.log" | tee "$OUT/probe.out"
+    --select-display 2 --wait 1500 --select-display 1 --wait 500 --resize 1280x720 --wait 1000 2>"$OUT/probe.log" | tee "$OUT/probe.out"
 echo "--- host input log: $(wc -l <"$OUT/host-input.csv") events"
 grep -c "Key" "$OUT/host-input.csv" | sed 's/^/keys: /'
 grep -E "Text|Button|Axis" "$OUT/host-input.csv" | head -5
 echo "--- host log:"
 grep -E "encoding|welcome|clipboard|now display|fps" "$OUT/host.log" | tail -n 12
+# A Resize to 1280x720 gives a Format at that size (the fake display is 1920x1080).
+grep -q "1280x720" <(grep '^formats:' "$OUT/probe.out") && echo "resize: ok" || { echo "resize: no Format at 1280x720"; exit 1; }
 ffprobe -v error -count_frames -show_entries stream=codec_name,width,height,nb_read_frames "$OUT/probe.bit" 2>&1 | tr '\n' ' '; echo

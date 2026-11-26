@@ -54,7 +54,7 @@ While a client is connected the desktop shows that the screen is being shared.
 ## What the host shows
 
 - **Displays.** GNOME: one display, the one chosen in the dialog; the client can't switch to another. KDE with several screens: all of them as one picture.
-- **Resolution.** The host does not resize or create displays. The picture is the display's own size, scaled down only to fit the other computer's window.
+- **Resolution.** The host does not resize or create displays. The picture follows the controlling computer's window: when that window is resized or goes full screen, the host re-encodes at the largest size with the display's shape that fits it, never larger than the display's own size. The stream changes about 150 ms after the window stops changing.
 - **Video.** H.264 or HEVC on the graphics card where there is a VA-API driver (Intel, AMD) or NVIDIA's driver; otherwise H.264 in software (x264 or OpenH264 from the system). HEVC is used when a hardware HEVC encoder works and the client decodes HEVC. Fedora ships without H.264 encoders; to get software H.264 there, enable the OpenH264 repository from Cisco or RPM Fusion and install `openh264`.
 - **Keyboard.** Keys arrive as key positions, so the computer's own keyboard layout applies, as with a keyboard plugged into it. Text from an input method on the client arrives as characters, as long as they are on the computer's keyboard layout.
 - **Sound.** The default output is shared (48 kHz stereo, Opus), and follows it when you change it.

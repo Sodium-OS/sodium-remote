@@ -51,7 +51,7 @@ Choose **Full screen** (or **Connect in full screen**).
 
 Settings › Display and Quality affect every computer, at the next connection.
 
-- **Resolution.** A **SodiumOS** computer creates a display at the size and refresh rate of your window, so nothing is scaled; with **Match the window** it follows every resize. Windows and macOS computers show their own screens at their own resolution, and the picture is scaled to fit the window.
+- **Resolution.** A **SodiumOS** computer creates a display at the size and refresh rate of your window, so nothing is scaled; with **Match the window** it follows every resize. Windows, macOS and Linux computers show their own screens; the host encodes the picture at the size of your window (never larger than its screen), so it stays sharp when you resize or go full screen.
 - **Which display.** When the other computer has several displays, choose which one to see from the display menu.
 - **Refresh rate.** Automatic follows your display.
 - **Video codec.** Automatic uses HEVC when both computers support it and H.264 otherwise. You can force one.

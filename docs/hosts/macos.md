@@ -36,7 +36,7 @@ The host runs inside the app, so the permissions belong to the app. The host's k
 
 - **Secure screens.** The lock screen, and another user on the console after fast user switching, can't be shown or controlled. The client shows "… is showing a secure screen" and the session resumes when the desktop is back.
 - **No login-window access.** The Mac must be signed in.
-- **One display at a time**, and no virtual display or resizing: the client shows the display at its own size, scaled to fit.
+- **One display at a time**, and no virtual display and no resizing of the display. The picture follows the client's window: it is encoded at the largest size with the display's shape that fits the window, never larger than the display's own size.
 - **Unsigned.** Until a signed and notarized build exists, each build you make needs its permissions granted again if its signature changes: build with a stable signing identity ([build guide](../building/macos.md)).
 
 Details for contributors: [macOS host reference](../reference/host-mac.md) and [the Mac app](../reference/mac-app.md).

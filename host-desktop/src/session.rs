@@ -129,6 +129,9 @@ pub struct PairedClient {
     pub os_flavor: String,
 }
 
+/// How long the client's window must stop changing before the stream follows it.
+const RESIZE_QUIET: Duration = Duration::from_millis(150);
+
 #[derive(Default)]
 struct Live {
     client: Option<DeviceId>,
@@ -136,6 +139,8 @@ struct Live {
     settings: msg::StreamSettings,
     /// The display the client chose (`SelectDisplay`), kept across connections.
     display: Option<u32>,
+    /// The client's window in physical pixels (`Hello.display`, then each `Resize`); 0: unknown.
+    window: (u32, u32),
     stats: Option<SessionStats>,
     /// The client's name and when its session started (Unix seconds).
     name: String,
@@ -154,6 +159,8 @@ struct Shared {
     keys: Mutex<KeyMapper>,
     live: Mutex<Live>,
     media: Mutex<Option<Media>>,
+    /// Counts `Resize` messages: a resize applies once no newer one came within 150 ms.
+    resize_gen: AtomicU64,
     audio: Mutex<Option<(Arc<AtomicBool>, std::thread::JoinHandle<()>)>>,
     clipboard: Option<Arc<dyn Clipboard>>,
     /// The host clipboard entry last offered, for the client's requests.
@@ -343,6 +350,7 @@ impl Session {
             keys: Mutex::new(KeyMapper::default()),
             live: Mutex::new(Live::default()),
             media: Mutex::new(None),
+            resize_gen: AtomicU64::new(0),
             audio: Mutex::new(None),
             clipboard,
             clip_out: Mutex::new(None),
@@ -640,12 +648,12 @@ impl Shared {
     }
 
     /// The stream for this client: its display (the one it chose, else the primary),
-    /// native size scaled only to fit its decoder, its rate (at most the display's), and
+    /// the size that fits its window and its decoder (never above native), its rate (at most the display's), and
     /// the codec both sides have.
     fn setup(&self) -> Result<StreamSetup, String> {
-        let (hello, settings, chosen) = {
+        let (hello, settings, chosen, window) = {
             let l = self.live.lock().unwrap();
-            (l.hello.clone(), l.settings, l.display)
+            (l.hello.clone(), l.settings, l.display, l.window)
         };
         let hello = hello.ok_or("no Hello")?;
         let displays = self.backend.displays();
@@ -657,7 +665,11 @@ impl Shared {
             .ok_or("this computer has no display to show")?;
         let codec = policy::choose_codec(self.backend.encoder_caps(), &hello.decode, settings.codec)
             .ok_or("no video codec in common: this computer encodes H.264 (and HEVC with a GPU) only")?;
-        let (width, height) = policy::fit(display.info.width, display.info.height, hello.decode.max_width, hello.decode.max_height);
+        let (width, height) = policy::stream_size(
+            (display.info.width, display.info.height),
+            window,
+            (hello.decode.max_width, hello.decode.max_height),
+        );
         let asked = if settings.refresh_mhz != 0 { settings.refresh_mhz } else { hello.display.refresh_mhz };
         let host_hz = if display.refresh_mhz > 0 { display.refresh_mhz } else { 60_000 };
         let fps = (asked.min(host_hz).max(1000) as f64 / 1000.0).round().max(1.0) as u32;
@@ -684,6 +696,7 @@ impl Shared {
             l.client = Some(client);
             l.name = name;
             l.settings = hello.settings;
+            l.window = (hello.display.width, hello.display.height);
             l.hello = Some(hello);
             l.secure = false;
             l.held = false;
@@ -724,7 +737,7 @@ impl Shared {
             resumed,
             host_os: self.backend.os(),
             display_mode: msg::DisplayMode::Physical,
-            live_resize: false,
+            live_resize: self.backend.live_resize(),
             displays: displays.iter().map(|d| d.info.clone()).collect(),
             current_display: setup.display.info.id,
             view_only: self.backend.view_only(),
@@ -844,7 +857,7 @@ impl Shared {
     }
 
     fn current_setup(&self) -> Option<StreamSetup> {
-        self.media.lock().unwrap().as_ref().map(|m| m.setup.clone())
+        self.media.lock().unwrap().as_ref().map(|m| m.setup())
     }
 
     fn on_input(&self, ev: InputEvent) {
@@ -924,9 +937,48 @@ impl Shared {
             Msg::ClipboardOffer(o) => self.clip_offer_in(o),
             Msg::ClipboardRequest { serial, format } => self.clip_request(serial, &format),
             Msg::ClipboardData(d) => self.clip_data_in(d),
-            // A physical display: no resize, UI size or home monitor mode (Welcome says so).
-            Msg::Resize(_) | Msg::HomeMonitor(_) | Msg::Vsync(_) | Msg::Stats(_) | Msg::Hello(_) => {}
+            // The client's window changed: the stream follows it once the resizing stops.
+            Msg::Resize(d) => {
+                if !self.backend.live_resize() {
+                    return;
+                }
+                self.live.lock().unwrap().window = (d.width, d.height);
+                let generation = self.resize_gen.fetch_add(1, Ordering::Relaxed) + 1;
+                let me = self.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(RESIZE_QUIET).await;
+                    if me.resize_gen.load(Ordering::Relaxed) == generation {
+                        me.apply_resize();
+                    }
+                });
+            }
+            // A physical display: no UI size or home monitor mode (Welcome says so).
+            Msg::HomeMonitor(_) | Msg::Vsync(_) | Msg::Stats(_) | Msg::Hello(_) => {}
             other => eprintln!("sodium-remote-host: ignoring {}", format!("{other:?}").split(['(', ' ', '{']).next().unwrap_or("")),
+        }
+    }
+
+    /// The window settled: when only the size changed, a new encoder on the running
+    /// capture and a new `Format`; anything else (a display hot-plug since) restarts the stream.
+    fn apply_resize(self: &Arc<Self>) {
+        let setup = match self.setup() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("sodium-remote-host: {e}");
+                return;
+            }
+        };
+        let Some(cur) = self.current_setup() else { return };
+        if cur == setup {
+            return;
+        }
+        if cur.display == setup.display && cur.fps == setup.fps && cur.codec == setup.codec {
+            self.send_route_demand(&setup);
+            if let Some(m) = self.media.lock().unwrap().as_ref() {
+                m.resize(setup.width, setup.height);
+            }
+        } else {
+            self.restart_stream();
         }
     }
 
