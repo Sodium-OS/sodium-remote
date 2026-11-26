@@ -29,8 +29,8 @@ $here = $PSScriptRoot
 # 1. The tools.
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $vswhere)) { throw 'Visual Studio 2022 is not installed (no vswhere.exe).' }
-$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
-if (-not $msbuild) { throw 'MSBuild not found.' }
+$msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\amd64\MSBuild.exe' | Select-Object -First 1
+if (-not $msbuild) { throw 'MSBuild (64-bit) not found.' }
 foreach ($t in 'git', 'nuget') { if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { throw "$t is not installed." } }
 "MSBuild: $msbuild"
 
@@ -83,7 +83,7 @@ $env:PATH = "$($stampinf.DirectoryName);$($inf2cat.DirectoryName);$env:PATH"
 
 # 5. Build: Release x64, the WDK's test signing off.
 $sln = Join-Path $src 'Virtual Display Driver (HDR)\SudoVDA.sln'
-& $msbuild $sln /m /nologo /v:minimal /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off
+& $msbuild $sln /m /nologo /v:minimal /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /p:PreferredToolArchitecture=x64
 if ($LASTEXITCODE) { throw 'MSBuild failed' }
 $built = Join-Path $src 'Virtual Display Driver (HDR)'
 $dll = Get-ChildItem -Recurse $built -Filter "$Name.dll" | Where-Object FullName -match '\\x64\\Release\\' | Select-Object -First 1
