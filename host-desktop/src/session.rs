@@ -1084,14 +1084,14 @@ impl Shared {
         }
     }
 
-    /// The matched display at the client's window size now, then a new stream on it.
+    /// The matched display at the client's window size and rate now, then the stream on it (a new one when anything
+    /// changed: the display's mode, or only the rate the client asked for).
     fn schedule_matched_mode(self: &Arc<Self>) {
         let me = self.clone();
         tokio::spawn(async move {
             let s = me.clone();
-            if tokio::task::spawn_blocking(move || s.apply_matched_mode()).await.unwrap_or(false) {
-                me.restart_stream();
-            }
+            let _ = tokio::task::spawn_blocking(move || s.apply_matched_mode()).await;
+            me.restart_stream();
         });
     }
 
