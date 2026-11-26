@@ -5,36 +5,56 @@
 //! `d3dcompiler_47.dll`, which ships with Windows), NV12 and 3-plane uploads,
 //! and alpha-blended overlays (HUD, notices). Hardware first, WARP when there
 //! is no GPU (the VM).
+//!
+//! **Zero copy:** `share_with_decoder` makes the hardware device (with video
+//! support) before the session starts and gives it to the D3D11VA decoder, which
+//! then decodes into NV12 texture arrays this device can sample. `Gfx::show`
+//! draws such a picture straight from its array slice (two views: R8 for luma,
+//! R8G8 for CbCr), so it never goes to system memory and back. A picture in
+//! system memory (software decode, 4:4:4, a driver that refuses shader-readable
+//! decoder textures, `--no-zero-copy`) is uploaded as before; if the views can't
+//! be made, zero copy is turned off for the session and the decoder copies again.
+//!
+//! **Which GPU:** `decode_adapter` picks the first hardware adapter that has a
+//! video decoder, the display's GPU when it has one, and both the shared device
+//! and the decoder's own device (`--no-zero-copy`) use it.
 
 use anyhow::{Context, Result, anyhow, bail};
-use remote_engine::decode::{Picture, PixFmt};
+use remote_engine::decode::{D3d11Lock, D3d11Slice, Picture, PixFmt};
 use std::ffi::{CString, c_void};
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 use windows::Win32::Foundation::{HANDLE, HMODULE, HWND};
-use windows::Win32::Graphics::Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, ID3DBlob};
+use windows::Win32::Graphics::Direct3D::{
+    D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_UNKNOWN, D3D_DRIVER_TYPE_WARP, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_11_0, D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, D3D11_SRV_DIMENSION_TEXTURE2DARRAY, ID3DBlob,
+};
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
 use windows::Win32::Graphics::Dxgi::*;
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LOAD_LIBRARY_SEARCH_APPLICATION_DIR, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW};
 use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
-use windows::core::{Interface, PCSTR, PCWSTR};
+use windows::core::{BOOL, Interface, PCSTR, PCWSTR};
 
+// `s.xy` scales the quad's texture coordinates (a decoder texture is padded
+// beyond the picture), `s.zw` is the last coordinate to sample (no padding bleeds
+// in through the bilinear filter). Both are 1 for uploaded planes and overlays.
 const HLSL: &str = r#"
-cbuffer C : register(b0) { float4 rect; float4 p; };
+cbuffer C : register(b0) { float4 rect; float4 p; float4 s; };
 struct VO { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
 VO vs(uint id : SV_VertexID) {
     float2 q = float2(id & 1, id >> 1);
     VO o;
     o.pos = float4(lerp(rect.x, rect.z, q.x), lerp(rect.y, rect.w, q.y), 0, 1);
-    o.uv = q;
+    o.uv = q * s.xy;
     return o;
 }
 Texture2D ty : register(t0);
 Texture2D tu : register(t1);
 Texture2D tv : register(t2);
+Texture2DArray ay : register(t3);
+Texture2DArray ac : register(t4);
 SamplerState sm : register(s0);
-float4 ps_video(VO i) : SV_Target {
-    float y = ty.Sample(sm, i.uv).r;
-    float2 c = p.x < 0.5 ? tu.Sample(sm, i.uv).rg : float2(tu.Sample(sm, i.uv).r, tv.Sample(sm, i.uv).r);
+float4 to_rgb(float y, float2 c) {
     float cb, cr;
     if (p.z > 0.5) { cb = c.x - 128.0 / 255.0; cr = c.y - 128.0 / 255.0; }
     else { y = (y * 255.0 - 16.0) / 219.0; cb = (c.x * 255.0 - 128.0) / 224.0; cr = (c.y * 255.0 - 128.0) / 224.0; }
@@ -43,8 +63,20 @@ float4 ps_video(VO i) : SV_Target {
     else rgb = float3(y + 1.5748 * cr, y - 0.1873 * cb - 0.4681 * cr, y + 1.8556 * cb);
     return float4(saturate(rgb), 1.0);
 }
+float4 ps_video(VO i) : SV_Target {
+    float y = ty.Sample(sm, i.uv).r;
+    float2 c = p.x < 0.5 ? tu.Sample(sm, i.uv).rg : float2(tu.Sample(sm, i.uv).r, tv.Sample(sm, i.uv).r);
+    return to_rgb(y, c);
+}
+float4 ps_nv12_array(VO i) : SV_Target {
+    float3 uv = float3(min(i.uv, s.zw), 0);
+    return to_rgb(ay.Sample(sm, uv).r, ac.Sample(sm, uv).rg);
+}
 float4 ps_overlay(VO i) : SV_Target { return ty.Sample(sm, i.uv); }
 "#;
+
+/// Texture coordinates for uploaded planes and overlays: the whole texture.
+const WHOLE: [f32; 4] = [1.0; 4];
 
 type D3DCompileFn = unsafe extern "system" fn(
     *const c_void,
@@ -114,6 +146,111 @@ struct Planes {
     srv: [Option<ID3D11ShaderResourceView>; 3],
 }
 
+/// A picture shown straight from its decoder texture: kept alive (its slot isn't
+/// reused by the decoder) for as long as it is the one drawn.
+struct GpuPicture {
+    _pic: Picture,
+    w: u32,
+    h: u32,
+    srv: [ID3D11ShaderResourceView; 2],
+    uv: [f32; 4],
+}
+
+/// What `draw` shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Shown {
+    Nothing,
+    Planes,
+    Gpu,
+}
+
+/// The device shared with the decoder (`share_with_decoder`), and its immediate context.
+struct Shared(ID3D11Device, ID3D11DeviceContext);
+// D3D11 devices are free-threaded; the context is made multithread-protected by the decoder shim.
+unsafe impl Send for Shared {}
+unsafe impl Sync for Shared {}
+
+static SHARED: OnceLock<Option<Shared>> = OnceLock::new();
+static TEARING: AtomicBool = AtomicBool::new(false);
+
+/// The DXGI adapter that decodes video, by `EnumAdapters1` index: the first
+/// hardware adapter whose D3D11 video device lists a decoder profile. Adapters
+/// come in DXGI's order, the one driving the primary display first, so a PC
+/// that decodes on its display GPU keeps it (no copy between adapters to
+/// present). Where that GPU has no video decoder (a virtual display, a second
+/// GPU kept for compute, a display-only adapter) the next one that has one is
+/// used. `None` when no adapter decodes: the default adapter is used, as before.
+/// Picked once; the decoder is told (`d3d11_set_adapter`) for when it makes its
+/// own device.
+pub fn decode_adapter() -> Option<u32> {
+    static PICKED: OnceLock<Option<u32>> = OnceLock::new();
+    *PICKED.get_or_init(|| {
+        let picked = pick_decode_adapter();
+        if let Some((i, name)) = &picked {
+            eprintln!("remote-client: decoding on GPU {i} ({name})");
+            remote_engine::decode::d3d11_set_adapter(*i);
+        }
+        picked.map(|(i, _)| i)
+    })
+}
+
+fn pick_decode_adapter() -> Option<(u32, String)> {
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        for i in 0.. {
+            let Ok(adapter) = factory.EnumAdapters1(i) else { break };
+            let Ok(desc) = adapter.GetDesc1() else { continue };
+            // The Basic Render Driver (WARP) and other software adapters.
+            if desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0 {
+                continue;
+            }
+            let Ok(a) = adapter.cast::<IDXGIAdapter>() else { continue };
+            let Ok((dev, _)) = create_device_on(Some(&a), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_VIDEO_SUPPORT) else { continue };
+            let Ok(vd) = dev.cast::<ID3D11VideoDevice>() else { continue };
+            if vd.GetVideoDecoderProfileCount() > 0 {
+                let n = desc.Description.iter().position(|&c| c == 0).unwrap_or(desc.Description.len());
+                return Some((i, String::from_utf16_lossy(&desc.Description[..n])));
+            }
+        }
+        None
+    }
+}
+
+/// The adapter `decode_adapter` picked, or `None` for the default one.
+fn decode_adapter_handle() -> Option<IDXGIAdapter> {
+    let i = decode_adapter()?;
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        factory.EnumAdapters1(i).ok()?.cast().ok()
+    }
+}
+
+/// Zero copy: make the hardware device (with video support) now, before the
+/// decoder opens, and have the D3D11VA decoder decode on it. The window's `Gfx`
+/// then presents on the same device. False (and nothing shared) when there is
+/// no hardware device with video support; the session then copies as before.
+pub fn share_with_decoder() -> bool {
+    SHARED
+        .get_or_init(|| match create_device_on(decode_adapter_handle().as_ref(), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT) {
+            Ok((d, c)) => {
+                // SAFETY: a live device; the shim takes its own reference.
+                unsafe { remote_engine::decode::d3d11_share_device(d.as_raw()) };
+                Some(Shared(d, c))
+            }
+            Err(e) => {
+                eprintln!("remote-client: no hardware D3D11 device with video support ({e}); pictures are copied");
+                None
+            }
+        })
+        .is_some()
+}
+
+/// Present without waiting for the vsync (`DXGI_PRESENT_ALLOW_TEARING`, sync
+/// interval 0) where DXGI allows it. Set before the window is made. Tearing
+/// shows only where Windows flips the window independently (full screen).
+pub fn set_tearing(on: bool) {
+    TEARING.store(on, Ordering::Relaxed);
+}
 pub struct Gfx {
     pub device: ID3D11Device,
     ctx: ID3D11DeviceContext,
@@ -128,17 +265,36 @@ pub struct Gfx {
     cb: ID3D11Buffer,
     sampler: ID3D11SamplerState,
     blend: ID3D11BlendState,
+    ps_nv12_array: ID3D11PixelShader,
     planes: Option<Planes>,
+    gpu: Option<GpuPicture>,
+    shown: Shown,
+    /// Views of decoder texture slices already made: ((texture, slice), [luma, CbCr]).
+    views: Vec<((usize, u32), [ID3D11ShaderResourceView; 2])>,
+    /// The device is the decoder's (`share_with_decoder`) and zero copy is still on.
+    zero_copy: bool,
+    /// `DXGI_PRESENT_ALLOW_TEARING` with sync interval 0 (`set_tearing`, and DXGI allows it).
+    pub tearing: bool,
 }
 
-fn create_device(driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE) -> Result<(ID3D11Device, ID3D11DeviceContext)> {
+fn create_device(driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE, flags: D3D11_CREATE_DEVICE_FLAG) -> Result<(ID3D11Device, ID3D11DeviceContext)> {
+    create_device_on(None, driver, flags)
+}
+
+/// `create_device` on a given adapter (the driver type is then `UNKNOWN`, as D3D11 requires).
+fn create_device_on(
+    adapter: Option<&IDXGIAdapter>,
+    driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE,
+    flags: D3D11_CREATE_DEVICE_FLAG,
+) -> Result<(ID3D11Device, ID3D11DeviceContext)> {
+    let driver = if adapter.is_some() { D3D_DRIVER_TYPE_UNKNOWN } else { driver };
     let (mut dev, mut ctx) = (None, None);
     unsafe {
         D3D11CreateDevice(
-            None::<&IDXGIAdapter>,
+            adapter,
             driver,
             HMODULE::default(),
-            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+            flags,
             Some(&[D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0]),
             D3D11_SDK_VERSION,
             Some(&mut dev),
@@ -149,26 +305,18 @@ fn create_device(driver: windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE) ->
     Ok((dev.context("no device")?, ctx.context("no context")?))
 }
 
-/// Does the GPU decode AV1 (VLD profile 0)? The FFmpeg here has no software AV1.
+fn swap_flags(tearing: bool) -> DXGI_SWAP_CHAIN_FLAG {
+    let mut f = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT.0;
+    if tearing {
+        f |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING.0;
+    }
+    DXGI_SWAP_CHAIN_FLAG(f)
+}
+
+/// Does the decoding GPU (`decode_adapter`) decode AV1 (VLD profile 0)? The FFmpeg here has no software AV1.
 pub fn hardware_av1() -> bool {
     unsafe {
-        let (mut dev, mut ctx) = (None, None);
-        if D3D11CreateDevice(
-            None::<&IDXGIAdapter>,
-            D3D_DRIVER_TYPE_HARDWARE,
-            HMODULE::default(),
-            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-            None,
-            D3D11_SDK_VERSION,
-            Some(&mut dev),
-            None,
-            Some(&mut ctx),
-        )
-        .is_err()
-        {
-            return false;
-        }
-        let Some(dev) = dev else { return false };
+        let Ok((dev, _)) = create_device_on(decode_adapter_handle().as_ref(), D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_VIDEO_SUPPORT) else { return false };
         let Ok(vd) = dev.cast::<ID3D11VideoDevice>() else { return false };
         // D3D11_DECODER_PROFILE_AV1_VLD_PROFILE0
         let av1 = windows::core::GUID::from_u128(0xb8be4ccb_cf53_46ba_8d59_d6b8a6da5d2a);
@@ -178,18 +326,32 @@ pub fn hardware_av1() -> bool {
 
 impl Gfx {
     pub fn new(hwnd: HWND, w: u32, h: u32) -> Result<Gfx> {
-        let (device, ctx, warp) = match create_device(D3D_DRIVER_TYPE_HARDWARE) {
-            Ok((d, c)) => (d, c, false),
-            Err(e) => {
-                eprintln!("remote-client: no hardware D3D11 device ({e}); using WARP");
-                let (d, c) = create_device(D3D_DRIVER_TYPE_WARP)?;
-                (d, c, true)
-            }
+        let shared = SHARED.get().and_then(|s| s.as_ref()).map(|s| (s.0.clone(), s.1.clone()));
+        let zero_copy = shared.is_some();
+        let (device, ctx, warp) = match shared {
+            Some((d, c)) => (d, c, false),
+            None => match create_device(D3D_DRIVER_TYPE_HARDWARE, D3D11_CREATE_DEVICE_BGRA_SUPPORT) {
+                Ok((d, c)) => (d, c, false),
+                Err(e) => {
+                    eprintln!("remote-client: no hardware D3D11 device ({e}); using WARP");
+                    let (d, c) = create_device(D3D_DRIVER_TYPE_WARP, D3D11_CREATE_DEVICE_BGRA_SUPPORT)?;
+                    (d, c, true)
+                }
+            },
         };
         unsafe {
             let dxgi: IDXGIDevice = device.cast()?;
             let adapter = dxgi.GetAdapter()?;
             let factory: IDXGIFactory2 = adapter.GetParent()?;
+            let tearing = TEARING.load(Ordering::Relaxed) && {
+                let mut allow = BOOL(0);
+                factory.cast::<IDXGIFactory5>().is_ok_and(|f5| {
+                    f5.CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &mut allow as *mut BOOL as *mut c_void, std::mem::size_of::<BOOL>() as u32).is_ok()
+                }) && allow.as_bool()
+            };
+            if TEARING.load(Ordering::Relaxed) {
+                eprintln!("remote-client: present without vsync: {}", if tearing { "on (DXGI_PRESENT_ALLOW_TEARING)" } else { "not supported here; waiting for vsync" });
+            }
             let desc = DXGI_SWAP_CHAIN_DESC1 {
                 Width: w.max(1),
                 Height: h.max(1),
@@ -201,7 +363,7 @@ impl Gfx {
                 Scaling: DXGI_SCALING_STRETCH,
                 SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
                 AlphaMode: DXGI_ALPHA_MODE_IGNORE,
-                Flags: DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT.0 as u32,
+                Flags: swap_flags(tearing).0 as u32,
             };
             let sc = factory.CreateSwapChainForHwnd(&device, hwnd, &desc, None, None)?;
             let _ = factory.MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
@@ -212,16 +374,19 @@ impl Gfx {
             let vs_b = compile(HLSL, "vs", "vs_4_0")?;
             let pv_b = compile(HLSL, "ps_video", "ps_4_0")?;
             let po_b = compile(HLSL, "ps_overlay", "ps_4_0")?;
+            let pa_b = compile(HLSL, "ps_nv12_array", "ps_4_0")?;
             let mut vs = None;
             device.CreateVertexShader(blob_bytes(&vs_b), None, Some(&mut vs))?;
             let mut ps_video = None;
             device.CreatePixelShader(blob_bytes(&pv_b), None, Some(&mut ps_video))?;
             let mut ps_overlay = None;
             device.CreatePixelShader(blob_bytes(&po_b), None, Some(&mut ps_overlay))?;
+            let mut ps_nv12_array = None;
+            device.CreatePixelShader(blob_bytes(&pa_b), None, Some(&mut ps_nv12_array))?;
             let mut cb = None;
             device.CreateBuffer(
                 &D3D11_BUFFER_DESC {
-                    ByteWidth: 32,
+                    ByteWidth: 48,
                     Usage: D3D11_USAGE_DYNAMIC,
                     BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
                     CPUAccessFlags: D3D11_CPU_ACCESS_WRITE.0 as u32,
@@ -268,7 +433,13 @@ impl Gfx {
                 cb: cb.context("cb")?,
                 sampler: sampler.context("sampler")?,
                 blend: blend.context("blend")?,
+                ps_nv12_array: ps_nv12_array.context("ps")?,
                 planes: None,
+                gpu: None,
+                shown: Shown::Nothing,
+                views: Vec::new(),
+                zero_copy,
+                tearing,
             };
             g.make_rtv()?;
             Ok(g)
@@ -298,7 +469,7 @@ impl Gfx {
             self.ctx.OMSetRenderTargets(None, None);
             self.rtv = None;
             self.ctx.Flush();
-            self.sc.ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT)?;
+            self.sc.ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, swap_flags(self.tearing))?;
         }
         self.size = (w, h);
         self.make_rtv()
@@ -308,9 +479,81 @@ impl Gfx {
         self.size
     }
 
-    /// The video size last uploaded.
+    /// The size of the picture shown.
     pub fn video_size(&self) -> Option<(u32, u32)> {
-        self.planes.as_ref().map(|p| (p.w, p.h))
+        match self.shown {
+            Shown::Nothing => None,
+            Shown::Planes => self.planes.as_ref().map(|p| (p.w, p.h)),
+            Shown::Gpu => self.gpu.as_ref().map(|g| (g.w, g.h)),
+        }
+    }
+
+    /// How the picture shown got here: "zero-copy" (drawn from the decoder's
+    /// texture), "copy" (uploaded from system memory) or "" (none yet).
+    pub fn path(&self) -> &'static str {
+        match self.shown {
+            Shown::Nothing => "",
+            Shown::Planes => "copy",
+            Shown::Gpu => "zero-copy",
+        }
+    }
+
+    /// Makes `p` the picture drawn: from its decoder texture when it is one
+    /// (zero copy), else uploaded. An error leaves the previous picture shown.
+    pub fn show(&mut self, p: Picture) -> Result<()> {
+        let Some(s) = p.d3d11 else {
+            self.upload(&p)?;
+            self.shown = Shown::Planes;
+            self.gpu = None;
+            return Ok(());
+        };
+        let views = if self.zero_copy { self.views(&s) } else { Err(anyhow!("not the presenter's device")) };
+        match views {
+            Ok(srv) => {
+                let (w, h) = (p.width, p.height);
+                let (tw, th) = (s.tex_width.max(1) as f32, s.tex_height.max(1) as f32);
+                let uv = [w as f32 / tw, h as f32 / th, w.saturating_sub(1) as f32 / tw, h.saturating_sub(1) as f32 / th];
+                self.gpu = Some(GpuPicture { _pic: p, w, h, srv, uv });
+                self.shown = Shown::Gpu;
+                Ok(())
+            }
+            Err(e) => {
+                // The next pictures come in system memory; this one is lost.
+                remote_engine::decode::d3d11_zero_copy(false);
+                self.zero_copy = false;
+                self.views.clear();
+                Err(e.context("drawing from the decoder's texture; copying pictures from now on"))
+            }
+        }
+    }
+
+    /// Luma (R8) and CbCr (R8G8) views of one slice of an NV12 decoder texture.
+    fn views(&mut self, s: &D3d11Slice) -> Result<[ID3D11ShaderResourceView; 2]> {
+        let key = (s.texture as usize, s.slice);
+        if let Some((_, v)) = self.views.iter().find(|(k, _)| *k == key) {
+            return Ok(v.clone());
+        }
+        // A new texture array (the decoder reopened or the size changed): the old views go,
+        // and with them the last references to the old array.
+        if self.views.first().is_some_and(|((t, _), _)| *t != key.0) {
+            self.views.clear();
+        }
+        let tex = unsafe { ID3D11Texture2D::from_raw_borrowed(&s.texture) }.context("no decoder texture")?;
+        let view = |fmt: DXGI_FORMAT| -> Result<ID3D11ShaderResourceView> {
+            let desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
+                Format: fmt,
+                ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2DARRAY,
+                Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                    Texture2DArray: D3D11_TEX2D_ARRAY_SRV { MostDetailedMip: 0, MipLevels: 1, FirstArraySlice: s.slice, ArraySize: 1 },
+                },
+            };
+            let mut v = None;
+            unsafe { self.device.CreateShaderResourceView(tex, Some(&desc), Some(&mut v)) }.with_context(|| format!("a {fmt:?} view of the decoder texture"))?;
+            v.context("no view")
+        };
+        let v = [view(DXGI_FORMAT_R8_UNORM)?, view(DXGI_FORMAT_R8G8_UNORM)?];
+        self.views.push((key, v.clone()));
+        Ok(v)
     }
 
     fn tex(&self, w: u32, h: u32, fmt: DXGI_FORMAT) -> Result<(ID3D11Texture2D, ID3D11ShaderResourceView)> {
@@ -407,15 +650,15 @@ impl Gfx {
         }
     }
 
-    fn set_cb(&self, rect_px: (f32, f32, f32, f32), p: [f32; 4]) -> Result<()> {
+    fn set_cb(&self, rect_px: (f32, f32, f32, f32), p: [f32; 4], s: [f32; 4]) -> Result<()> {
         let (bw, bh) = (self.size.0 as f32, self.size.1 as f32);
         let (x0, y0, x1, y1) = rect_px;
         // Pixels → NDC; y grows downward in pixels, upward in NDC.
-        let v: [f32; 8] = [x0 / bw * 2.0 - 1.0, 1.0 - y0 / bh * 2.0, x1 / bw * 2.0 - 1.0, 1.0 - y1 / bh * 2.0, p[0], p[1], p[2], p[3]];
+        let v: [f32; 12] = [x0 / bw * 2.0 - 1.0, 1.0 - y0 / bh * 2.0, x1 / bw * 2.0 - 1.0, 1.0 - y1 / bh * 2.0, p[0], p[1], p[2], p[3], s[0], s[1], s[2], s[3]];
         unsafe {
             let mut m = D3D11_MAPPED_SUBRESOURCE::default();
             self.ctx.Map(&self.cb, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut m))?;
-            std::ptr::copy_nonoverlapping(v.as_ptr() as *const u8, m.pData as *mut u8, 32);
+            std::ptr::copy_nonoverlapping(v.as_ptr() as *const u8, m.pData as *mut u8, 48);
             self.ctx.Unmap(&self.cb, 0);
         }
         Ok(())
@@ -444,27 +687,36 @@ impl Gfx {
             self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.cb.clone())]));
             self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
             self.ctx.OMSetBlendState(None, None, 0xffff_ffff);
-            if let (Some(v), Some(q)) = (video, self.planes.as_ref()) {
-                let mode = if q.fmt == PixFmt::Nv12 { 0.0 } else { 1.0 };
-                self.set_cb(
-                    (v.0 as f32, v.1 as f32, (v.0 + v.2) as f32, (v.1 + v.3) as f32),
-                    [mode, bt601 as u8 as f32, full_range as u8 as f32, 0.0],
-                )?;
-                self.ctx.PSSetShader(&self.ps_video, None);
-                self.ctx.PSSetShaderResources(0, Some(&[q.srv[0].clone(), q.srv[1].clone(), q.srv[2].clone()]));
-                self.ctx.Draw(4, 0);
+            let rect = video.map(|v| (v.0 as f32, v.1 as f32, (v.0 + v.2) as f32, (v.1 + v.3) as f32));
+            match (rect, self.shown, self.planes.as_ref(), self.gpu.as_ref()) {
+                (Some(r), Shown::Planes, Some(q), _) => {
+                    let mode = if q.fmt == PixFmt::Nv12 { 0.0 } else { 1.0 };
+                    self.set_cb(r, [mode, bt601 as u8 as f32, full_range as u8 as f32, 0.0], WHOLE)?;
+                    self.ctx.PSSetShader(&self.ps_video, None);
+                    self.ctx.PSSetShaderResources(0, Some(&[q.srv[0].clone(), q.srv[1].clone(), q.srv[2].clone()]));
+                    self.ctx.Draw(4, 0);
+                }
+                (Some(r), Shown::Gpu, _, Some(g)) => {
+                    self.set_cb(r, [0.0, bt601 as u8 as f32, full_range as u8 as f32, 0.0], g.uv)?;
+                    self.ctx.PSSetShader(&self.ps_nv12_array, None);
+                    // FFmpeg's lock around the decoder's own use of this context.
+                    let _lock = D3d11Lock::take();
+                    self.ctx.PSSetShaderResources(3, Some(&[Some(g.srv[0].clone()), Some(g.srv[1].clone())]));
+                    self.ctx.Draw(4, 0);
+                }
+                _ => {}
             }
             if !overlays.is_empty() {
                 self.ctx.OMSetBlendState(&self.blend, None, 0xffff_ffff);
                 self.ctx.PSSetShader(&self.ps_overlay, None);
                 for (o, r) in overlays {
-                    self.set_cb((r.0, r.1, r.0 + r.2, r.1 + r.3), [0.0; 4])?;
+                    self.set_cb((r.0, r.1, r.0 + r.2, r.1 + r.3), [0.0; 4], WHOLE)?;
                     self.ctx.PSSetShaderResources(0, Some(&[Some(o.srv.clone())]));
                     self.ctx.Draw(4, 0);
                 }
             }
-            self.ctx.PSSetShaderResources(0, Some(&[None, None, None]));
-            let hr = self.sc.Present(1, DXGI_PRESENT(0));
+            self.ctx.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+            let hr = if self.tearing { self.sc.Present(0, DXGI_PRESENT_ALLOW_TEARING) } else { self.sc.Present(1, DXGI_PRESENT(0)) };
             if hr.is_err() && hr.0 != 0x087A0001u32 as i32 {
                 return Err(anyhow!("Present: {hr:?}"));
             }

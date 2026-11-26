@@ -6,7 +6,12 @@
 //!   object (one frame of latency), then takes the newest picture, uploads it,
 //!   draws and presents; a frame replaced before that is never shown (counted
 //!   as skipped). Present times come from DXGI frame statistics (`QPC` →
-//!   client µs) and feed the receiver report and `Msg::Vsync`.
+//!   client µs) and feed the receiver report and `Msg::Vsync`. A picture still
+//!   in its decoder texture is drawn from there (zero copy, `d3d`).
+//! - **Present path timing:** per shown frame, the time to hand the picture to
+//!   the GPU (upload or view), ready → drawn, drawn → on screen and last packet →
+//!   on screen; p50/p95 on stderr every 5 s and on the HUD, with the path
+//!   ("zero-copy" or "copy"), so the two can be compared on the same machine.
 //! - **Size:** `ClientDisplay` is the client area in pixels (per-monitor DPI
 //!   aware, so real pixels), the monitor's refresh and size, `pixels_per_point`
 //!   from the DPI (96 → 1.0). Every change sends `Msg::Resize` (the host
@@ -58,6 +63,68 @@ struct Pending {
     present_id: u32,
     frame_id: u32,
     at: Instant,
+    /// When `draw` presented it (client µs).
+    commit_us: i64,
+    /// `Gfx::show`'s time for it: the upload, or making the decoder texture's views.
+    show_ms: f64,
+    /// `Gfx::path` when it was drawn.
+    path: &'static str,
+}
+
+/// The present path's timing over the last few seconds (see the module docs).
+struct PathTimes {
+    show: Vec<f64>,
+    ready_drawn: Vec<f64>,
+    drawn_shown: Vec<f64>,
+    received_shown: Vec<f64>,
+    path: &'static str,
+    since: Instant,
+    line: Option<String>,
+}
+
+impl PathTimes {
+    const EVERY: Duration = Duration::from_secs(5);
+
+    fn new() -> PathTimes {
+        PathTimes { show: vec![], ready_drawn: vec![], drawn_shown: vec![], received_shown: vec![], path: "", since: Instant::now(), line: None }
+    }
+
+    /// One shown frame: ms values.
+    fn add(&mut self, path: &'static str, show: f64, ready_drawn: f64, drawn_shown: f64, received_shown: f64) {
+        if path != self.path && !self.show.is_empty() {
+            self.flush();
+        }
+        self.path = path;
+        self.show.push(show);
+        self.ready_drawn.push(ready_drawn);
+        self.drawn_shown.push(drawn_shown);
+        self.received_shown.push(received_shown);
+        if self.since.elapsed() >= Self::EVERY {
+            self.flush();
+        }
+    }
+
+    fn flush(&mut self) {
+        let n = self.show.len();
+        if n > 0 {
+            let pp = |v: &mut Vec<f64>| {
+                let r = format!("{:.2}/{:.2}", remote_engine::stats::percentile(v, 0.5), remote_engine::stats::percentile(v, 0.95));
+                v.clear();
+                r
+            };
+            let line = format!(
+                "present path {}: to GPU {} ms, ready→drawn {} ms, drawn→shown {} ms, last packet→shown {} ms (p50/p95, {n} frames)",
+                self.path,
+                pp(&mut self.show),
+                pp(&mut self.ready_drawn),
+                pp(&mut self.drawn_shown),
+                pp(&mut self.received_shown)
+            );
+            eprintln!("remote-client: {line}");
+            self.line = Some(line);
+        }
+        self.since = Instant::now();
+    }
 }
 
 struct Win {
@@ -94,6 +161,7 @@ struct Win {
     cursor: isize,
     hud: Option<Overlay>,
     next_hud: Instant,
+    times: PathTimes,
     notice: Option<Overlay>,
     secure: bool,
     pending: VecDeque<Pending>,
@@ -229,6 +297,7 @@ pub fn run_with(app: Arc<App>, rx: Receiver<WinMsg>, opts: WindowOptions, wake: 
             cursor: LoadCursorW(None, IDC_ARROW)?.0 as isize,
             hud: None,
             next_hud: Instant::now(),
+            times: PathTimes::new(),
             notice: None,
             secure: false,
             pending: VecDeque::new(),
@@ -707,14 +776,19 @@ impl Win {
     fn draw(&mut self) -> Result<()> {
         let app = self.app.clone();
         let mut new_frame = None;
+        let mut show_ms = 0.0;
         if let Some((pic, id)) = app.latest.take() {
             let before = self.gfx.video_size();
-            self.bt601 = pic.bt601;
-            self.full_range = pic.full_range;
-            if let Err(e) = self.gfx.upload(&pic) {
-                eprintln!("remote-client: upload: {e:#}");
-            } else {
-                new_frame = Some(id);
+            let (bt601, full_range) = (pic.bt601, pic.full_range);
+            let t = Instant::now();
+            match self.gfx.show(pic) {
+                Err(e) => eprintln!("remote-client: picture: {e:#}"),
+                Ok(()) => {
+                    show_ms = t.elapsed().as_secs_f64() * 1e3;
+                    self.bt601 = bt601;
+                    self.full_range = full_range;
+                    new_frame = Some(id);
+                }
             }
             if self.gfx.video_size() != before {
                 self.cursors.clear();
@@ -733,6 +807,9 @@ impl Win {
                 }
                 if let Some(c) = &app.click {
                     extra.push(c.status());
+                }
+                if let Some(l) = &self.times.line {
+                    extra.push(l.clone());
                 }
                 extra
             });
@@ -763,8 +840,9 @@ impl Win {
         let (bt601, full) = (self.bt601, self.full_range);
         let present_id = self.gfx.draw(video, bt601, full, &overlays)?;
         if let Some(id) = new_frame {
-            app.stats.on_commit(id, app.clock.now_us() as i64);
-            self.pending.push_back(Pending { present_id, frame_id: id, at: Instant::now() });
+            let commit_us = app.clock.now_us() as i64;
+            app.stats.on_commit(id, commit_us);
+            self.pending.push_back(Pending { present_id, frame_id: id, at: Instant::now(), commit_us, show_ms, path: self.gfx.path() });
         }
         self.dirty = false;
         Ok(())
@@ -807,6 +885,8 @@ impl Win {
             if let Some((decode_us, present_us, ready_us)) = self.app.stats.on_present(Some(p.frame_id), us, refresh_ns) {
                 self.app.client.send_receiver_report(p.frame_id, decode_us, present_us);
                 self.on_lead(ready_us, us, refresh_ns);
+                let ms = |d: i64| d.max(0) as f64 / 1e3;
+                self.times.add(p.path, p.show_ms, ms(p.commit_us - ready_us), ms(us - p.commit_us), ms(decode_us as i64 + present_us as i64));
             }
             if let Some(c) = &self.app.click {
                 c.on_present(p.frame_id, us);
