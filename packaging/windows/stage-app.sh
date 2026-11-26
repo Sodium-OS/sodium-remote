@@ -14,7 +14,7 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REMOTE=$(cd "$HERE/../.." && pwd)
 REPO=$REMOTE
 . "$HERE/env.sh"
-export QT_WIN_ROOT=${QT_WIN_ROOT:-$REMOTE/build/qt-win/6.12.0/mingw_64}
+export QT_WIN_ROOT=${QT_WIN_ROOT:-$REMOTE/build/qt-win/6.12.1/mingw_64}
 JOBS=${JOBS:-8}
 UI_BUILD=${SODIUMUI_WIN_BUILD:-$REMOTE/build/sodiumui-win}
 APP_BUILD=$REMOTE/build/app-win
@@ -41,7 +41,7 @@ cmake --build "$APP_BUILD" -j"$JOBS"
 "$REMOTE/i18n/i18n.sh" release --optional >/dev/null || true
 python3 -I "$HERE/stage-sodiumui.py" --build "$UI_BUILD" --exe-from "$APP_BUILD/bin" --exe SodiumRemote.exe \
   --qml-dir "$REMOTE/app/qml" --no-gallery --catalog remote --out "$OUT" --qt "$QT_WIN_ROOT" --deps "$WIN_DEPS" --repo "$REPO" --icons "$ICONS" \
-  --qt-licenses "${QT_LICENSES:-/usr/share/licenses/qt6-base}" --qt-sbom "$QT_WIN_ROOT/sbom" --qt-sbom "$REMOTE/build/qt-win/6.12.0/mingw_64/sbom"
+  --qt-licenses "${QT_LICENSES:-/usr/share/licenses/qt6-base}" --qt-sbom "$QT_WIN_ROOT/sbom" --qt-sbom "$REMOTE/build/qt-win/6.12.1/mingw_64/sbom"
 mkdir -p "$OUT/licenses"
 cp -r "$HERE/licenses/." "$OUT/licenses/"
 cp "$REMOTE/LICENSE" "$REMOTE/LICENSING.md" "$REMOTE/TRADEMARKS.md" "$OUT/licenses/"

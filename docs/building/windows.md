@@ -8,7 +8,7 @@ On the Linux machine:
 
 - Rust, with the target: `rustup target add x86_64-pc-windows-gnu`.
 - `mingw-w64` (`x86_64-w64-mingw32-gcc`), `nasm`, `cmake`, `ninja`, `make`, `pkgconf`, `curl`, `zip`. On Arch Linux: `pacman -S --needed mingw-w64-gcc nasm cmake ninja make pkgconf curl zip`.
-- A Linux **Qt 6.12.0** (`qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools`), the exact version of the Windows Qt the scripts build, for `moc`, `rcc` and `qsb`. The scripts stop with a message when the two differ; when Arch moves to a newer Qt, the version in `build-qt-ucrt.sh` and `fetch-qt.sh` moves with it.
+- A Linux **Qt 6.12.1** (`qt6-base qt6-declarative qt6-shadertools qt6-svg qt6-tools`), the exact version of the Windows Qt the scripts build, for `moc`, `rcc` and `qsb`. The scripts stop with a message when the two differ; when Arch moves to a newer Qt, the version in `build-qt-ucrt.sh` and `fetch-qt.sh` moves with it.
 - `p7zip` (the zip and Qt's archives), `python` and `mingw-w64-binutils` (`objdump`, for the gate below).
 - About 15 GB of free disk space and patience: dependencies take around five minutes, ICU around half an hour, Qt built from source a few hours.
 - The app's icons are in the tree (`app/data/icons/SodiumOS`; `ICONS=` points to another folder).
@@ -25,9 +25,9 @@ packaging/windows/build-icu.sh
 
 # Qt for Windows. Release builds use Qt built from source on UCRT, so that no file in the package needs msvcrt:
 packaging/windows/fetch-qt.sh                  # Qt's own build: opengl32sw.dll (and the SBOM files for the Qt attributions) come from it
-packaging/windows/build-qt-ucrt.sh             # qtbase, qtshadertools, qtdeclarative, qtsvg 6.12.0 -> build/qt-win-ucrt/6.12.0
-cp build/qt-win/6.12.0/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.0/
-export QT_WIN_ROOT=$PWD/build/qt-win-ucrt/6.12.0
+packaging/windows/build-qt-ucrt.sh             # qtbase, qtshadertools, qtdeclarative, qtsvg 6.12.1 -> build/qt-win-ucrt/6.12.1
+cp build/qt-win/6.12.1/mingw_64/opengl32sw.dll build/qt-win-ucrt/6.12.1/
+export QT_WIN_ROOT=$PWD/build/qt-win-ucrt/6.12.1
 
 # Everything else: Sodium UI, the Rust engine, the app, the translations, the package.
 packaging/windows/stage-app.sh

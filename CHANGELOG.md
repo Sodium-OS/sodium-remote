@@ -14,6 +14,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Changed
 
+- **Windows app:** built with Qt 6.12.1 (was 6.12.0), the version Arch now ships for the host tools the cross build needs.
 - The `sodiumos-remoted` unit runs `/usr/bin/remoted` instead of a SodiumOS checkout's build, and `host/install.links` is gone (SodiumOS no longer carries Sodium Remote in its tree).
 
 - **LAN signalling** now starts with `SignalHelloV2`, and the host answers with a fresh nonce that goes into the seal context of that connection. Hosts refuse the 0.1.0 `SignalHello`, so connecting over the LAN needs both computers on this version.

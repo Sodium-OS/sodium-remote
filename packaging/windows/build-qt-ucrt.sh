@@ -30,14 +30,14 @@
 # Qt itself is built without ICU, as Qt's own Windows builds are (Sodium UI's native part uses the
 # ICU of build-icu.sh directly, found through win-deps). QT_ICU=1 builds Qt against that ICU too.
 # Output: remote/build/qt-win-ucrt/<version>/{bin,lib,plugins,qml,...}. Use it with
-#   QT_WIN_ROOT=remote/build/qt-win-ucrt/6.12.0  (toolchain-mingw.cmake reads it)
+#   QT_WIN_ROOT=remote/build/qt-win-ucrt/6.12.1  (toolchain-mingw.cmake reads it)
 # opengl32sw.dll (Mesa) is not Qt code: it still comes from fetch-qt.sh's archives.
 # Idempotent: a finished module is skipped (FORCE=1 redoes all). JOBS sets the parallelism.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REMOTE=$(cd "$HERE/../.." && pwd)
-QT_VER=6.12.0
+QT_VER=6.12.1
 QT_MINOR=${QT_VER%.*}
 OUT=${QT_UCRT_OUT:-$REMOTE/build/qt-win-ucrt}
 PREFIX=$OUT/$QT_VER
@@ -53,10 +53,10 @@ MODULES=(qtbase qtshadertools qtdeclarative qtsvg)
 BASE_URL=https://download.qt.io/official_releases/qt/$QT_MINOR/$QT_VER/submodules
 # SHA-256 of <module>-everywhere-src-$QT_VER.tar.xz, from Qt's published .sha256 files (--print-pins). Re-pin when QT_VER changes.
 declare -A QT_SHA=(
-  [qtbase]=a951bd163c7b80fc6b8c88d7668fb56abf91c152373e13c10666763238131307
-  [qtshadertools]=c7d84f436e1aaef39fdcadebf2bd71bdf24dc69497e13f2e0198873cbbfea2ab
-  [qtdeclarative]=311f3a2603e1973bb59baef9dfa740a376de713157d4782ee043681e889c9260
-  [qtsvg]=e4ab39534ec97987b1b9b60ef7f4d3253d5912a69f8c713a01753174a4029331
+  [qtbase]=cd837bb9fd631e20439a04eaa0c2f252f19ad92fdf5adf10229d0fbc2fab2d53
+  [qtshadertools]=f8c5b9c91eca0927198918c537d1b4d515f96dc9a3b178a88a1ff1d2f85c7877
+  [qtdeclarative]=91853e52d7ba958bfd85ea46b5efcf4a3b28b02e7bcd0e7c97a7b797ed6d1ecc
+  [qtsvg]=6a7157a9a0556a129ae6582c7fbe57a0d6c0b83083cfcbd38d5d4a93b30c46e1
 )
 
 log() { printf '\n==== %s\n' "$*" >&2; }
