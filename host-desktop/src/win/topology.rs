@@ -5,7 +5,7 @@
 //! database (no `SDC_SAVE_TO_DATABASE`): if the host dies, Windows goes back to the
 //! database's own configuration by itself.
 //!
-//! What worked in the driver spike (docs/remote/windows-vdd-spike.md, e): the virtual
+//! What worked when the driver was first tried in a Windows 11 VM: the virtual
 //! target's active path alone, its source moved to 0,0, the mode array cut down to that
 //! path's two entries, `SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES`.
 //! Without the move and the compaction Windows answers 87 (invalid parameter).

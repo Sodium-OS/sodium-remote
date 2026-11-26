@@ -41,12 +41,12 @@ pub const SETTING: &str = "matched_display";
 /// The topology journal, in the host's data folder.
 pub const JOURNAL: &str = "matched-display.json";
 /// How long a new virtual monitor may take to show up as a display before the session
-/// falls back to the physical display and scaling (W9.5).
+/// falls back to the physical display and scaling.
 pub const APPEAR_WITHIN: Duration = Duration::from_secs(3);
 /// How long the client's window must stay the same size before the monitor changes mode;
-/// scaling covers the drag until then (W8).
+/// scaling covers the drag until then.
 pub const MODE_QUIET: Duration = Duration::from_millis(400);
-/// A lost connection keeps the matched display this long for the client to come back (W9.6).
+/// A lost connection keeps the matched display this long for the client to come back.
 pub const LOST_GRACE: Duration = Duration::from_secs(15);
 /// The smallest matched mode, and the highest refresh.
 pub const MIN_SIZE: (u32, u32) = (800, 600);

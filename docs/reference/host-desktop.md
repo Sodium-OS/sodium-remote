@@ -1,6 +1,6 @@
 # host-desktop: the portable host
 
-`remote/host-desktop` is the host for computers that aren't SodiumOS: Windows, the Mac and Linux on GNOME or KDE Plasma (the Mac in [host-mac.md](host-mac.md), Linux in [host-linux.md](host-linux.md)). It is a library plus a program, `sodium-remote-host`. SodiumOS keeps `sodiumos-remoted`, which has its own virtual display, compositor plugin and input method; `host-desktop` streams the computer's real displays instead (`display_mode: Physical`).
+`remote/host-desktop` is the host for computers that aren't SodiumOS: Windows, the Mac and Linux on GNOME or KDE Plasma (the Mac in [host-mac.md](host-mac.md), Linux in [host-linux.md](host-linux.md)). It is a library plus a program, `sodium-remote-host`. SodiumOS keeps `sodiumos-remoted`, which has its own virtual display, compositor plugin and input method; `host-desktop` streams the computer's real displays instead (`display_mode: Physical`), or on Windows, with the setting on, a virtual display matched to the client's window ([the matched display](#the-matched-display-windows)).
 
 ## Layout
 
@@ -12,7 +12,10 @@
 | `src/policy.rs` | The rules with unit tests: codec choice, fit to the client's maximum, the 150 ms refresh, the encoder re-open rule, pointer mapping. |
 | `src/encode.rs` + `csrc/hd_shim.c` | The encoders through a C shim: FFmpeg's (hardware HEVC and H.264, Media Foundation H.264, VA-API, libx264) and OpenH264 used directly, its library loaded at run time (`src/softvideo.rs`: Cisco's DLL on Windows, downloaded on first need; the system's on Linux); BGRA to NV12/I420 with swscale; Opus. |
 | `src/hid.rs` | HID usage to Windows scan code (set 1) or virtual key, to macOS key code, and to Linux evdev code. |
-| `src/fake.rs` | A fake backend for tests on any OS. |
+| `src/fake.rs` | A fake backend for tests on any OS, and `FakeDisplays`, a fake driver and display configuration for the matched display. |
+| `src/vdisplay.rs` | The matched display: the `VirtualDisplay` and `Topology` traits, `Matched`, the journal, the mode rule. Platform-free. |
+| `src/vdd_pin.rs` | The driver's commit, file names and SHA-256 pins. |
+| `src/settings.rs` | `settings.json` in the data folder (software video, the matched display). |
 | `src/win/` | The Windows backend (`cfg(windows)`). |
 | `src/mac/` | The macOS backend (`cfg(target_os = "macos")`): [host-mac.md](host-mac.md). |
 | `src/linux/` | The generic Linux backend over xdg-desktop-portal (feature `linux-portal`, on by default): [host-linux.md](host-linux.md). PipeWire capture and audio are in `remote/linux-media`. |
@@ -31,7 +34,7 @@
 - **Pairing.** With `--pair`, or when nothing is paired yet, the host opens pairing, prints `pairing code NNNNNN` when stdout is a terminal (never to a log or the journal) and writes `pairing-code.txt` (0600 in a 0700 data folder on Linux and macOS, tightened at every start; removed once a client pairs). With `--pair` it opens a new code when one expires; after three wrong codes pairing stays closed (it says so) until it is opened again.
 - **Pairing by address.** A client that knows only this computer's address pairs with `IP[:PORT]` (default 47311) and the code: `remote-client --data DIR pair --address IP --code N`. The host answers the address-only exchange (M1 `v: 2`) as well as the ID one; the client learns this host's ID from the exchange, bound by the code (`protocol.md`, `session-api.md` section 4). Nothing changes in the host's command line.
 - **Discovery.** The LAN listener is on (`0.0.0.0:47311`, or any free port if that's taken; `--port`, `--bind`). mDNS is on unless `--no-mdns`. The rendezvous server is off unless `--rendezvous URL`.
-- **Welcome**: `host_os` Windows (or the backend's), `display_mode` Physical, `live_resize` true (`Backend::live_resize`; every backend's encoder scales to any even size), no UI scales, no home monitor, the displays with their Windows names where Windows has them (empty otherwise, so clients show "Display %1"), the current one, and `view_only` (true only when the backend can't inject input: a Mac without Accessibility; the Windows and fake backends send false).
+- **Welcome**: `host_os` Windows (or the backend's), `display_mode` Physical (Virtual while the matched display is up), `live_resize` true (`Backend::live_resize`; every backend's encoder scales to any even size), no UI scales, no home monitor, the displays with their Windows names where Windows has them (empty otherwise, so clients show "Display %1"), the current one, and `view_only` (true only when the backend can't inject input: a Mac without Accessibility; the Windows and fake backends send false).
 - **Not ready** (`Backend::check_ready`): returns `NotReady::Permission { screen_recording, accessibility }`, sent to the client as `DisconnectReason::PermissionMissing`, or `NotReady::Other(text)` for the client's log. `Backend::view_only()` feeds `Welcome.view_only` and `ControllingDevice.viewOnly`.
 - **Display.** The client's chosen display, else the primary. `SelectDisplay` restarts the media on another display and sends a new `Format`. The frame rate is the lower of the client's and the display's.
 - **Stream size.** `policy::stream_size`: the largest even size with the display's aspect that fits the client's window (`Hello.display` width and height, then each `Resize`; physical pixels) and the decoder's `max_width`/`max_height`, never above the display's native size (the client scales up). `Resize` is debounced: the host applies the latest one after 150 ms without another. If the size is unchanged, nothing happens. If only the size changed, the media loop opens a new encoder on the running capture, sends `Format` and a keyframe, and resends the pointer shape at the new scale; a changed display, rate or codec restarts the whole stream as `SelectDisplay` does. The encoders scale the captured picture: swscale on the CPU path for every Windows encoder (NVENC, AMF, QSV, Media Foundation, OpenH264) and the Linux software and CPU-fed encoders (area averaging when shrinking, bilinear when enlarging), `scale_vaapi` for Linux DMA-BUF frames, `VTPixelTransferSession` on the Mac. Pointer positions arrive in stream pixels and are scaled to display pixels on the host (`policy::stream_to_display`), so they stay right at any stream size; the pointer shape and damage rectangles are scaled to stream pixels.
@@ -40,6 +43,29 @@
 - **Clipboard.** Text, HTML and PNG both ways, as remoted does it (offer, request, chunks). An entry a password manager marks with `ExcludeClipboardContentFromMonitorProcessing` goes out with the offer's `concealed` flag; a concealed entry coming in is written with that format and `CanIncludeInClipboardHistory` 0.
 - **Audio.** The default output device's loopback, 48 kHz stereo, Opus 10 ms frames at 128 kbit/s.
 - **Lost and ended sessions.** `ClientLost` pauses the media; the core's hold keeps the session for a resume. `HoldExpired` or a disconnect ends it.
+
+## The matched display (Windows)
+
+With "Match the display to the connecting computer" on (`settings.json` key `matched_display`, default off), a connection gets a virtual monitor at its window size as the only active display.
+
+**Traits** (`src/vdisplay.rs`), behind which Mac and Linux have nothing (`Backend::topology` is None, `Backend::virtual_display` an error):
+
+| Trait | Methods | Windows |
+|---|---|---|
+| `VirtualDisplay` | `create(key, mode)`, `set_mode(monitor, mode)` (in place when the driver can; false: replace the monitor), `remove(key)`, `keep_alive()` | `win/sudovda.rs`: SudoVDA's IOCTLs on its device interface `{e5bcc234-1e0c-418a-a0d4-ef8b7501414d}`: ADD (w, h, Hz, GUID, EDID name "Sodium Remote") gives the adapter LUID and target id; REMOVE by GUID; PING; protocol 0.2 required |
+| `Topology` | `display_of(monitor)`, `save()`, `only(monitor)`, `restore(saved)`, `rescue_windows()` | `win/topology.rs`: `QueryDisplayConfig`/`SetDisplayConfig`, never `SDC_SAVE_TO_DATABASE` |
+
+**A session** (`Matched`, driven by `session.rs`):
+
+1. Before `Welcome`: the mode is the client's window (`Hello.display`), its refresh (the client's setting, else its display's) and its decoder's maximum: even, at least 800×600, at most 120 Hz, at most 8192 a side (`matched_mode`).
+2. The active topology is saved and the journal written (`matched-display.json` in the data folder: the monitor GUIDs and the topology, hex), then the monitor created. It must show as an active display within 3 s; Windows extends the desktop to it by itself (if it doesn't, the host extends once, unsaved). Otherwise everything is undone and the session gets the physical display and scaling (`Note::MatchedDisplayFailed`, the app's `host_matched` event).
+3. `only`: the virtual target's path alone, its source at 0,0, the mode array cut to that path's entries, `SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES`. The physical displays are inactive; Windows moves the windows. The capture is the usual DXGI duplication of the virtual output once it is listed (up to 1 s). `Welcome` says Virtual; `SelectDisplay` is ignored.
+4. A thread pings the driver every second. SudoVDA's watchdog (3 s) removes every monitor when the pings stop, so the monitor dies with the host and Windows applies its own, unchanged database configuration.
+5. `Resize`: scaling as for a physical display after 150 ms; 400 ms after the last `Resize` the monitor takes the new mode and the stream restarts on it (new capture, `Format`, keyframe). A mode the monitor lists (its own, ×0.5/0.75/1.25/1.5 variants, a preset list) is set in place with `ChangeDisplaySettingsEx` (not saved); any other size is a new monitor (new GUID, journaled), made the only display, then the old one removed and `only` applied again.
+6. The end: the saved topology applied again (if it fails, as after a restart when the adapter LUIDs changed, `SDC_USE_DATABASE_CURRENT`), the monitor removed, after 300 ms visible windows on no monitor moved to the primary's work area (`rescue_windows`), the journal deleted. At once on a clean disconnect, `HoldExpired`, a hosting switch-off or Quit; 15 s after `ClientLost` unless a connection came since.
+7. Start (`Session::start`, and `rh_new` in the app): a leftover journal means the host stopped with the monitor up: its monitors are removed (when the driver answers), the topology applied again (skipped when it already is), windows rescued, the journal deleted.
+
+**Install** (`win/vdd_install.rs`, run as `SodiumRemote.exe --matched-display install|uninstall --log FILE`, started elevated by the app with one UAC prompt; the setting is saved only when it exits 0): the files in `drivers\sudovda\` beside the program must match `vdd_pin.rs` (empty pins fail closed); our certificate goes into the local machine's Root and TrustedPublisher stores; the package is staged (`SetupCopyOEMInf`); a root Display device with hardware ID `Root\SudoMaker\SudoVDA` is made (`SetupDiCreateDeviceInfo`, `SPDRP_HARDWAREID`, `DIF_REGISTERDEVICE`) and the driver installed on it (`UpdateDriverForPlugAndPlayDevices`, forced); then the control device must answer within 10 s. `HKLM\SOFTWARE\Sodium Remote\Matched display` keeps `Device`, `DriverInf` and `Certificate` (thumbprint). Uninstall removes exactly those (`DiUninstallDevice`, `SetupUninstallOEMInf`, the certificate by thumbprint from both stores) and the key. A SudoVDA device the key doesn't name (another program's) stops the install and is never touched. The driver is built and signed by `packaging/windows/sudovda/` (`make-cert.sh`, `build-sign.ps1`, `pin.sh`).
 
 ## Media policy
 
@@ -84,7 +110,7 @@ sodium-remote-host [--data DIR] [--name NAME] [--port N] [--pair] [--no-mdns] [-
 
 ## Testing
 
-- **Unit tests** (`cargo test -p host-desktop`): HID scan code and Mac key code spot checks, codec choice, the 150 ms refresh, the re-open rule, the keyframe gate, pointer mapping (Windows and Mac), fit.
+- **Unit tests** (`cargo test -p host-desktop`): HID scan code and Mac key code spot checks, codec choice, the 150 ms refresh, the re-open rule, the keyframe gate, pointer mapping (Windows and Mac), fit; the matched display with `FakeDisplays` (the mode rule, the journal and its recovery, Virtual or Physical by the setting with a new size replacing the monitor, the fallback when the display doesn't appear).
 - **The Mac off the Mac:** `host-desktop/build-swift.sh check-mac` type-checks the macOS backend, with and without `ffi`, for `aarch64-apple-darwin` on Linux.
 - **Linux end to end:** `host-desktop/tests/e2e-linux.sh [hevc_nvenc|openh264] [SECS]`. A fake host on a random port with mDNS off, the probe pairs over the LAN hint, client-linux runs headless for SECS seconds, then the probe types, commits IME text, clicks, scrolls, exchanges clipboard text and switches displays. Output in `remote/build/e2e/<encoder>/`.
 - **Linux, GNOME and KDE Plasma:** `host-desktop/tests/linux/e2e.sh gnome|kde [--fresh]` in the Arch VM; see [host-linux.md](host-linux.md).
@@ -118,7 +144,7 @@ client-linux and the probe on this PC, the host in the Windows 11 VM (Basic Disp
 ## Limits
 
 - One display at a time; a second client takes over.
-- No virtual display, no UI scales, no home monitor. The display itself is never resized; only the stream follows the client's window.
+- No UI scales, no home monitor. Without the matched display (Windows only, off by default) the display itself is never resized; only the stream follows the client's window. The matched display has one monitor, no HDR, Windows' own DPI scale for it, and isn't verified on hardware yet; SudoVDA's render adapter is its default (the GPU with the most memory).
 - Programs running elevated can't be driven unless the host is elevated (UIPI). The secure desktop is never captured or driven.
 - The CPU path copies each frame out of the GPU and converts and scales it with swscale (a window smaller than the display makes that work and the encoder's smaller). Scaling on the GPU is part of the same next step: the D3D11 video processor takes the desktop texture to an NV12 texture at the stream size, so the copy to system memory and swscale both go. A GPU path (D3D11 video processor into an NV12 texture straight into NVENC/AMF/QSV) is the next step for 4K at 60 fps.
 - WGC (Windows.Graphics.Capture) isn't built: duplication works on the Basic Display Adapter, so it was never needed as a fallback.
