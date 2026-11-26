@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 # SPDX-FileCopyrightText: 2026 Ning Bao
-# Makes Sodium Remote's self-signed code-signing certificate for the matched display's driver (SudoVDA, built and signed
-# by build-sign.ps1). Run once, by the maintainer, with the go-ahead to make the real key. Nothing here is uploaded.
+# Makes Sodium Remote's self-signed code-signing certificate for the matched display's driver (Sodium Remote Display,
+# built by build.ps1 in CI and signed by sign.sh). Run once, by the maintainer, with the go-ahead to make the real key. Nothing here is uploaded.
 #
 #   packaging/windows/sudovda/make-cert.sh [--out DIR]
 #
 # - The private key stays in $SODIUM_REMOTE_SIGNING_DIR (default ~/.local/share/sodium-remote-signing/, 0700): key.pem
-#   (encrypted) and signing.pfx (for signtool in the build VM), both 0600, both locked with the password in
+#   (encrypted) and signing.pfx (for sign.sh), both 0600, both locked with the password in
 #   $SODIUM_REMOTE_SIGNING_PASS (asked for when unset). Never in the repository.
 # - The public certificate goes to DIR (default: this folder) as sodium-remote-driver-signing.cer (DER), the file the app
 #   imports into the local machine's Root and TrustedPublisher stores when "Match the display to the connecting computer"

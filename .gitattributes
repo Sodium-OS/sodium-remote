@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+# The display driver's patches apply to SudoVDA's files byte for byte, and their SHA-256 goes in each build's record:
+# never convert their line endings (a Windows checkout would otherwise make them CRLF).
+packaging/windows/sudovda/patches/*.patch -text
