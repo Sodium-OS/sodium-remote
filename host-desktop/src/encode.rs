@@ -7,7 +7,7 @@
 //! the portal's DMA-BUF pictures (`hd_enc_encode_drm`).
 //!
 //! Every candidate is set up for low latency: no B-frames, no lookahead, an endless
-//! GOP with keyframes on request only, CBR with a one-frame VBV (FFmpeg) or OpenH264's
+//! GOP with keyframes on request only, CBR with a one-frame VBV (FFmpeg; Quick Sync half a second) or OpenH264's
 //! bitrate mode without frame skipping. OpenH264 changes its rate per frame; FFmpeg's
 //! wrappers fix it at open (its NVENC wrapper even forces an IDR on every change), so
 //! for those the media loop re-opens on a lasting change (`policy::RateFollower`).

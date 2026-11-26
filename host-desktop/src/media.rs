@@ -33,7 +33,7 @@ use remote_core::connect::Host;
 use remote_core::msg::{self, Codec, CursorImage, Msg};
 use remote_core::session::OutgoingFrame;
 
-use crate::backend::{Backend, CursorShape, Display, Encoder, EncoderConfig, Picture, Rect};
+use crate::backend::{Backend, CursorShape, Display, EncodedFrame, Encoder, EncoderConfig, Picture, Rect};
 use crate::policy::{KeyframeGate, RateFollower, Refresh};
 
 /// The encoder's rate until core has a budget (core's controller starts at 8 Mbps).
@@ -328,6 +328,29 @@ impl Loop {
         }
     }
 
+    /// An encode error is no reason to end the session either. HEVC goes to H.264 for the rest of the
+    /// session at once (a hardware HEVC encoder that failed once fails again: `hevc_qsv`'s empty frames);
+    /// H.264 gets a new encoder. Then that encoder's keyframe of the same picture, once more with a new
+    /// encoder if it fails too; after that the error ends the stream.
+    fn recover(&mut self, pic: &dyn Picture, bps: u64, e: anyhow::Error) -> Result<EncodedFrame> {
+        if self.setup.codec == Codec::H264 {
+            eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
+            self.open_encoder(bps)?;
+        } else {
+            eprintln!("sodium-remote-host: encode: {e:#}");
+            self.encoder = None;
+            self.fall_back(bps, e)?;
+        }
+        match self.encoder.as_mut().expect("encoder").encode(pic, true, bps) {
+            Ok(f) => Ok(f),
+            Err(e) => {
+                eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
+                self.open_encoder(bps)?;
+                self.encoder.as_mut().expect("encoder").encode(pic, true, bps)
+            }
+        }
+    }
+
     fn try_open(&mut self, bps: u64) -> Result<()> {
         let cfg = EncoderConfig {
             codec: self.setup.codec,
@@ -517,18 +540,7 @@ impl Loop {
         let enc = self.encoder.as_mut().expect("encoder");
         let f = match enc.encode(pic.as_ref(), keyframe, bps) {
             Ok(f) => f,
-            Err(e) => {
-                // A new encoder (which tries again and falls back by itself), then H.264, then give up.
-                eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
-                self.open_encoder(target)?;
-                match self.encoder.as_mut().unwrap().encode(pic.as_ref(), true, target) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        self.fall_back(target, e)?;
-                        self.encoder.as_mut().unwrap().encode(pic.as_ref(), true, target)?
-                    }
-                }
-            }
+            Err(e) => self.recover(pic.as_ref(), target, e)?,
         };
         let t_encoded = Instant::now();
         self.last_sent = Some(now);
