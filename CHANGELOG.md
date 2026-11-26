@@ -8,6 +8,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - **Windows host: "Match the display to the connecting computer"** (This computer, off by default). While someone is connected, Windows uses a virtual display the size of their window as the only display, so the picture is 1:1 at any window size; this computer's screens are off meanwhile and its keyboard and mouse keep working. The virtual display follows the window 400 ms after a resize, falls back to the real screens and scaling when it can't start, and goes away with the host if the app stops. Turning it on installs Sodium Remote Display (SudoVDA with Sodium Remote's own IDs and an in-place resize, built and signed by Sodium Remote) with one administrator prompt, beside any other program's SudoVDA; turning it off removes it. One Sodium Remote host runs on a Windows computer at a time.
 - **Arch package `sodium-remote-sodiumos`**: the SodiumOS host, `remoted`, in `/usr/bin`, with its systemd user unit (`sodiumos-remoted.service`), the D-Bus activation file for `org.sodiumos.Remote` and the fcitx5 input-method add-on. Installing enables nothing; Settings › Remote starts it when it opens.
+- **Windows client: zero copy.** The D3D11VA decoder now decodes on the presenter's own Direct3D 11 device, and each picture is drawn straight from the decoder's texture instead of being copied to system memory and uploaded again. Where the GPU or driver can't do that, pictures are copied as before. `--no-zero-copy` turns it off for comparing.
+- **Windows client: picks the GPU that decodes.** It decodes (and, with zero copy, presents) on the first GPU that has a hardware video decoder, the display's GPU when it has one, instead of always the display's GPU, which left PCs whose display adapter has no video decoder on software decoding.
+- **Windows client: present path timing** on stderr every 5 s and on the HUD (to the GPU, ready → drawn, drawn → shown, last packet → shown).
+- **Windows client: `--no-vsync`** presents without waiting for the vsync where DXGI allows tearing (full screen). Off by default.
 
 ### Changed
 
@@ -20,6 +24,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 
+- **Hosts.** Switching a host off and straight back on no longer fails with "address already in use": switching off now waits until the LAN port is released.
 - **Windows app.** The session window opens fitted to and centred on its screen at any display scale, instead of wider than a 150–200% laptop screen and partly off it. Its edges resize it, it maximises and snaps, it follows a move to a monitor with another scale, and full screen goes in and out with the previous size restored.
 - **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
 - **Linux host (NVIDIA).** Scrolling text no longer shimmers on a fast link. While content keeps moving, the encoder's quality can drop by only a small step from one frame to the next.

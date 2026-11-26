@@ -27,6 +27,9 @@ public:
     /// The HWND the engine parents its child window to.
     void *hwnd() const;
     void setTitle(const QString &title);
+    /// Opening the window: the HUD goes to `logical` (Qt's pixels) and the frame with it. Otherwise the frame owns
+    /// the geometry and the HUD follows it.
+    void place(const QRect &logical);
     /// What the app draws over the picture, HUD-window logical pixels: the HUD window's region.
     void setRegion(const QVariantList &rects);
     /// A key the engine saw while an app menu is open (the keyboard has no Qt focus: the frame is foreground and the

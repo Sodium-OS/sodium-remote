@@ -166,7 +166,9 @@ public Q_SLOTS:
     /// geometry), centred on it, so it never opens larger than the screen or partly outside it.
     static QRect fitWindow(const QRect &avail, const QSize &want);
     /// The same for the screen `anchor` (the main window) is on, as {x, y, width, height}.
-    Q_INVOKABLE QVariantMap streamWindowRect(QWindow *anchor, int width, int height) const;
+    Q_INVOKABLE QVariantMap fittedWindowRect(QWindow *anchor, int width, int height) const;
+    /// Places the stream window (logical pixels); on Windows its frame follows.
+    Q_INVOKABLE void placeStreamWindow(QWindow *window, int x, int y, int width, int height);
 
     /// Starts a session whose picture goes under `window` (the stream window).
     /// `videoY`: where the picture starts in the window (below the title bar; 0 in full screen).

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Ning Bao
 #include "streamframe.h"
 
+#include <QAbstractNativeEventFilter>
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QWindow>
@@ -50,7 +51,7 @@ int frameThickness(HWND h)
 }
 } // namespace
 
-struct StreamFrame::Impl
+struct StreamFrame::Impl : QAbstractNativeEventFilter
 {
     StreamFrame *q = nullptr;
     QPointer<QWindow> hud;
@@ -62,6 +63,26 @@ struct StreamFrame::Impl
     RECT normalRect{};
     bool wasZoomed = false;
     QByteArray cls;
+
+    /// The HUD's own moves and resizes (Qt's startSystemMove/startSystemResize: the bar's drag, its resize edges)
+    /// become the frame's: Qt posts them to the HUD as WM_SYSCOMMAND SC_MOVE/SC_SIZE after releasing the mouse.
+    bool nativeEventFilter(const QByteArray &type, void *message, qintptr *result) override
+    {
+        if (type != "windows_generic_MSG")
+            return false;
+        auto *m = static_cast<MSG *>(message);
+        if (m->hwnd != hudHwnd || m->message != WM_SYSCOMMAND || !frame)
+            return false;
+        const WPARAM cmd = m->wParam & 0xFFF0;
+        if (cmd != SC_MOVE && cmd != SC_SIZE)
+            return false;
+        if (!fullscreen)
+            PostMessageW(frame, WM_SYSCOMMAND, m->wParam, m->lParam);
+        // Qt's event dispatcher filters queued messages with no result pointer.
+        if (result)
+            *result = 0;
+        return true;
+    }
 
     static LRESULT CALLBACK proc(HWND h, UINT m, WPARAM w, LPARAM l)
     {
@@ -179,26 +200,20 @@ struct StreamFrame::Impl
         syncing = false;
     }
 
-    /// The HUD was moved or resized (its own bar drag, its edges): the frame follows. Never in or around full
-    /// screen: the frame owns that geometry (Qt's own saved rectangle for the HUD is not to be trusted).
-    void fromHud()
+    /// The frame owns the geometry: whatever moves or resizes the HUD (Qt around full screen, a monitor's scale) is
+    /// put back on the frame. The user's moves and resizes reach the frame directly (nativeEventFilter).
+    void onHudChanged()
     {
-        if (syncing || !hudHwnd || !IsWindow(hudHwnd) || fullscreen || !hud || (hud->windowStates() & Qt::WindowFullScreen))
+        toHud();
+    }
+
+    /// Opening the window: the frame takes the rectangle the app placed the HUD at (physical pixels).
+    void adoptHud()
+    {
+        if (fullscreen || !hudHwnd || !IsWindow(hudHwnd))
             return;
         RECT r;
         GetWindowRect(hudHwnd, &r);
-        RECT cur;
-        if (IsZoomed(frame)) {
-            // The HUD sits on the client area of a maximised frame: that is not a move.
-            GetClientRect(frame, &cur);
-            POINT p{0, 0};
-            ClientToScreen(frame, &p);
-            OffsetRect(&cur, p.x, p.y);
-        } else {
-            GetWindowRect(frame, &cur);
-        }
-        if (cur.left == r.left && cur.top == r.top && cur.right == r.right && cur.bottom == r.bottom)
-            return;
         syncing = true;
         if (IsZoomed(frame))
             ShowWindow(frame, SW_RESTORE);
@@ -282,7 +297,8 @@ StreamFrame::StreamFrame(QWindow *hud, const QString &title, QObject *parent)
     SetWindowLongPtrW(d->hudHwnd, GWL_EXSTYLE, ex | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
     SetWindowLongPtrW(d->hudHwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(d->frame));
 
-    auto follow = [this] { d->fromHud(); };
+    QGuiApplication::instance()->installNativeEventFilter(d);
+    auto follow = [this] { d->onHudChanged(); };
     connect(hud, &QWindow::xChanged, this, follow);
     connect(hud, &QWindow::yChanged, this, follow);
     connect(hud, &QWindow::widthChanged, this, follow);
@@ -295,7 +311,7 @@ StreamFrame::StreamFrame(QWindow *hud, const QString &title, QObject *parent)
             ShowWindow(d->frame, SW_HIDE);
         else if (v && d->frame) {
             if (!d->fullscreen)
-                d->fromHud();
+                d->adoptHud();
             ShowWindow(d->frame, SW_SHOW);
             SetForegroundWindow(d->frame);
         }
@@ -316,6 +332,7 @@ StreamFrame::StreamFrame(QWindow *hud, const QString &title, QObject *parent)
 
 StreamFrame::~StreamFrame()
 {
+    QGuiApplication::instance()->removeNativeEventFilter(d);
     if (d->hudHwnd && IsWindow(d->hudHwnd))
         SetWindowLongPtrW(d->hudHwnd, GWLP_HWNDPARENT, 0);
     if (d->frame) {
@@ -323,6 +340,17 @@ StreamFrame::~StreamFrame()
         DestroyWindow(d->frame);
     }
     delete d;
+}
+
+void StreamFrame::place(const QRect &logical)
+{
+    if (!d->hud)
+        return;
+    // While the HUD moves, it must not be put back on the frame's old rectangle: then the frame takes it.
+    d->syncing = true;
+    d->hud->setGeometry(logical);
+    d->syncing = false;
+    d->adoptHud();
 }
 
 void *StreamFrame::hwnd() const

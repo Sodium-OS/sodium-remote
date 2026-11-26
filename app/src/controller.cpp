@@ -504,13 +504,26 @@ QRect RemoteController::fitWindow(const QRect &avail, const QSize &want)
     return QRect(avail.x() + (avail.width() - w) / 2, avail.y() + (avail.height() - h) / 2, w, h);
 }
 
-QVariantMap RemoteController::streamWindowRect(QWindow *anchor, int width, int height) const
+QVariantMap RemoteController::fittedWindowRect(QWindow *anchor, int width, int height) const
 {
     QScreen *screen = anchor ? anchor->screen() : nullptr;
     if (!screen)
         screen = QGuiApplication::primaryScreen();
     const QRect r = screen ? fitWindow(screen->availableGeometry(), QSize(width, height)) : QRect(0, 0, width, height);
     return {{QStringLiteral("x"), r.x()}, {QStringLiteral("y"), r.y()}, {QStringLiteral("width"), r.width()}, {QStringLiteral("height"), r.height()}};
+}
+
+void RemoteController::placeStreamWindow(QWindow *window, int x, int y, int width, int height)
+{
+    if (!window)
+        return;
+#ifdef Q_OS_WIN
+    if (m_frame) {
+        m_frame->place(QRect(x, y, width, height));
+        return;
+    }
+#endif
+    window->setGeometry(x, y, width, height);
 }
 
 bool RemoteController::connectTo(const QString &hostId, QWindow *window, bool takeover, bool fullscreen, int videoY)
