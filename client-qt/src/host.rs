@@ -65,6 +65,7 @@ fn note_json(n: Note) -> Value {
         Note::Paired(d) => json!({"ev": "host_paired", "id": d.id.to_string(), "name": d.name}),
         Note::PairedChanged => json!({"ev": "host_paired"}),
         Note::Consent(c) => consent_json(&c),
+        Note::MatchedDisplayFailed => json!({"ev": "host_matched", "state": "failed"}),
     }
 }
 
