@@ -29,6 +29,8 @@ RULES = [
     ("libstdc++-*.dll", ["GCC-Runtime-Library-Exception-3.1.txt", "GCC-runtime-GPL-3.0.txt"]),
     ("libwinpthread-*.dll", ["MinGW-w64-runtime-and-winpthreads.txt"]),
     ("opengl32sw.dll", ["Mesa-opengl32sw-NOTICE.txt"]),
+    # The matched display's driver (packaging/windows/sudovda/), a separate binary, when a signed build is staged.
+    ("drivers/sudovda/*.dll", ["SudoVDA-MIT.txt", "SudoVDA-MS-PL.txt"]),
 ]
 # Linked into the program itself (static), so there is no DLL to match: their texts must be there too.
 STATIC = ["opus-BSD-3-Clause.txt", "libvpl-MIT.txt", "nv-codec-headers-MIT.txt", "AMF-MIT.txt", "openh264-headers-BSD-2-Clause.txt",

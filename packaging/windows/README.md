@@ -116,6 +116,7 @@ VM helpers are in `remote/tools/vm/windows-app/`: `redeploy.sh` (stage and copy 
 | `opengl32sw.dll` | MIT (Mesa 11.2.2), NCSA (LLVM 3.6.2) | `Mesa-opengl32sw-NOTICE.txt` |
 | `SodiumRemote.exe`: Opus, libvpl, nv-codec-headers, AMF, OpenH264 headers | BSD-3, MIT, MIT, MIT, BSD-2 | `opus-BSD-3-Clause.txt`, `libvpl-MIT.txt`, `nv-codec-headers-MIT.txt`, `AMF-MIT.txt`, `openh264-headers-BSD-2-Clause.txt`, `OpenH264-Cisco-NOTICE.txt` |
 | `fonts/` | SIL OFL 1.1 | `Inter-OFL.txt`, `JetBrainsMono-OFL.txt`, `NotoSansCJK-OFL.txt` |
+| `drivers/sudovda/` (when a signed build is staged): SudoVDA, a separate binary | MIT and CC0 (SudoMaker, VirtualDrivers), MS-PL (Microsoft's IddSampleDriver) | `SudoVDA-MIT.txt`, `SudoVDA-MS-PL.txt` |
 | `SodiumRemote.exe`, `sodiumuinative.dll`, Rust libraries | AGPL-3.0-only; the Rust libraries' own | `LICENSE`, `LICENSING.md`, `THIRD-PARTY-NOTICES.md` |
 | `d3dcompiler_47.dll` | not shipped (Microsoft's; Windows 10 and 11 have it in System32, where Qt loads it) | none |
 
