@@ -46,8 +46,11 @@ fn parse<const N: usize>(s: &str) -> Option<[u8; N]> {
     (out != [0u8; N]).then_some(out)
 }
 
+/// Each file's name and SHA-256.
+pub type FilePins = Vec<(&'static str, [u8; 32])>;
+
 /// Every file with its SHA-256, and the certificate's thumbprint; or why this build isn't pinned.
-pub fn pinned() -> Result<(Vec<(&'static str, [u8; 32])>, [u8; 20]), String> {
+pub fn pinned() -> Result<(FilePins, [u8; 20]), String> {
     let why = || "the virtual display driver is not pinned in this build: run packaging/windows/sudovda/pin.sh after a signed build and put its lines in host-desktop/src/vdd_pin.rs".to_string();
     let files = [(INF, INF_SHA256), (DLL, DLL_SHA256), (CAT, CAT_SHA256), (CER, CER_SHA256)]
         .into_iter()

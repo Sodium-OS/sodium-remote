@@ -139,7 +139,7 @@ fn ours() -> Result<Devices> {
         if unsafe { SetupDiGetDeviceRegistryPropertyW(set, &dev, SPDRP_HARDWAREID, None, Some(&mut buf), None) }.is_err() {
             continue;
         }
-        let wide: Vec<u16> = buf.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let wide: Vec<u16> = buf.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
         let matches = wide.split(|&c| c == 0).any(|id| String::from_utf16_lossy(id).to_ascii_lowercase() == want);
         if matches {
             let mut id = vec![0u16; 512];
