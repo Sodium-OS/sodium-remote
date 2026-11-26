@@ -401,7 +401,9 @@ void HostController::handleEvent(const QJsonObject &ev)
     } else if (kind == QLatin1String("host_paired")) {
         refreshPaired();
     } else if (kind == QLatin1String("host_status")) {
-        const bool now = ev.value(QStringLiteral("controlled")).toBool();
+        // A held session (the connection was lost; the host waits for the client to come back) isn't controlling
+        // anything: the page, the tray and the paired list stop showing it as connected. A client that returns is a new "controlling".
+        const bool now = ev.value(QStringLiteral("controlled")).toBool() && !ev.value(QStringLiteral("held")).toBool();
         QVariantMap c;
         if (now) {
             c = ev.value(QStringLiteral("client")).toObject().toVariantMap();

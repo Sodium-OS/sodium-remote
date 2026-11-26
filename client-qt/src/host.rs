@@ -16,8 +16,29 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+/// The runtime, dropped with `shutdown_background`: the last `Arc<Rh>` may go in a task on the runtime's own thread
+/// (a finished `disable`), where tokio's plain drop would panic.
+struct Rt(Option<tokio::runtime::Runtime>);
+
+impl std::ops::Deref for Rt {
+    type Target = tokio::runtime::Runtime;
+    fn deref(&self) -> &tokio::runtime::Runtime {
+        self.0.as_ref().expect("the runtime")
+    }
+}
+
+impl Drop for Rt {
+    fn drop(&mut self) {
+        if let Some(rt) = self.0.take() {
+            rt.shutdown_background();
+        }
+    }
+}
+
 pub struct Rh {
-    rt: tokio::runtime::Runtime,
+    rt: Rt,
+    /// The stop in flight (`disable`): `rh_free` waits for it, so the matched display is restored before the app ends.
+    stopping: Mutex<Option<tokio::task::JoinHandle<()>>>,
     data: PathBuf,
     sink: Sink,
     gate: Arc<crate::Gate>,
@@ -118,12 +139,13 @@ impl Rh {
     fn disable(self: &Arc<Self>) {
         let s = self.session.lock().unwrap().take();
         let me = self.clone();
-        self.rt.spawn(async move {
+        let h = self.rt.spawn(async move {
             if let Some(s) = s {
                 s.shutdown().await;
             }
             (me.sink)(json!({"ev": "host", "state": "off"}));
         });
+        *self.stopping.lock().unwrap() = Some(h);
     }
 
     fn with(&self, f: impl FnOnce(&Session) + Send + 'static) {
@@ -149,7 +171,7 @@ pub unsafe extern "C" fn rh_new(data_dir: *const c_char, cb: EventFn, user: *mut
     let soft = SoftwareVideo::system();
     // A matched display left up by a host that stopped (a crash, a sign-out): the displays as they were, before anything else.
     host_desktop::recover_matched_display(&data);
-    Box::into_raw(Box::new(Arc::new(Rh { rt, data, sink, gate, session: Mutex::new(None), soft })))
+    Box::into_raw(Box::new(Arc::new(Rh { rt: Rt(Some(rt)), stopping: Mutex::new(None), data, sink, gate, session: Mutex::new(None), soft })))
 }
 
 unsafe fn rh<'a>(p: *mut Arc<Rh>) -> &'a Arc<Rh> {
@@ -162,6 +184,9 @@ pub unsafe extern "C" fn rh_free(p: *mut Arc<Rh>) {
         return;
     }
     let b = unsafe { Box::from_raw(p) };
+    if let Some(h) = b.stopping.lock().unwrap().take() {
+        let _ = b.rt.block_on(h);
+    }
     if let Some(s) = b.session.lock().unwrap().take() {
         b.rt.block_on(s.shutdown());
     }

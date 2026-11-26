@@ -208,6 +208,10 @@ impl Topology for WinTopology {
         Ok(())
     }
 
+    fn is_only(&self, m: &Monitor) -> bool {
+        query(QDC_ONLY_ACTIVE_PATHS).is_ok_and(|(paths, _)| paths.len() == 1 && find(&paths, m).is_some())
+    }
+
     fn restore(&self, saved: &[u8]) -> Result<()> {
         if let Some((paths, modes)) = decode(saved) {
             // Already so (Windows went back by itself after the monitor left): nothing to do.

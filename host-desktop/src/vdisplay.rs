@@ -57,6 +57,8 @@ const MAX_SIDE: u32 = 8192;
 const PING_EVERY: Duration = Duration::from_secs(1);
 /// After a change of the only display, how long the new display id may take to show.
 const SETTLE: Duration = Duration::from_secs(1);
+/// How long the virtual display must have been the only active one after a mode change.
+const ONLY_STABLE: Duration = Duration::from_millis(250);
 /// After a restore, how long Windows gets to move its windows back before the rescue.
 const RESCUE_AFTER: Duration = Duration::from_millis(300);
 
@@ -136,6 +138,9 @@ pub trait Topology: Send + Sync {
     fn save(&self) -> Result<Vec<u8>>;
     /// Makes `m` the only active display, primary at 0,0, without saving to the OS's database.
     fn only(&self, m: &Monitor) -> Result<()>;
+    /// Whether `m` is the only active display now (Windows re-activates a physical display
+    /// after a mode change of the virtual one).
+    fn is_only(&self, m: &Monitor) -> bool;
     /// Applies a saved topology without saving to the OS's database; bytes it can't apply
     /// (none, or from before a restart) apply the database's own configuration instead.
     fn restore(&self, saved: &[u8]) -> Result<()>;
@@ -356,6 +361,8 @@ impl Matched {
         if self.driver.set_mode(&old, mode)? {
             self.monitor = Some(Monitor { mode, ..old });
             self.display = wait_display(&*self.topo, &old, Instant::now() + SETTLE).unwrap_or(self.display);
+            // The update can make Windows activate the physical display again (as an extended one).
+            self.enforce_only(&old);
             eprintln!("sodium-remote-host: matched display: now {}x{} @{} Hz", mode.width, mode.height, mode.hz);
             return Ok(());
         }
@@ -389,10 +396,34 @@ impl Matched {
         while self.topo.display_of(&old).is_some() && Instant::now() < gone {
             std::thread::sleep(Duration::from_millis(20));
         }
-        let _ = self.topo.only(&new);
+        self.enforce_only(&new);
         self.display = wait_display(&*self.topo, &new, Instant::now() + SETTLE).context("the new virtual display went away")?;
         eprintln!("sodium-remote-host: matched display: now display {} at {}x{} @{} Hz", self.display, mode.width, mode.height, mode.hz);
         Ok(())
+    }
+
+    /// After a mode change: until `mon` has been the only active display for a moment (at
+    /// most [`SETTLE`]), apply "only `mon`" whenever anything else is active.
+    fn enforce_only(&self, mon: &Monitor) {
+        let until = Instant::now() + SETTLE;
+        let mut ok_since: Option<Instant> = None;
+        loop {
+            if self.topo.is_only(mon) {
+                if ok_since.get_or_insert_with(Instant::now).elapsed() >= ONLY_STABLE {
+                    return;
+                }
+            } else {
+                ok_since = None;
+                eprintln!("sodium-remote-host: matched display: another display became active; making the virtual display the only one again");
+                if let Err(e) = self.topo.only(mon) {
+                    eprintln!("sodium-remote-host: matched display: {e:#}");
+                }
+            }
+            if Instant::now() >= until {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
 
     /// The saved topology again, the monitor removed, stranded windows moved to the
@@ -498,6 +529,22 @@ mod tests {
         assert!(s.monitors.is_empty());
         assert_eq!(s.restored, vec![FakeDisplays::PHYSICAL.to_vec()]);
         assert!(!d.join(JOURNAL).exists());
+    }
+
+    #[test]
+    fn an_in_place_mode_change_that_reactivates_the_physical_display_is_undone() {
+        let d = dir("in-place");
+        let f = FakeDisplays::new(Some(Duration::ZERO));
+        f.state.lock().unwrap().in_place = true;
+        let (drv, topo) = parts(&f);
+        let Choice::Virtual(mut m) = open(true, Some(topo), || Ok(drv), d.join(JOURNAL), Mode { width: 900, height: 584, hz: 60 }, APPEAR_WITHIN) else {
+            panic!("not virtual")
+        };
+        m.set_mode(Mode { width: 900, height: 616, hz: 60 }, APPEAR_WITHIN).unwrap();
+        let s = f.state.lock().unwrap();
+        assert_eq!(s.monitors.len(), 1, "updated in place, not replaced");
+        assert!(!s.physical_back, "the physical display is off again");
+        assert_eq!(s.only, Some(s.monitors[0].0.key));
     }
 
     #[test]

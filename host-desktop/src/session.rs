@@ -156,6 +156,9 @@ struct Live {
     serving: bool,
     /// The matched display's id while it is up (`vdisplay`): the stream's only display.
     virtual_display: Option<u32>,
+    /// The codec the stream fell back to when no encoder of the chosen one would open
+    /// (`MediaEvent::CodecFallback`): kept for the session, so a resize doesn't try the other again.
+    codec_fallback: Option<msg::Codec>,
 }
 
 struct Shared {
@@ -685,10 +688,10 @@ impl Shared {
     /// the size that fits its window and its decoder (never above native), its rate (at most the display's), and
     /// the codec both sides have.
     fn setup(&self) -> Result<StreamSetup, String> {
-        let (hello, settings, chosen, window) = {
+        let (hello, settings, chosen, window, fallback) = {
             let l = self.live.lock().unwrap();
             // The matched display is the only one while it is up.
-            (l.hello.clone(), l.settings, l.virtual_display.or(l.display), l.window)
+            (l.hello.clone(), l.settings, l.virtual_display.or(l.display), l.window, l.codec_fallback)
         };
         let hello = hello.ok_or("no Hello")?;
         let displays = self.backend.displays();
@@ -700,6 +703,7 @@ impl Shared {
             .ok_or("this computer has no display to show")?;
         let codec = policy::choose_codec(self.backend.encoder_caps(), &hello.decode, settings.codec)
             .ok_or("no video codec in common: this computer encodes H.264 (and HEVC with a GPU) only")?;
+        let codec = fallback.filter(|_| codec == msg::Codec::Hevc420).unwrap_or(codec);
         let (width, height) = policy::stream_size(
             (display.info.width, display.info.height),
             window,
@@ -736,6 +740,7 @@ impl Shared {
             l.secure = false;
             l.held = false;
             l.serving = false;
+            l.codec_fallback = None;
         }
         // A new connection is a new session: its table comes after Hello.
         self.keys.lock().unwrap().set_table(vec![]);
@@ -812,6 +817,7 @@ impl Shared {
                     s.host.disconnect(ended_reason(s.backend.locked()));
                     s.update_consent();
                 }
+                MediaEvent::CodecFallback(c) => s.live.lock().unwrap().codec_fallback = Some(c),
                 MediaEvent::Secure(on) => {
                     s.live.lock().unwrap().secure = on;
                     if on {
@@ -1103,6 +1109,10 @@ impl Shared {
             let refresh = if l.settings.refresh_mhz != 0 { l.settings.refresh_mhz } else { h.display.refresh_mhz };
             vdisplay::matched_mode(l.window, refresh, (h.decode.max_width, h.decode.max_height))
         };
+        // Not while the media loop opens an encoder at the scaled size: the mode change disturbs the GPU.
+        if let Some(media) = self.media.lock().unwrap().as_ref() {
+            media.settle(Duration::from_secs(3));
+        }
         let mut g = self.matched.lock().unwrap();
         let Some(m) = g.as_mut() else { return false };
         if m.mode() == Some(mode) {

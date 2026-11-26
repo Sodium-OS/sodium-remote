@@ -292,6 +292,9 @@ pub struct FakeDisplayState {
     pub removed: Vec<crate::vdisplay::Key>,
     pub rescued: u32,
     pub pings: u32,
+    /// The driver changes modes in place; Windows then activates the physical display again.
+    pub in_place: bool,
+    pub physical_back: bool,
 }
 
 impl FakeDisplays {
@@ -315,8 +318,16 @@ impl crate::vdisplay::VirtualDisplay for FakeDisplays {
         s.monitors.push((m, Instant::now()));
         Ok(m)
     }
-    fn set_mode(&self, _m: &crate::vdisplay::Monitor, _mode: crate::vdisplay::Mode) -> Result<bool> {
-        Ok(false)
+    fn set_mode(&self, m: &crate::vdisplay::Monitor, mode: crate::vdisplay::Mode) -> Result<bool> {
+        let mut s = self.state.lock().unwrap();
+        if !s.in_place {
+            return Ok(false);
+        }
+        if let Some((x, _)) = s.monitors.iter_mut().find(|(x, _)| x.key == m.key) {
+            x.mode = mode;
+        }
+        s.physical_back = true;
+        Ok(true)
     }
     fn remove(&self, key: crate::vdisplay::Key) {
         let mut s = self.state.lock().unwrap();
@@ -339,8 +350,14 @@ impl crate::vdisplay::Topology for FakeDisplays {
         Ok(Self::PHYSICAL.to_vec())
     }
     fn only(&self, m: &crate::vdisplay::Monitor) -> Result<()> {
-        self.state.lock().unwrap().only = Some(m.key);
+        let mut s = self.state.lock().unwrap();
+        s.only = Some(m.key);
+        s.physical_back = false;
         Ok(())
+    }
+    fn is_only(&self, m: &crate::vdisplay::Monitor) -> bool {
+        let s = self.state.lock().unwrap();
+        s.only == Some(m.key) && !s.physical_back
     }
     fn restore(&self, saved: &[u8]) -> Result<()> {
         let mut s = self.state.lock().unwrap();
