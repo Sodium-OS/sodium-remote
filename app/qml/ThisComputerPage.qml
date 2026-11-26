@@ -407,6 +407,12 @@ Item {
                     }
                 }
                 ControlRow {
+                    objectName: "matched-install-failed"
+                    visible: !page.linux && Host.matchedInstallFailed
+                    Layout.fillWidth: true
+                    text: qsTr("The display driver couldn’t be installed.")
+                }
+                ControlRow {
                     objectName: "matched-failed"
                     visible: !page.linux && Host.matchedFailed
                     Layout.fillWidth: true

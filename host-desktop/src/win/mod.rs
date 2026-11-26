@@ -14,8 +14,11 @@
 //! - `audio`: WASAPI loopback of the default render endpoint, 48 kHz stereo.
 //! - `clipboard`: the Win32 clipboard: text, HTML, PNG (DIB converted).
 //! - `desktop`: the foreground app's process name, the input desktop's name.
-//! - `sudovda`, `topology`: the matched display (`vdisplay`): the SudoVDA driver's IOCTLs, and
+//! - `sudovda`, `topology`: the matched display (`vdisplay`): the display driver's IOCTLs, and
 //!   `SetDisplayConfig` without saving; `vdd_install`: the driver's install and removal (elevated).
+//!
+//! One host per computer ([`HostLock`]): the screen, the input and the matched display's
+//! monitors are the whole machine's, whichever user's session the host runs in.
 
 pub mod audio;
 pub mod capture;
@@ -40,6 +43,53 @@ use crate::softvideo::SoftwareVideo;
 
 pub struct WinBackend {
     probe: Probe,
+    _lock: HostLock,
+}
+
+/// Another Sodium Remote host (the app's "This computer" in this or another user's session, or
+/// `sodium-remote-host`) is already running on this computer. The apps recognise it with
+/// `downcast_ref` and show their own translated line.
+#[derive(Debug)]
+pub struct HostInUse;
+
+impl std::fmt::Display for HostInUse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("another Sodium Remote host is already sharing this computer: quit it (the app's \"This computer\" switch, or the sodium-remote-host program) and try again")
+    }
+}
+
+impl std::error::Error for HostInUse {}
+
+/// A machine-wide named mutex, `Global\SodiumRemote.Host`, for as long as it lives: Windows
+/// deletes it with the last handle, however the process ends.
+#[derive(Debug)]
+pub struct HostLock(windows::Win32::Foundation::HANDLE);
+
+// Only closed, from any thread.
+unsafe impl Send for HostLock {}
+unsafe impl Sync for HostLock {}
+
+impl HostLock {
+    pub fn take() -> Result<HostLock> {
+        use windows::Win32::Foundation::{CloseHandle, ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, GetLastError};
+        use windows::Win32::System::Threading::CreateMutexW;
+        match unsafe { CreateMutexW(None, false, windows::core::w!("Global\\SodiumRemote.Host")) } {
+            Ok(h) if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS => {
+                let _ = unsafe { CloseHandle(h) };
+                Err(HostInUse.into())
+            }
+            Ok(h) => Ok(HostLock(h)),
+            // Another user's host made it: its mutex isn't open to this user.
+            Err(e) if e.code() == ERROR_ACCESS_DENIED.to_hresult() => Err(HostInUse.into()),
+            Err(e) => Err(anyhow::Error::new(e).context("creating the host's lock")),
+        }
+    }
+}
+
+impl Drop for HostLock {
+    fn drop(&mut self) {
+        let _ = unsafe { windows::Win32::Foundation::CloseHandle(self.0) };
+    }
 }
 
 impl WinBackend {
@@ -49,7 +99,9 @@ impl WinBackend {
     }
 
     /// With the app's own software video (setting, events and download folder).
+    /// `HostInUse` when another host runs on this computer.
     pub fn with_software(encoder: Option<&str>, soft: Arc<SoftwareVideo>) -> Result<WinBackend> {
+        let lock = HostLock::take()?;
         unsafe {
             // Physical pixels everywhere (duplication, SendInput, monitor rects).
             let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -58,7 +110,7 @@ impl WinBackend {
             timeBeginPeriod(1);
         }
         let cands = encoder.map(Candidates::only).unwrap_or_else(Candidates::windows);
-        Ok(WinBackend { probe: Probe::with_software(cands, soft) })
+        Ok(WinBackend { probe: Probe::with_software(cands, soft), _lock: lock })
     }
 }
 

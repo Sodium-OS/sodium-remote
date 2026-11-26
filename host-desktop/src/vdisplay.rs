@@ -69,17 +69,26 @@ pub struct Mode {
 }
 
 /// The mode for a client's window (physical pixels; 0 unknown), its refresh (mHz; 0
-/// unknown: 60 Hz) and its decoder's largest picture (0: no limit): even, at least
-/// 800×600, at most the decoder's size, at most 120 Hz.
+/// unknown: 60 Hz) and its decoder's largest picture (0: no limit): at most the decoder's
+/// size (and 8192), scaled down as a whole so the window's shape is kept; then even, at
+/// least 800×600, at most 120 Hz.
 pub fn matched_mode(window: (u32, u32), refresh_mhz: u32, decoder_max: (u32, u32)) -> Mode {
-    let side = |v: u32, min: u32, max: u32| {
-        let max = if max == 0 { MAX_SIDE } else { max.min(MAX_SIDE) };
-        v.min(max).max(min) & !1
+    let cap = |max: u32| if max == 0 { MAX_SIDE } else { max.min(MAX_SIDE) };
+    let (mw, mh) = (cap(decoder_max.0), cap(decoder_max.1));
+    let (w, h) = (window.0 as u64, window.1 as u64);
+    let (w, h) = if w <= mw as u64 && h <= mh as u64 {
+        (w, h)
+    } else if w * mh as u64 >= h * mw as u64 {
+        // The width is what caps.
+        (mw as u64, h * mw as u64 / w)
+    } else {
+        (w * mh as u64 / h, mh as u64)
     };
+    let side = |v: u64, min: u32| (v as u32).max(min) & !1;
     let hz = refresh_mhz.saturating_add(500) / 1000;
     Mode {
-        width: side(window.0, MIN_SIZE.0, decoder_max.0),
-        height: side(window.1, MIN_SIZE.1, decoder_max.1),
+        width: side(w, MIN_SIZE.0),
+        height: side(h, MIN_SIZE.1),
         hz: if hz == 0 { 60 } else { hz.min(MAX_HZ) },
     }
 }
@@ -110,8 +119,8 @@ pub struct Monitor {
 pub trait VirtualDisplay: Send + Sync {
     /// Adds a monitor at `mode`.
     fn create(&self, key: Key, mode: Mode) -> Result<Monitor>;
-    /// Changes `m`'s mode in place, without saving it, when the driver can (SudoVDA: only to
-    /// a mode the monitor lists). False: it can't, and [`Matched`] replaces the monitor.
+    /// Changes `m`'s mode in place, without saving it, when the driver can (Windows: a mode
+    /// the monitor lists, after asking the driver to list it). False: it can't, and [`Matched`] replaces the monitor.
     fn set_mode(&self, m: &Monitor, mode: Mode) -> Result<bool>;
     /// Removes a monitor (one that is already gone is no error).
     fn remove(&self, key: Key);
@@ -435,6 +444,12 @@ mod tests {
         assert_eq!(matched_mode((640, 480), 144_000, (0, 0)), Mode { width: 800, height: 600, hz: 120 });
         assert_eq!(matched_mode((0, 0), 0, (0, 0)), Mode { width: 800, height: 600, hz: 60 });
         assert_eq!(matched_mode((3840, 2160), 60_000, (1920, 1080)), Mode { width: 1920, height: 1080, hz: 60 });
+    }
+
+    #[test]
+    fn a_capped_mode_keeps_the_window_shape() {
+        assert_eq!(matched_mode((2560, 1600), 60_000, (1920, 1080)), Mode { width: 1728, height: 1080, hz: 60 });
+        assert_eq!(matched_mode((5120, 1440), 60_000, (4096, 4096)), Mode { width: 4096, height: 1152, hz: 60 });
     }
 
     #[test]

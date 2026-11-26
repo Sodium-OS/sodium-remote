@@ -43,10 +43,14 @@ fn consent_json(c: &Consent) -> Value {
 }
 
 /// `{"ev": "host", "state": "error", "detail"}` (English, for the log) and, when another host already serves from the
-/// data directory, `"code": "in_use"`: the page shows its own translated line for it.
+/// data directory (Windows: runs on this computer), `"code": "in_use"`: the page shows its own translated line for it.
 fn host_error_json(e: &anyhow::Error) -> Value {
     #[cfg(target_os = "linux")]
     if e.downcast_ref::<host_desktop::linux::DataDirInUse>().is_some() {
+        return json!({"ev": "host", "state": "error", "code": "in_use", "detail": format!("{e:#}")});
+    }
+    #[cfg(windows)]
+    if e.downcast_ref::<host_desktop::win::HostInUse>().is_some() {
         return json!({"ev": "host", "state": "error", "code": "in_use", "detail": format!("{e:#}")});
     }
     json!({"ev": "host", "state": "error", "detail": format!("{e:#}")})

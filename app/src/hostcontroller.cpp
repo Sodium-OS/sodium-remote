@@ -609,6 +609,7 @@ void HostController::setMatchedDisplay(bool on)
         return;
     m_matchedBusy = true;
     m_matchedWant = on;
+    m_matchedInstallFailed = false;
     Q_EMIT matchedChanged();
     // The driver goes in or out in an elevated copy of this program (one UAC prompt), which checks the driver's files against
     // their pins first. The setting is saved only when that worked; a No at the prompt changes nothing.
@@ -626,15 +627,20 @@ void HostController::setMatchedDisplay(bool on)
         sei.lpParameters = reinterpret_cast<const wchar_t *>(args.utf16());
         sei.nShow = SW_HIDE;
         DWORD code = 1;
+        bool cancelled = false;
         if (ShellExecuteExW(&sei) && sei.hProcess) {
             WaitForSingleObject(sei.hProcess, INFINITE);
             GetExitCodeProcess(sei.hProcess, &code);
             CloseHandle(sei.hProcess);
+        } else {
+            cancelled = GetLastError() == ERROR_CANCELLED; // No at the UAC prompt
         }
-        QMetaObject::invokeMethod(this, [this, on, code] {
+        QMetaObject::invokeMethod(this, [this, on, code, cancelled] {
             m_matchedBusy = false;
             if (code == 0 && m_rh)
                 rh_set_matched_display(m_rh, on ? 1 : 0);
+            // Silent on a No; the reason for a real failure is in the log.
+            m_matchedInstallFailed = on && code != 0 && !cancelled;
             Q_EMIT matchedChanged();
         }, Qt::QueuedConnection);
     });

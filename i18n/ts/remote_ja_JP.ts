@@ -2259,7 +2259,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="377"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="569"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="575"/>
         <source>Remove</source>
         <translation>削除</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2296,188 +2296,194 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <source>The display driver couldn’t be installed.</source>
+        <translation>ディスプレイドライバーをインストールできませんでした。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
         <source>The virtual display couldn’t start. Showing this computer’s screen instead.</source>
         <translation>仮想ディスプレイを開始できませんでした。代わりにこのコンピューターの画面を表示しています。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="417"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="424"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="423"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="430"/>
         <source>Name shown to other computers</source>
         <translation>他のコンピューターに表示する名前</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
         <source>Network</source>
         <translation>ネットワーク</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="438"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="444"/>
         <source>This network is Public</source>
         <translation>このネットワークはパブリックです</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
         <source>Remote control needs a Private network. Set this network to Private in Windows network settings.</source>
         <translation>遠隔操作にはプライベートネットワークが必要です。Windows のネットワーク設定でこのネットワークをプライベートにしてください。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
         <source>Network settings</source>
         <translation>ネットワーク設定</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
         <source>The firewall is blocking %1</source>
         <translation>ファイアウォールが %1 をブロックしています</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
         <source>Other computers on your network can’t reach this one until you allow it.</source>
         <translation>許可するまで、ネットワーク上の他のコンピューターはこのコンピューターに接続できません。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="447"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
         <source>Allow…</source>
         <translation>許可…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="458"/>
         <source>Waiting for Windows to ask…</source>
         <translation>Windows の確認を待機中…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="465"/>
         <source>Allowed on private networks</source>
         <translation>プライベートネットワークで許可済み</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="472"/>
         <source>Address for connecting directly</source>
         <translation>直接接続用のアドレス</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="477"/>
         <source>Copy</source>
         <translation>コピー</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="487"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
         <source>Limits</source>
         <translation>制限</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="491"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="497"/>
         <source>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</source>
         <translation>このコンピューターは自身の解像度のままです。映像は、相手のコンピューターのウインドウに合わせて拡大縮小されます。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="495"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="501"/>
         <source>Your desktop shows its own indicator while the screen is shared.</source>
         <translation>画面共有中は、デスクトップが独自のインジケーターを表示します。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="496"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="502"/>
         <source>Remote control works only while %1 is open.</source>
         <translation>遠隔操作は、%1 を開いている間だけ使えます。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="509"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="515"/>
         <source>To share without keeping the app open, see the Linux guide.</source>
         <translation>アプリを開いたままにせずに共有する方法は、Linuxガイドをご覧ください。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="510"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="516"/>
         <source>Open guide</source>
         <translation>ガイドを開く</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="543"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
         <source>Copy %1</source>
         <translation>%1をコピー</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
         <source>Copy full address</source>
         <translation>完全なアドレスをコピー</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="518"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="524"/>
         <source>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</source>
         <translation>ロック画面、サインイン画面、UAC 画面は遠隔では表示も操作もできません。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="460"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
         <source>Windows Firewall allows it. Public networks stay blocked.</source>
         <translation>Windows ファイアウォールで許可されています。パブリックネットワークはブロックされたままです。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="499"/>
         <source>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</source>
         <translation>このコンピューターがロックされている間、ペアリング済みのデバイスにはロック画面が表示され、パスワードで解除できます。サインインするまでは、誰も接続できません。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="494"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="500"/>
         <source>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</source>
         <translation>このコンピューターをロックするとセッションが終了します。ロック中やサインイン前は、誰も接続できません。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="504"/>
         <source>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</source>
         <translation>もう一方のコンピューターから入力できるのは、このコンピューターのキーボード配列にある文字だけです。それ以外の文字は、代わりに貼り付けてください。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="561"/>
         <source>Forget the screen sharing permission?</source>
         <translation>画面共有の許可を削除しますか？</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="556"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="562"/>
         <source>Your desktop asks again the next time a paired device connects.</source>
         <translation>次にペアリング済みのデバイスが接続するとき、デスクトップが再度確認します。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="558"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="564"/>
         <source>Forget permission</source>
         <translation>許可を削除</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="566"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="572"/>
         <source>Remove %1?</source>
         <translation>%1 を削除しますか？</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="567"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="573"/>
         <source>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</source>
         <translation>再度ペアリングするまで、このコンピューターには接続できなくなります。現在接続中の場合は切断されます。</translation>
         <extra-sodium-review>machine</extra-sodium-review>

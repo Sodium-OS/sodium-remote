@@ -19,7 +19,7 @@ class HostController : public QObject
     Q_PROPERTY(bool enabled READ enabled NOTIFY stateChanged)                 // the switch (what the user chose)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)                  // off starting on error
     Q_PROPERTY(QString error READ error NOTIFY stateChanged)
-    Q_PROPERTY(QString errorCode READ errorCode NOTIFY stateChanged)          // "" or in_use (another host serves from this data directory)
+    Q_PROPERTY(QString errorCode READ errorCode NOTIFY stateChanged)          // "" or in_use (another host serves from this data directory; Windows: runs on this computer)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)                     // shown to other computers
     Q_PROPERTY(QString defaultName READ defaultName CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
@@ -45,10 +45,12 @@ class HostController : public QObject
     Q_PROPERTY(QString desktopId READ desktopId CONSTANT)
     // "Match the display to the connecting computer" (Windows; settings.json, default off). While the elevated helper installs
     // or removes the driver, matchedBusy is true and matchedDisplay is what was asked for. matchedFailed: the current session
-    // couldn't get the virtual display and shows this computer's screen instead (until it ends).
+    // couldn't get the virtual display and shows this computer's screen instead (until it ends). matchedInstallFailed: the
+    // helper ran and couldn't install the driver (details in matched-display-setup.log); a No at the UAC prompt isn't a failure.
     Q_PROPERTY(bool matchedDisplay READ matchedDisplay NOTIFY matchedChanged)
     Q_PROPERTY(bool matchedBusy READ matchedBusy NOTIFY matchedChanged)
     Q_PROPERTY(bool matchedFailed READ matchedFailed NOTIFY matchedChanged)
+    Q_PROPERTY(bool matchedInstallFailed READ matchedInstallFailed NOTIFY matchedChanged)
 
 public:
     HostController(const QString &dataDir, QObject *parent = nullptr);
@@ -80,6 +82,7 @@ public:
     bool matchedDisplay() const;
     bool matchedBusy() const { return m_matchedBusy; }
     bool matchedFailed() const { return m_matchedFailed; }
+    bool matchedInstallFailed() const { return m_matchedInstallFailed; }
     QString desktop() const;
     QString desktopId() const;
     /// The id for a colon-separated XDG_CURRENT_DESKTOP (case-insensitive).
@@ -166,6 +169,6 @@ private:
     QTimer m_tick;
     QTimer m_netTimer;
     QString m_lastControllerName;
-    bool m_matchedBusy = false, m_matchedWant = false, m_matchedFailed = false;
+    bool m_matchedBusy = false, m_matchedWant = false, m_matchedFailed = false, m_matchedInstallFailed = false;
     bool m_serverPending = false;
 };

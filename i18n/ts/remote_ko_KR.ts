@@ -2259,7 +2259,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="377"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="569"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="575"/>
         <source>Remove</source>
         <translation>제거</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2296,188 +2296,194 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <source>The display driver couldn’t be installed.</source>
+        <translation>디스플레이 드라이버를 설치할 수 없습니다.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
         <source>The virtual display couldn’t start. Showing this computer’s screen instead.</source>
         <translation>가상 디스플레이를 시작할 수 없습니다. 대신 이 컴퓨터의 화면을 표시합니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="417"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="424"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="423"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="430"/>
         <source>Name shown to other computers</source>
         <translation>다른 컴퓨터에 표시되는 이름</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
         <source>Network</source>
         <translation>네트워크</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="438"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="444"/>
         <source>This network is Public</source>
         <translation>이 네트워크는 공용입니다</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
         <source>Remote control needs a Private network. Set this network to Private in Windows network settings.</source>
         <translation>원격 제어에는 프라이빗 네트워크가 필요합니다. Windows 네트워크 설정에서 이 네트워크를 프라이빗으로 설정하세요.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
         <source>Network settings</source>
         <translation>네트워크 설정</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
         <source>The firewall is blocking %1</source>
         <translation>방화벽이 %1을(를) 차단하고 있습니다</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
         <source>Other computers on your network can’t reach this one until you allow it.</source>
         <translation>허용하기 전에는 네트워크의 다른 컴퓨터가 이 컴퓨터에 접속할 수 없습니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="447"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
         <source>Allow…</source>
         <translation>허용…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="458"/>
         <source>Waiting for Windows to ask…</source>
         <translation>Windows의 확인을 기다리는 중…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="465"/>
         <source>Allowed on private networks</source>
         <translation>프라이빗 네트워크에서 허용됨</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="472"/>
         <source>Address for connecting directly</source>
         <translation>직접 연결용 주소</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="477"/>
         <source>Copy</source>
         <translation>복사</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="487"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
         <source>Limits</source>
         <translation>제한 사항</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="491"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="497"/>
         <source>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</source>
         <translation>이 컴퓨터는 자체 해상도를 유지합니다. 화면은 다른 컴퓨터의 창 크기에 맞게 조정됩니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="495"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="501"/>
         <source>Your desktop shows its own indicator while the screen is shared.</source>
         <translation>화면이 공유되는 동안 데스크톱에 자체 표시기가 나타납니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="496"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="502"/>
         <source>Remote control works only while %1 is open.</source>
         <translation>원격 제어는 %1이(가) 열려 있는 동안에만 작동합니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="509"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="515"/>
         <source>To share without keeping the app open, see the Linux guide.</source>
         <translation>앱을 열어 두지 않고 공유하려면 Linux 안내서를 참고하세요.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="510"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="516"/>
         <source>Open guide</source>
         <translation>안내서 열기</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="543"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
         <source>Copy %1</source>
         <translation>%1 복사</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
         <source>Copy full address</source>
         <translation>전체 주소 복사</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="518"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="524"/>
         <source>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</source>
         <translation>잠금, 로그인, UAC 화면은 원격으로 표시하거나 제어할 수 없습니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="460"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
         <source>Windows Firewall allows it. Public networks stay blocked.</source>
         <translation>Windows 방화벽에서 허용됩니다. 공용 네트워크는 계속 차단됩니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="499"/>
         <source>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</source>
         <translation>이 컴퓨터가 잠겨 있는 동안 페어링된 기기에 잠금 화면이 표시되며, 암호로 잠금을 해제할 수 있습니다. 로그인하기 전에는 아무도 연결할 수 없습니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="494"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="500"/>
         <source>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</source>
         <translation>이 컴퓨터를 잠그면 세션이 종료됩니다. 잠겨 있는 동안이나 로그인하기 전에는 아무도 연결할 수 없습니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="504"/>
         <source>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</source>
         <translation>다른 컴퓨터에서는 이 컴퓨터의 키보드 배열에 있는 문자만 입력할 수 있습니다. 그 밖의 텍스트는 대신 붙여넣으세요.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="561"/>
         <source>Forget the screen sharing permission?</source>
         <translation>화면 공유 권한을 삭제할까요?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="556"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="562"/>
         <source>Your desktop asks again the next time a paired device connects.</source>
         <translation>페어링된 기기가 다음에 연결될 때 데스크톱이 다시 묻습니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="558"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="564"/>
         <source>Forget permission</source>
         <translation>권한 삭제</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="566"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="572"/>
         <source>Remove %1?</source>
         <translation>%1을(를) 제거할까요?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="567"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="573"/>
         <source>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</source>
         <translation>다시 페어링하기 전에는 이 컴퓨터에 다시 연결할 수 없습니다. 지금 연결되어 있다면 연결이 끊깁니다.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
