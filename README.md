@@ -34,7 +34,7 @@
 </picture>
 
 > [!NOTE]
-> **Version 0.1.0 is a preview.** Windows and the generic Linux host have so far been tested in virtual machines, and there is no hosted relay service yet. See [Status and known limits](#status-and-known-limits).
+> **Version 0.2.0 is a preview.** Windows and the generic Linux host have so far been tested in virtual machines, and there is no hosted relay service yet. See [Status and known limits](#status-and-known-limits).
 
 ## What it does
 
@@ -130,11 +130,11 @@ Details for each host are in [docs/hosts/](docs/hosts/).
 
 ## Download and install
 
-Version 0.1.0 is a preview.
+Version 0.2.0 is a preview.
 
 | Platform | How |
 |---|---|
-| Windows 11 | Download `SodiumRemote-0.1.0-win64.zip` from [Releases](https://github.com/sodium-os/sodium-remote/releases), unzip it and run `SodiumRemote.exe`. The build is **not signed yet**, so Windows SmartScreen warns on first run: choose More info, then Run anyway. Compare the file with the checksum on the release page first |
+| Windows 11 | Download `SodiumRemote-0.2.0-win64.zip` from [Releases](https://github.com/sodium-os/sodium-remote/releases), unzip it and run `SodiumRemote.exe`. The build is **not signed yet**, so Windows SmartScreen warns on first run: choose More info, then Run anyway. Compare the file with the checksum on the release page first |
 | macOS | [Build it from source](docs/building/macos.md) until a signed and notarized build exists |
 | Arch Linux | Build the package from the `PKGBUILD` in `packaging/arch/` (the app, and the server as a second package) |
 | Other Linux | [Build it from source](docs/building/linux.md) |
@@ -201,7 +201,7 @@ The full index is [docs/README.md](docs/README.md). The most useful pages:
 
 ## Status and known limits
 
-Version 0.1.0 is a preview.
+Version 0.2.0 is a preview.
 
 - Windows has been tested in a virtual machine only so far.
 - Hosting from SodiumOS needs an NVIDIA graphics card.
