@@ -32,11 +32,11 @@
 
 **Settings › Server says "No server".** That is the default. Nothing is built in; add a server with a link or a file ([user guide](user-guide.md), [configuration](configuration.md)).
 
-**"Not enrolled" or a token error on a host.** The server needs an enrolment token for new hosts. Get one from the server's operator and add it with the server's link, or put it in `server.toml`. `token_invalid` is a token the server doesn't know (or that was revoked); `token_expired` is past its expiry or used up: ask for a new one.
+**"Not enrolled" or a token error on a host.** The server needs an enrolment token for new hosts. Get one from the server's operator and add it with the server's link, or put it in `server.toml`. `token_invalid` is a token the server doesn't know (or that was revoked); `token_expired` is past its expiry or used up: ask for a new one. A host stops retrying after a refused token, so it doesn't use up the address's registrations: put the new token in Settings › Server (a running host picks it up within seconds; otherwise turn hosting off and on). "Too many computers have registered from this network address" means the server's limit (five new computers an hour per address) was reached; the host tries again every few minutes.
 
 **The app can't connect to the server, or says the certificate isn't trusted.**
 - The URL must be `wss://name:port/remote`, and the name must match the certificate.
-- The certificate must be valid and chain to a public CA, or you must give the device the server's private CA (`ca_file`, or in the link). A pinned CA replaces the system's CAs.
+- The certificate must be valid and chain to a public CA (on Windows and macOS the operating system checks the chain, so a root it hasn't installed yet, such as Let's Encrypt's ISRG Root X1 on a new Windows, is fetched on first use), or you must give the device the server's private CA (`ca_file`, or in the link). A pinned CA replaces the system's CAs.
 - If an operator renewed the certificate but didn't restart the server, it may still serve the old one.
 
 For servers you run: `deploy.sh status`, the checks in `relay/deploy/verify.sh`, and the logs ([self-hosting](self-hosting.md#logs)).

@@ -111,6 +111,7 @@ ColumnLayout {
         text: page.problem === "tokenNeeded" ? qsTr("This server needs an enrollment token. Enter the one you were given.")
             : page.problem === "tokenInvalid" ? qsTr("That enrollment token isn’t valid. Check it with the person who runs the server.")
             : page.problem === "tokenExpired" ? qsTr("That enrollment token has expired. Ask the person who runs the server for a new one.")
+            : page.problem === "rateLimited" ? qsTr("Too many computers have registered from this network address lately. Sodium Remote will try again in a few minutes.")
             : page.problem === "quotaExceeded" ? qsTr("%1 has reached its limit for now. Computers on this network and by address still work.").arg(page.name)
             : page.problem === "paymentRequired" ? qsTr("%1 needs a payment before this computer can use it. Computers on this network and by address still work.").arg(page.name)
             : ""

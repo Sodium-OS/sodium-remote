@@ -560,7 +560,11 @@ fn spawn_pump<T: Send + 'static>(
 // The rendezvous loop (both roles)
 
 struct RdvShared {
-    cfg: RendezvousConfig,
+    /// Replaced by the loop only when `follow_server_toml` and the file changed after a permanent refusal.
+    cfg: Mutex<RendezvousConfig>,
+    /// The configuration came from `server.toml`: after a refusal that trying again can't change, look at the file
+    /// again so a new token or server is picked up without restarting.
+    follow_server_toml: bool,
     key: DeviceKey,
     role: DeviceRole,
     rdv: Mutex<Option<Rendezvous>>,
@@ -576,6 +580,48 @@ enum RdvNote {
     Event(rendezvous::Event),
 }
 
+/// What the loop does after a refused or failed connection.
+#[derive(Debug, PartialEq, Eq)]
+enum RdvRetry {
+    /// Wait this long (the loop doubles it from here on the next failure).
+    After(Duration),
+    /// Trying again can't help: a refused token. Wait for new settings.
+    Never,
+}
+
+fn rdv_retry(e: &RdvError, backoff: Duration) -> RdvRetry {
+    if e.is_permanent_refusal() {
+        return RdvRetry::Never;
+    }
+    // Longer than the doubling would give, and not doubled again: the address's limit refills slowly.
+    if let Some(wait) = e.rate_limit_wait() {
+        return RdvRetry::After(wait);
+    }
+    RdvRetry::After(backoff)
+}
+
+/// After a permanent refusal: sleep until the loop is stopped (`false`) or, for a host that reads `server.toml`,
+/// the file names a different server or token (`true`, `sh.cfg` replaced). Hosting off and on starts a new loop.
+async fn wait_for_new_settings(sh: &RdvShared, tried: &RendezvousConfig, notes: &mpsc::UnboundedSender<RdvNote>) -> bool {
+    let mut polls = 0u32;
+    loop {
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        if notes.is_closed() || sh.stop.load(Ordering::Relaxed) {
+            return false;
+        }
+        polls += 1;
+        if sh.follow_server_toml && polls % 20 == 0 {
+            if let Some(now) = crate::server_config::ServerConfig::load_rendezvous() {
+                if now != *tried {
+                    tracing::info!("rendezvous: the server settings changed; registering again");
+                    *sh.cfg.lock().unwrap() = now;
+                    return true;
+                }
+            }
+        }
+    }
+}
+
 /// Keep a rendezvous connection up, with backoff. Signals go straight to their
 /// route; everything else to `notes`.
 fn spawn_rdv_loop(sh: Arc<RdvShared>, notes: mpsc::UnboundedSender<RdvNote>) {
@@ -586,7 +632,8 @@ fn spawn_rdv_loop(sh: Arc<RdvShared>, notes: mpsc::UnboundedSender<RdvNote>) {
                 tokio::time::sleep(Duration::from_millis(200)).await;
                 continue;
             }
-            match Rendezvous::connect(&sh.cfg, &sh.key, sh.role).await {
+            let cfg = sh.cfg.lock().unwrap().clone();
+            match Rendezvous::connect(&cfg, &sh.key, sh.role).await {
                 Ok((rdv, mut events, _)) => {
                     backoff = Duration::from_secs(1);
                     *sh.rdv.lock().unwrap() = Some(rdv.clone());
@@ -620,10 +667,19 @@ fn spawn_rdv_loop(sh: Arc<RdvShared>, notes: mpsc::UnboundedSender<RdvNote>) {
                     let _ = notes.send(RdvNote::Down(error));
                 }
                 Err(e) => {
-                    if e.code() == Some("host_not_allowed") {
-                        backoff = Duration::from_secs(30);
-                    }
                     let _ = notes.send(RdvNote::Down(Some(e.to_string())));
+                    match rdv_retry(&e, backoff) {
+                        RdvRetry::After(wait) => backoff = wait,
+                        RdvRetry::Never => {
+                            // Every attempt with a refused token spends one of the address's few new-device slots.
+                            tracing::warn!("rendezvous: {e}; not trying again until the server settings change or hosting is turned off and on");
+                            if !wait_for_new_settings(&sh, &cfg, &notes).await {
+                                break;
+                            }
+                            backoff = Duration::from_secs(1);
+                            continue;
+                        }
+                    }
                 }
             }
             if notes.is_closed() || sh.stop.load(Ordering::Relaxed) {
@@ -660,6 +716,8 @@ pub struct HostConfig {
     pub relay_only: bool,
     /// Announce the LAN listener over mDNS (off for tests on a shared LAN).
     pub mdns: bool,
+    /// `rendezvous` came from `server.toml`: pick up a new server or token written there after a refusal.
+    pub follow_server_toml: bool,
 }
 
 impl HostConfig {
@@ -675,6 +733,7 @@ impl HostConfig {
             hold: HOLD,
             relay_only: false,
             mdns: true,
+            follow_server_toml: false,
         }
     }
 }
@@ -800,7 +859,8 @@ impl Host {
         let (ev_tx, ev_rx) = mpsc::unbounded_channel();
         let routes: Routes = Default::default();
         let rdv = Arc::new(RdvShared {
-            cfg: cfg.rendezvous.clone().unwrap_or_else(|| RendezvousConfig::new("")),
+            cfg: Mutex::new(cfg.rendezvous.clone().unwrap_or_else(|| RendezvousConfig::new(""))),
+            follow_server_toml: cfg.follow_server_toml,
             key: key.clone(),
             role: DeviceRole::Host,
             rdv: Mutex::new(None),
@@ -2190,7 +2250,8 @@ impl Client {
         let (brain_tx, brain_rx) = mpsc::unbounded_channel();
         let (ev_tx, ev_rx) = mpsc::unbounded_channel();
         let rdv = Arc::new(RdvShared {
-            cfg: cfg.rendezvous.clone().unwrap_or_else(|| RendezvousConfig::new("")),
+            cfg: Mutex::new(cfg.rendezvous.clone().unwrap_or_else(|| RendezvousConfig::new(""))),
+            follow_server_toml: false,
             key: key.clone(),
             role: DeviceRole::Client,
             rdv: Mutex::new(None),
@@ -2334,7 +2395,7 @@ impl Client {
 
     /// Whether a rendezvous server is configured at all.
     pub fn has_rendezvous(&self) -> bool {
-        !self.rdv.cfg.url.is_empty()
+        !self.rdv.cfg.lock().unwrap().url.is_empty()
     }
 
     /// Wait until the rendezvous is connected (or `timeout`). False at once when
@@ -3155,6 +3216,17 @@ async fn dial(ctx: DialCtx) -> Result<(EndpointHandle, SigChan), ConnectError> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_refused_token_stops_the_retries_and_a_rate_limit_waits_five_minutes() {
+        let refused = |code: &str| RdvError::Server { code: code.into(), message: String::new(), retry_after: None };
+        let b = Duration::from_secs(4);
+        for c in ["token_invalid", "token_expired", "host_not_allowed"] {
+            assert_eq!(rdv_retry(&refused(c), b), RdvRetry::Never, "{c}");
+        }
+        assert_eq!(rdv_retry(&refused("rate_limited"), b), RdvRetry::After(Duration::from_secs(300)));
+        assert_eq!(rdv_retry(&RdvError::Io("down".into()), b), RdvRetry::After(b));
+    }
+
     use super::*;
 
     #[test]

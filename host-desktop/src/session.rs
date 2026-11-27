@@ -313,6 +313,7 @@ impl Session {
         remote_core::connect::load_named_networks();
         let mut cfg = HostConfig::new(o.store(), name.clone());
         cfg.rendezvous = if o.server.is_some() { o.server.clone() } else if o.rendezvous { ServerConfig::load_rendezvous() } else { None };
+        cfg.follow_server_toml = o.server.is_none() && o.rendezvous;
         cfg.lan = true;
         cfg.mdns = o.mdns;
         cfg.bind = o.bind.clone();

@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Fixed
+
+- **A host registers on the first try on a freshly installed Windows.** The server's certificate chain was checked against the roots in Windows' store at start, and a new Windows has not installed Let's Encrypt's ISRG Root X1 yet, so the first start failed with `UnknownIssuer` until the app was restarted. On Windows and macOS the operating system now verifies the chain, fetching a missing root itself; this covers the server, TURN over TLS and the server check in Settings › Server. A pinned CA works as before.
+- **A one-use enrolment token registers the host.** The app's own client connection read the same `server.toml` and spent the token before the host's connection arrived, which was then refused as expired. Only the host's connection sends the token now, and the server redeems a token only for a host (a client that presents one is treated as without).
+- **A refused token no longer locks the address out.** A host with a wrong, expired or missing token retried in a loop and used up the server's five new devices an hour, so a good token entered later got `rate_limited` for up to an hour. The host now stops after `token_invalid`, `token_expired` and `host_not_allowed` until Settings › Server names a new server or token (or hosting is turned off and on), and waits at least five minutes after `rate_limited`, which Settings › Server shows in words.
+
 ## [0.2.0] - 2026-11-27
 
 Windows hosts can match their display to the client's window, Windows sessions resize and go full screen like SodiumOS ones, and Intel Quick Sync encodes sharply. Windows and the generic Linux host have so far been tested in virtual machines.

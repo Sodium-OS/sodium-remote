@@ -58,7 +58,7 @@ class RemoteController : public QObject
     Q_PROPERTY(bool showPreviews READ showPreviews WRITE setShowPreviews NOTIFY settingsChanged)     // the computers' pictures; off deletes them
 
     // Settings › Server: {configured, url, host, label, official, pinnedCa, token, error}; serverState none|checking|online|offline;
-    // serverProblem is "" or the apps' own reading of the server's refusal: tokenInvalid tokenExpired tokenNeeded quotaExceeded paymentRequired
+    // serverProblem is "" or the apps' own reading of the server's refusal: tokenInvalid tokenExpired tokenNeeded rateLimited quotaExceeded paymentRequired
     Q_PROPERTY(QVariantMap server READ server NOTIFY serverChanged)
     Q_PROPERTY(bool serverConfigured READ serverConfigured NOTIFY serverChanged)
     Q_PROPERTY(QString serverState READ serverState NOTIFY serverChanged)
