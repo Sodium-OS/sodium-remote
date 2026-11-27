@@ -191,7 +191,7 @@ impl Rq {
         self.rt.spawn(async move {
             let Some(c) = me.browse() else { return };
             let paired = c.paired();
-            let (status, found) = tokio::join!(c.presence(), c.discover_pairing(Duration::from_millis(400)));
+            let (status, found) = tokio::join!(c.presence(), c.discover_pairing_idle(Duration::from_millis(400)));
             let hosts: Vec<Value> = paired
                 .iter()
                 .map(|d| {
@@ -242,7 +242,10 @@ impl Rq {
             let target: Option<PairingTarget> = match addr {
                 // A host typed with its address: nothing to find.
                 Some((ip, port)) => Some(PairingTarget { host: id, name: String::new(), lan: Some((vec![ip], port)), rendezvous: None }),
-                None => c.discover_pairing(Duration::from_secs(2)).await.into_iter().find(|t| t.host == id),
+                None => match c.try_discover_pairing(Duration::from_secs(2)).await {
+                    Ok(found) => found.into_iter().find(|t| t.host == id),
+                    Err(_) => return say("busy", json!({})),
+                },
             };
             let Some(t) = target else { return say("closed", json!({"why": "not_found"})) };
             match c.pair(&t, code.trim()).await {

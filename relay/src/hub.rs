@@ -592,7 +592,9 @@ impl Hub {
                 }
                 let needs_token =
                     role == Role::Host && self.cfg.enrol == Enrol::Token && !self.allowlisted(&device);
-                let account = match token {
+                // Only a host redeems a token: the same server.toml also reaches the app's own client
+                // connection, which must not spend the host's one-use token.
+                let account = match token.filter(|_| role == Role::Host) {
                     Some(t) => tokens::redeem(&self.cfg.tokens_dir(), t, now).map_err(|e| {
                         info!(device = %device.short(), role = role.as_str(), error = ?e, "enrolment token refused");
                         token_refused(e)

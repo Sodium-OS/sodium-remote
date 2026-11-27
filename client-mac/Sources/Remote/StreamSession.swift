@@ -236,7 +236,7 @@ final class StreamSession: NSObject, StreamActions, StreamInputSink, StreamWindo
             scheduleRetry()
         case .Failed(let message):
             model.card = .failed(message)
-        case .WrongCode, .PairingClosed:
+        case .WrongCode, .PairingClosed, .ServerBusy:
             model.card = .failed("\(e)")
         }
     }

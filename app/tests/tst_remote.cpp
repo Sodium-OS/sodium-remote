@@ -299,6 +299,8 @@ void TstRemote::aServersRefusalIsReadFromItsCodeNeverItsText()
     // host_not_allowed means "enrol first": the card asks for an enrollment token.
     c.handleEvent(parse(R"j({"ev":"rendezvous","online":false,"error":"rendezvous refused: host_not_allowed (x)"})j"));
     QCOMPARE(c.serverProblem(), QStringLiteral("tokenNeeded"));
+    c.handleEvent(parse(R"j({"ev":"rendezvous","online":false,"error":"rendezvous refused: rate_limited (too many new devices from this address)"})j"));
+    QCOMPARE(c.serverProblem(), QStringLiteral("rateLimited"));
     c.handleEvent(parse(R"j({"ev":"rendezvous","online":false,"error":"rendezvous unreachable: connection refused"})j"));
     QCOMPARE(c.serverProblem(), QString());   // not a code the app words: the generic unreachable banner
     c.handleEvent(parse(R"j({"ev":"rendezvous","online":true,"error":null})j"));

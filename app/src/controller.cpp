@@ -227,6 +227,7 @@ void RemoteController::handleEvent(const QJsonObject &ev)
                 if (code == QLatin1String("token_invalid")) problem = QStringLiteral("tokenInvalid");
                 else if (code == QLatin1String("token_expired")) problem = QStringLiteral("tokenExpired");
                 else if (code == QLatin1String("host_not_allowed")) problem = QStringLiteral("tokenNeeded");
+                else if (code == QLatin1String("rate_limited")) problem = QStringLiteral("rateLimited");
                 else if (code == QLatin1String("quota_exceeded")) problem = QStringLiteral("quotaExceeded");
                 else if (code == QLatin1String("payment_required")) problem = QStringLiteral("paymentRequired");
             }

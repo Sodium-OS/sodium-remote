@@ -206,8 +206,8 @@ async fn a_pairing_window_is_one_use_and_discovery_is_rate_limited() {
     host.request(json!({ "t": "pair_close", "pairing": pairing })).await;
     assert_eq!(client.event("pair_closed").await["reason"], "closed");
 
-    // Discovery: 10 a minute per address.
-    for _ in 0..10 {
+    // Discovery: 30 a minute per address.
+    for _ in 0..30 {
         assert_eq!(client.request(json!({ "t": "pair_discover" })).await["hosts"], json!([]));
     }
     assert_eq!(client.request(json!({ "t": "pair_discover" })).await["code"], "rate_limited");

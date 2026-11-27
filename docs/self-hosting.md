@@ -129,7 +129,7 @@ Mint a token on the server:
 SODIUM_REMOTE_SSH=admin@relay.example.com relay/deploy/deploy.sh token-new --uses 1 --expires 7d
 ```
 
-It prints the token **once**; the server keeps only its SHA-256. Options: `--uses N` (default 1, `0` for unlimited), `--expires` (`30m`, `24h`, `7d` … or `never`; default 7 days), `--account LABEL` (devices registered with it belong to that account label). `token-list` shows the IDs, state, uses left and expiry (never the tokens), and `token-revoke ID` deletes one. A token is only needed when a host first registers. Failed tokens count against a registration limit of five an hour per address, so guessing is slow.
+It prints the token **once**; the server keeps only its SHA-256. Options: `--uses N` (default 1, `0` for unlimited), `--expires` (`30m`, `24h`, `7d` … or `never`; default 7 days), `--account LABEL` (devices registered with it belong to that account label). `token-list` shows the IDs, state, uses left and expiry (never the tokens), and `token-revoke ID` deletes one. A token is only needed when a host first registers, and only a host's connection spends one: a client that presents a token is treated as one without it. Failed tokens count against a registration limit of five an hour per address, so guessing is slow. A host that is refused a token (`token_invalid`, `token_expired`, `host_not_allowed`) stops asking until it gets new server settings or its user turns hosting off and on; after `rate_limited` it waits at least five minutes between attempts.
 
 On the server itself the same commands are `sodium-remote-server token new|list|revoke` (add `--state-dir /var/lib/sodium-remote-server`, and run it as the service's user so the files stay readable by the service).
 

@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
@@ -35,6 +35,8 @@ const AUTH_CONTEXT: &[u8] = b"remote-rendezvous/v1/auth\0";
 const PAIRED_LIST_CONTEXT: &[u8] = b"remote-rendezvous/v1/paired-list\0";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+/// The least a host waits after `rate_limited`: the server's new-device limit refills one slot per 12 minutes.
+pub const RATE_LIMITED_BACKOFF: Duration = Duration::from_secs(300);
 /// How long a relay gets to answer the RTT check before it counts as unreachable.
 const RELAY_PROBE_TIMEOUT: Duration = Duration::from_millis(1500);
 
@@ -119,7 +121,7 @@ pub enum RdvError {
     Io(String),
     /// The server refused: rendezvous-api.md §10's code (`host_not_allowed`,
     /// `not_authorised`, `rate_limited`, the [`codes`] for enrolment and accounts, …).
-    Server { code: String, message: String },
+    Server { code: String, message: String, retry_after: Option<u64> },
     Timeout,
     Protocol(String),
     /// The server sent this registration elsewhere (`connect` follows it once).
@@ -127,6 +129,23 @@ pub enum RdvError {
 }
 
 impl RdvError {
+    /// The server's refusal will not change by trying again: the token is unknown, spent or missing. Only a new
+    /// token (a changed server configuration) or turning hosting off and on is worth another attempt.
+    pub fn is_permanent_refusal(&self) -> bool {
+        matches!(self.code(), Some(codes::TOKEN_INVALID | codes::TOKEN_EXPIRED | codes::HOST_NOT_ALLOWED))
+    }
+
+    /// When to try again after a `rate_limited` refusal: the server's `retry_after` if it sent one, at least
+    /// [`RATE_LIMITED_BACKOFF`] either way. Each attempt counts against the per-address limit, so hammering keeps it shut.
+    pub fn rate_limit_wait(&self) -> Option<Duration> {
+        match self {
+            RdvError::Server { code, retry_after, .. } if code == "rate_limited" => {
+                Some(retry_after.map(Duration::from_secs).unwrap_or_default().max(RATE_LIMITED_BACKOFF))
+            }
+            _ => None,
+        }
+    }
+
     pub fn code(&self) -> Option<&str> {
         match self {
             RdvError::Server { code, .. } => Some(code),
@@ -139,7 +158,7 @@ impl std::fmt::Display for RdvError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RdvError::Io(e) => write!(f, "rendezvous unreachable: {e}"),
-            RdvError::Server { code, message } => write!(f, "rendezvous refused: {code} ({message})"),
+            RdvError::Server { code, message, .. } => write!(f, "rendezvous refused: {code} ({message})"),
             RdvError::Timeout => write!(f, "rendezvous timed out"),
             RdvError::Protocol(e) => write!(f, "rendezvous protocol error: {e}"),
             RdvError::Redirect(u) => write!(f, "rendezvous redirected to {u}"),
@@ -307,8 +326,10 @@ impl TurnCredentials {
     }
 }
 
-/// The platform's root certificates, read once.
+/// The platform's root certificates, read once (Linux and the others without an OS verifier below).
+#[cfg(not(any(windows, target_vendor = "apple")))]
 fn platform_roots() -> Result<rustls::RootCertStore, String> {
+    use std::sync::OnceLock;
     static ROOTS: OnceLock<Result<rustls::RootCertStore, String>> = OnceLock::new();
     ROOTS
         .get_or_init(|| {
@@ -323,10 +344,15 @@ fn platform_roots() -> Result<rustls::RootCertStore, String> {
         .clone()
 }
 
-/// A rustls client config for the rendezvous and TURN over TLS: only `ca_pem`
-/// when given (a pinned CA), else Web PKI through the platform's roots.
+/// A rustls client config for the rendezvous, TURN over TLS and the downloads: only `ca_pem` when given (a pinned
+/// CA), else Web PKI. On Windows and macOS the OS verifies the chain (a Windows that has not installed ISRG Root X1
+/// yet fetches it); elsewhere the roots come from the system's certificate files.
 pub fn tls_config(ca_pem: Option<&[u8]>, alpn_http: bool) -> Result<Arc<rustls::ClientConfig>, String> {
-    let roots = match ca_pem {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let builder = rustls::ClientConfig::builder_with_provider(provider.clone())
+        .with_safe_default_protocol_versions()
+        .map_err(|e| e.to_string())?;
+    let builder = match ca_pem {
         Some(pem) => {
             let mut roots = rustls::RootCertStore::empty();
             for cert in CertificateDer::pem_slice_iter(pem) {
@@ -335,15 +361,17 @@ pub fn tls_config(ca_pem: Option<&[u8]>, alpn_http: bool) -> Result<Arc<rustls::
             if roots.is_empty() {
                 return Err("no CA certificate in the PEM".into());
             }
-            roots
+            builder.with_root_certificates(roots)
         }
-        None => platform_roots()?,
+        #[cfg(any(windows, target_vendor = "apple"))]
+        None => {
+            use rustls_platform_verifier::BuilderVerifierExt;
+            builder.with_platform_verifier().map_err(|e| format!("the system certificate verifier: {e}"))?
+        }
+        #[cfg(not(any(windows, target_vendor = "apple")))]
+        None => builder.with_root_certificates(platform_roots()?),
     };
-    let mut cfg = rustls::ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
-        .with_safe_default_protocol_versions()
-        .map_err(|e| e.to_string())?
-        .with_root_certificates(roots)
-        .with_no_client_auth();
+    let mut cfg = builder.with_no_client_auth();
     if alpn_http {
         cfg.alpn_protocols = vec![b"http/1.1".to_vec()];
     }
@@ -444,7 +472,9 @@ impl Rendezvous {
         m.push(0);
         m.extend_from_slice(&nonce);
         let mut auth = json!({"t": "auth", "device": key.id().to_string(), "role": role.as_str(), "sig": b64(&key.sign(&m))});
-        if let Some(token) = cfg.token.as_deref().filter(|t| !t.is_empty()) {
+        // Only the host's connection carries the token: a one-use token spent by this app's own client
+        // connection (the same server.toml) would leave the host refused as expired.
+        if let Some(token) = cfg.token.as_deref().filter(|t| !t.is_empty() && role == DeviceRole::Host) {
             auth["token"] = json!(token);
         }
         ws.send(Message::Text(auth.to_string().into())).await.map_err(|e| RdvError::Io(e.to_string()))?;
@@ -689,6 +719,8 @@ fn server_error(v: &Value) -> RdvError {
     RdvError::Server {
         code: v["code"].as_str().unwrap_or("unknown").to_string(),
         message: v["message"].as_str().unwrap_or_default().to_string(),
+        // Seconds, if the server says when to come back.
+        retry_after: v["retry_after"].as_u64(),
     }
 }
 
@@ -757,8 +789,25 @@ mod tests {
     /// The Mac app finds a server's refusal by this text (`ServerProblem.parse` in client-mac): keep it.
     #[test]
     fn a_refusal_is_reported_as_its_code_for_the_apps_to_word() {
-        let e = RdvError::Server { code: codes::TOKEN_INVALID.into(), message: "no such token".into() };
+        let e = RdvError::Server { code: codes::TOKEN_INVALID.into(), message: "no such token".into(), retry_after: None };
         assert!(e.to_string().starts_with("rendezvous refused: token_invalid "), "{e}");
+    }
+
+    fn refusal(code: &str, retry_after: Option<u64>) -> RdvError {
+        RdvError::Server { code: code.into(), message: String::new(), retry_after }
+    }
+
+    #[test]
+    fn a_refused_token_is_permanent_and_a_rate_limit_waits_at_least_five_minutes() {
+        for c in ["token_invalid", "token_expired", "host_not_allowed"] {
+            assert!(refusal(c, None).is_permanent_refusal(), "{c}");
+        }
+        assert!(!refusal("rate_limited", None).is_permanent_refusal());
+        assert!(!RdvError::Io("down".into()).is_permanent_refusal());
+        assert_eq!(refusal("rate_limited", None).rate_limit_wait(), Some(RATE_LIMITED_BACKOFF));
+        assert_eq!(refusal("rate_limited", Some(10)).rate_limit_wait(), Some(RATE_LIMITED_BACKOFF));
+        assert_eq!(refusal("rate_limited", Some(1800)).rate_limit_wait(), Some(Duration::from_secs(1800)));
+        assert_eq!(refusal("server_full", None).rate_limit_wait(), None);
     }
 
     #[test]

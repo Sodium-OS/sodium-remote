@@ -16,7 +16,7 @@ The choices that shape Sodium Remote, and what they cost. Outcomes only: each is
 ## Servers and networks
 
 - **Nothing is compiled in.** No default server and no bundled CA. A device uses a server only when its configuration or a link names one; without one it works on the LAN and by address and says so.
-- **Web PKI by default, a pinned CA optionally.** A pinned CA replaces trust entirely, and is never fetched from the server it checks.
+- **Web PKI by default, a pinned CA optionally.** On Windows and macOS the operating system verifies the chain (it can fetch a root it hasn't installed yet); elsewhere the roots come from the system's certificate files. A pinned CA replaces trust entirely, and is never fetched from the server it checks.
 - **You can run the whole thing.** The server and its deploy scripts are open source and generic: no built-in names, ports are parameters, TLS from a public CA or a private one.
 - **Enrolment by token by default.** A host registers with a short-lived token or an allowlist, so a public server isn't a free relay.
 - **Additive API.** The rendezvous API only grows. Control versions are negotiated by range, and every release speaks the previous one too ([compatibility](compatibility.md)).

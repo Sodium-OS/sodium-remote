@@ -449,7 +449,7 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
             while true {
                 guard let me = self, me.model.hosts.isEmpty || me.pairingSheet != nil else { break }
                 if !me.pairingBusy {
-                    let found = await c.discoverPairing(timeoutMs: 2000)
+                    let found = (try? await c.discoverPairing(timeoutMs: 2000)) ?? []
                     if !me.pairingBusy {
                         me.model.nearby = found.map { NearbyHost(id: $0.host, name: $0.name, foundVia: $0.foundVia) }
                     }
@@ -467,13 +467,20 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
         let wanted = pairingFor
         Task { [weak self] in
             // Fresh: `pair` names a computer from the latest discovery.
-            var hosts = await c.discoverPairing(timeoutMs: 1500)
+            var hosts: [PairingHost] = []
+            var failure: RemoteError?
+            do {
+                hosts = try await c.discoverPairing(timeoutMs: 1500)
+            } catch let e as RemoteError {
+                failure = e
+            } catch {
+                failure = .Failed(message: "\(error)")
+            }
             if let id = wanted {
                 let only = hosts.filter { $0.host == id }
                 if !only.isEmpty { hosts = only }
             }
             var result: Device?
-            var failure: RemoteError?
             for h in hosts {
                 do {
                     result = try await c.pair(host: h, code: code)
@@ -495,12 +502,17 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
                 m.phase = .paired(name: d.name, code: deviceCode(id: d.id))
                 self.refreshHosts()
                 Log.info("paired with \(d.name) (\(deviceCode(id: d.id)))")
-            } else if hosts.isEmpty {
+            } else if hosts.isEmpty, !isServerBusy(failure) {
                 m.phase = .noComputer
             } else {
                 m.phase = AppController.phase(for: failure)
             }
         }
+    }
+
+    private func isServerBusy(_ e: RemoteError?) -> Bool {
+        if case .ServerBusy = e { return true }
+        return false
     }
 
     static func phase(for e: RemoteError?) -> PairingPhase {
@@ -513,6 +525,8 @@ final class AppController: NSObject, AppActions, PairingActions, SettingsActions
             if reason.contains("expired") { return .expired }
             if reason.contains("not found") || reason.contains("not_found") { return .noComputer }
             return .failed(String(localized: "The computer closed its pairing window. Make a new code there."))
+        case .ServerBusy:
+            return .failed(String(localized: "The server is busy. Try again in a minute."))
         case .Failed(let message):
             return .failed(message)
         default:

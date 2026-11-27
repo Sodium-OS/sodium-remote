@@ -73,14 +73,24 @@ async fn token_enrolment_accepts_a_valid_token_once_and_refuses_the_rest() {
     let srv = start("token2", |c| c.enrol = Enrol::Token).await;
     let dir = srv.cfg.tokens_dir();
 
-    // Clients need none, but a bad one is refused rather than ignored.
+    // Clients need none and ignore one: the app's own client connection reads the same server.toml as the host.
     assert_eq!(auth(&srv, &new_key(), Role::Client, None).await["t"], "auth_ok");
-    assert_eq!(auth(&srv, &new_key(), Role::Client, Some("not-a-token-at-all-xxxx")).await["code"], "token_invalid");
+    assert_eq!(auth(&srv, &new_key(), Role::Client, Some("not-a-token-at-all-xxxx")).await["t"], "auth_ok");
 
     // Revoked tokens are unknown.
     let (t, rec) = tokens::mint(&dir, None, None, None, now).unwrap();
     tokens::revoke(&dir, rec.id()).unwrap();
     assert_eq!(auth(&srv, &new_key(), Role::Host, Some(&t)).await["code"], "token_invalid");
+}
+
+#[tokio::test]
+async fn a_client_presenting_a_token_does_not_spend_it() {
+    let srv = start("token3", |c| c.enrol = Enrol::Token).await;
+    let now = unix_now();
+    let (one_use, _) = tokens::mint(&srv.cfg.tokens_dir(), Some(1), Some(now + 3600), None, now).unwrap();
+    assert_eq!(auth(&srv, &new_key(), Role::Client, Some(&one_use)).await["t"], "auth_ok");
+    // The host's connection, with the same token, still registers.
+    assert_eq!(auth(&srv, &new_key(), Role::Host, Some(&one_use)).await["registered"], true);
 }
 
 #[tokio::test]

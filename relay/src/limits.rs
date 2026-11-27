@@ -22,7 +22,7 @@ pub enum Kind {
     PairJoin,
     /// Pairing join attempts per address.
     PairJoinIp,
-    /// Looking for open pairing windows, per address.
+    /// Looking for open pairing windows, per address: 30 a minute, since homes and offices share one.
     PairDiscover,
     /// TURN credential requests per device.
     Turn,
@@ -38,7 +38,7 @@ impl Kind {
             Kind::PairOpen => (10.0, 10.0 / 600.0),
             Kind::PairJoin => (5.0, 5.0 / 60.0),
             Kind::PairJoinIp => (10.0, 10.0 / 600.0),
-            Kind::PairDiscover => (10.0, 10.0 / 60.0),
+            Kind::PairDiscover => (30.0, 30.0 / 60.0),
             Kind::Turn => (10.0, 10.0 / 60.0),
         }
     }

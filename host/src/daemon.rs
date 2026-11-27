@@ -204,6 +204,7 @@ async fn daemon(o: RunOpts) -> Result<()> {
     if cfg.rendezvous.is_none() && o.rendezvous {
         eprintln!("remoted: no server configured ({}): LAN and address only", remote_core::brand::SERVER_TOML);
     }
+    cfg.follow_server_toml = o.rendezvous && o.rendezvous_url.is_none();
     let rdv_host = cfg.rendezvous.as_ref().map(|r| r.host());
     cfg.lan = o.lan;
     cfg.mdns = o.lan && settings.mdns;

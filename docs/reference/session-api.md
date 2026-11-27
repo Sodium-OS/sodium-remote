@@ -66,7 +66,7 @@ client                                         host
 - Every request of rendezvous-api.md §5 is a typed `async fn` (`upload_paired_list`, `paired_list_seq`, `pair_open/msg/fail/close`, `signal`, `close_session`, `turn_credentials`, `unregister`, `presence`, `connect_host`, `pair_discover`, `pair_join`); errors carry the server's code (`RdvError::code()`).
 - `TurnCredentials::resolve()` turns the URLs into STUN servers and TURN servers (UDP, TCP, TLS) for the path layer; `rendezvous::tls_config` is the pinned config for TURN over TLS too.
 - **Sleep notice:** `sleep_notice()` sends `{"t":"sleep"}` and closes. The live server doesn't know `sleep` (it answers `bad_request`, which is tolerated), so the card shows Offline with `last_seen` until the relay adds an "asleep" state (open question 1).
-- Reconnecting is the `connect` layer's job: it keeps one connection up with backoff (1 s doubling to 30 s; 30 s after `host_not_allowed`).
+- Reconnecting is the `connect` layer's job: it keeps one connection up with backoff (1 s doubling to 30 s). It stops after `token_invalid`, `token_expired` and `host_not_allowed` (each attempt spends one of the address's new-device slots) until the host is restarted or, for a host that reads `server.toml`, the file names another server or token; after `rate_limited` it waits `retry_after` or five minutes, whichever is longer.
 
 ## 4. Pairing (`pairing`)
 
@@ -120,7 +120,7 @@ host.network_changed();  host.shutdown().await;
 
 | `HostEvent` | When |
 |---|---|
-| `Rendezvous { online, error }` | Connected or dropped. `error` containing `host_not_allowed` is the "not enrolled" state (`deploy.sh allow-host`). |
+| `Rendezvous { online, error }` | Connected or dropped. `error` containing `host_not_allowed` is the "not enrolled" state, and the last event before the retries stop for a refused token (`deploy.sh allow-host`). |
 | `PairingAttempt { attempt }`, `PairingFailed { attempts_left }`, `Paired(PairedDevice)`, `PairingClosed { reason }` | The pairing window. `reason`: `paired`, `expired`, `attempts_used`, `cancelled`. |
 | `ClientConnected { client, name, hello, took_over_from, resumed }` | Handshake done and `Hello` received: set REMOTE-1 up and answer `Msg::Welcome` (copy `took_over_from` and `resumed`). |
 | `ClientLost { client }` | The connection died: **the hold starts**. Keep REMOTE-1 and the layout. |
@@ -142,6 +142,8 @@ host.network_changed();  host.shutdown().await;
 let mut cfg = ClientConfig::new(store, "MacBook Air");     // cfg.rendezvous, cfg.mdns, cfg.hold, cfg.lan_hints
 let (client, mut events) = Client::start(cfg).await?;
 let targets = client.discover_pairing(Duration::from_secs(2)).await;   // mDNS and the rendezvous, merged by host
+let targets = client.try_discover_pairing(Duration::from_secs(2)).await?;  // the same, Err(ServerBusy) when the server is rate limiting
+let targets = client.discover_pairing_idle(Duration::from_millis(400)).await; // a background refresh: the server at most every 30 s
 client.pair(&targets[0], "123456").await?;                // PairedDevice | PairError::{WrongCode, Closed, Failed}
 client.paired();  client.forget(&id);  client.presence().await;        // online, on_lan, last_seen, asleep_since
 client.connect(host_id, hello, false).await?;             // ConnectError::Busy { by } → ask → connect(.., true)
@@ -217,7 +219,7 @@ let core = try RemoteClient(settings: ClientSettings(name: "MacBook Air", rendez
                             store: KeychainStore(),        // KeyStore: load/save/remove(name)
                             listener: self)                // ClientListener: onEvent(event: RemoteEvent)
 core.id(); core.paired(); try core.forget(host:)
-let hosts = await core.discoverPairing(timeoutMs: 2000)    // [PairingHost]
+let hosts = try await core.discoverPairing(timeoutMs: 2000) // [PairingHost]; RemoteError.serverBusy
 let host = try await core.pair(host: hosts[0], code: "123456")   // RemoteError.wrongCode, .pairingClosed
 await core.presence()                                      // [HostPresence]
 try await core.connect(host: id, hello: Hello(...), takeover: false)   // RemoteError.busy(by:)

@@ -166,48 +166,54 @@
     </message>
     <message>
         <location filename="../../app/qml/AddSheet.qml" line="200"/>
+        <source>The server is busy. Try again in a minute.</source>
+        <translation>El servidor está ocupado. Inténtalo de nuevo en un minuto.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/AddSheet.qml" line="201"/>
         <source>Couldn’t pair with %1. Check that it is on and on this network.</source>
         <translation>No se pudo vincular con %1. Comprueba que está encendido y en esta red.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="201"/>
+        <location filename="../../app/qml/AddSheet.qml" line="202"/>
         <source>The code is shown on that computer, where pairing is switched on.</source>
         <translation>El código aparece en ese ordenador, donde está activado el emparejamiento.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="208"/>
+        <location filename="../../app/qml/AddSheet.qml" line="209"/>
         <source>Back</source>
         <translation>Atrás</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="212"/>
+        <location filename="../../app/qml/AddSheet.qml" line="213"/>
         <source>Try a new code</source>
         <translation>Probar un código nuevo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="230"/>
+        <location filename="../../app/qml/AddSheet.qml" line="231"/>
         <source>%1 is paired</source>
         <translation>%1 está vinculado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="237"/>
+        <location filename="../../app/qml/AddSheet.qml" line="238"/>
         <source>Its key is saved on this computer.</source>
         <translation>Su clave se ha guardado en este equipo.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="243"/>
+        <location filename="../../app/qml/AddSheet.qml" line="244"/>
         <source>Done</source>
         <translation>Hecho</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="246"/>
+        <location filename="../../app/qml/AddSheet.qml" line="247"/>
         <source>Connect now</source>
         <translation>Conectar ahora</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -862,106 +868,106 @@
     <name>Main</name>
     <message>
         <location filename="../../app/qml/Main.qml" line="12"/>
-        <location filename="../../app/qml/Main.qml" line="42"/>
+        <location filename="../../app/qml/Main.qml" line="46"/>
         <source>Remote</source>
         <translation>Acceso remoto</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="75"/>
-        <location filename="../../app/qml/Main.qml" line="83"/>
+        <location filename="../../app/qml/Main.qml" line="79"/>
+        <location filename="../../app/qml/Main.qml" line="87"/>
         <source>Add a computer</source>
         <translation>Añadir un equipo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="89"/>
+        <location filename="../../app/qml/Main.qml" line="93"/>
         <source>Settings</source>
         <translation>Ajustes</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="118"/>
+        <location filename="../../app/qml/Main.qml" line="122"/>
         <source>This computer: %1 · ID %2</source>
         <translation>Este equipo: %1 · ID %2</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="119"/>
+        <location filename="../../app/qml/Main.qml" line="123"/>
         <source>Remote server online</source>
         <translation>Servidor remoto en línea</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="159"/>
+        <location filename="../../app/qml/Main.qml" line="163"/>
         <source>Previews are off. The saved pictures were deleted.</source>
         <translation>Las vistas previas están desactivadas. Se eliminaron las imágenes guardadas.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="170"/>
+        <location filename="../../app/qml/Main.qml" line="174"/>
         <source>Downloading a video codec</source>
         <translation>Descargando un códec de vídeo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="171"/>
+        <location filename="../../app/qml/Main.qml" line="175"/>
         <source>This computer has no hardware video encoder, so Sodium Remote is downloading OpenH264 from Cisco. It’s used for video on this computer only. You can turn this off in Settings › Advanced.</source>
         <translation>Este equipo no tiene un codificador de vídeo por hardware, así que Sodium Remote está descargando OpenH264 de Cisco. Solo se usa para el vídeo de este equipo. Puedes desactivarlo en «Ajustes › Avanzado».</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="173"/>
+        <location filename="../../app/qml/Main.qml" line="177"/>
         <source>OK</source>
         <translation>Aceptar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="174"/>
+        <location filename="../../app/qml/Main.qml" line="178"/>
         <source>Turn off downloads</source>
         <translation>Desactivar descargas</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="192"/>
+        <location filename="../../app/qml/Main.qml" line="196"/>
         <source>Forget %1?</source>
         <translation>¿Olvidar %1?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="193"/>
+        <location filename="../../app/qml/Main.qml" line="197"/>
         <source>This computer stops trusting its key and can’t connect until you pair again.</source>
         <translation>Este equipo deja de confiar en su clave y no podrá conectarse hasta que vuelvas a vincularlo.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="195"/>
+        <location filename="../../app/qml/Main.qml" line="199"/>
         <source>Forget</source>
         <translation>Olvidar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="201"/>
-        <location filename="../../app/qml/Main.qml" line="202"/>
+        <location filename="../../app/qml/Main.qml" line="205"/>
+        <location filename="../../app/qml/Main.qml" line="206"/>
         <source>Rename</source>
         <translation>Cambiar nombre</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="208"/>
-        <location filename="../../app/qml/Main.qml" line="209"/>
+        <location filename="../../app/qml/Main.qml" line="212"/>
+        <location filename="../../app/qml/Main.qml" line="213"/>
         <source>Name here</source>
         <translation>Nombre aquí</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="65"/>
+        <location filename="../../app/qml/Main.qml" line="69"/>
         <source>Computers</source>
         <translation>Equipos</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/Main.qml" line="65"/>
+        <location filename="../../app/qml/Main.qml" line="69"/>
         <source>This computer</source>
         <translation>Este equipo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -1075,14 +1081,14 @@
     </message>
     <message>
         <location filename="../../app/qml/ServerPage.qml" line="59"/>
-        <location filename="../../app/qml/ServerPage.qml" line="181"/>
+        <location filename="../../app/qml/ServerPage.qml" line="182"/>
         <source>How to run your own server</source>
         <translation>Cómo ejecutar tu propio servidor</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
         <location filename="../../app/qml/ServerPage.qml" line="63"/>
-        <location filename="../../app/qml/ServerPage.qml" line="176"/>
+        <location filename="../../app/qml/ServerPage.qml" line="177"/>
         <source>Import…</source>
         <translation>Importar…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -1120,7 +1126,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ServerPage.qml" line="100"/>
-        <location filename="../../app/qml/ServerPage.qml" line="117"/>
+        <location filename="../../app/qml/ServerPage.qml" line="118"/>
         <source>Change…</source>
         <translation>Cambiar…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -1151,84 +1157,90 @@
     </message>
     <message>
         <location filename="../../app/qml/ServerPage.qml" line="114"/>
+        <source>Too many computers have registered from this network address lately. Sodium Remote will try again in a few minutes.</source>
+        <translation>Se han registrado demasiados ordenadores desde esta dirección de red en poco tiempo. Sodium Remote lo volverá a intentar en unos minutos.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ServerPage.qml" line="115"/>
         <source>%1 has reached its limit for now. Computers on this network and by address still work.</source>
         <translation>%1 ha alcanzado su límite por ahora. Los equipos de esta red y las conexiones por dirección siguen funcionando.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="115"/>
+        <location filename="../../app/qml/ServerPage.qml" line="116"/>
         <source>%1 needs a payment before this computer can use it. Computers on this network and by address still work.</source>
         <translation>%1 necesita un pago antes de que este equipo pueda usarlo. Los equipos de esta red y las conexiones por dirección siguen funcionando.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="124"/>
+        <location filename="../../app/qml/ServerPage.qml" line="125"/>
         <source>Couldn’t reach %1. Computers on this network and by address still work. Sodium Remote keeps trying.</source>
         <translation>No se pudo conectar con %1. Los equipos de esta red y las conexiones por dirección siguen funcionando. Sodium Remote seguirá intentándolo.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="125"/>
+        <location filename="../../app/qml/ServerPage.qml" line="126"/>
         <source>Try now</source>
         <translation>Reintentar ahora</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="133"/>
+        <location filename="../../app/qml/ServerPage.qml" line="134"/>
         <source>The new server is used when this session ends.</source>
         <translation>El nuevo servidor se usará cuando termine esta sesión.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="140"/>
+        <location filename="../../app/qml/ServerPage.qml" line="141"/>
         <source>Server</source>
         <translation>Servidor</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="144"/>
+        <location filename="../../app/qml/ServerPage.qml" line="145"/>
         <source>Address</source>
         <translation>Dirección</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="150"/>
+        <location filename="../../app/qml/ServerPage.qml" line="151"/>
         <source>Certificate</source>
         <translation>Certificado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="151"/>
+        <location filename="../../app/qml/ServerPage.qml" line="152"/>
         <source>Pinned</source>
         <translation>Fijado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="151"/>
+        <location filename="../../app/qml/ServerPage.qml" line="152"/>
         <source>Public</source>
         <translation>Público</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="156"/>
+        <location filename="../../app/qml/ServerPage.qml" line="157"/>
         <source>This computer</source>
         <translation>Este equipo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="167"/>
+        <location filename="../../app/qml/ServerPage.qml" line="168"/>
         <source>Enrolled</source>
         <translation>Registrado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="177"/>
+        <location filename="../../app/qml/ServerPage.qml" line="178"/>
         <source>Export…</source>
         <translation>Exportar…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ServerPage.qml" line="190"/>
+        <location filename="../../app/qml/ServerPage.qml" line="191"/>
         <source>The exported file includes the enrollment token.</source>
         <translation>El archivo exportado incluye el token de registro.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -1858,61 +1870,61 @@
 <context>
     <name>StreamWindow</name>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="41"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="44"/>
         <source>Remote</source>
         <translation>Acceso remoto</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="207"/>
         <source>Connection lost · retrying</source>
         <translation>Conexión perdida · reintentando</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="207"/>
         <source>Reconnecting…</source>
         <translation>Reconectando…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="234"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="238"/>
         <source>%1 is showing a secure screen</source>
         <translation>%1 muestra una pantalla segura</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="243"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="247"/>
         <source>Its lock screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Su pantalla de bloqueo no se puede mostrar ni controlar desde aquí. La sesión continúa cuando vuelva el escritorio.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="244"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="248"/>
         <source>Its lock, sign-in or UAC screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>Sus pantallas de bloqueo, inicio de sesión o UAC no se pueden mostrar ni controlar desde aquí. La sesión continúa cuando vuelva el escritorio.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="251"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="255"/>
         <source>Waiting for the desktop…</source>
         <translation>Esperando al escritorio…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="257"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="261"/>
         <source>Disconnect</source>
         <translation>Desconectar</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="277"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="281"/>
         <source>Back on %1’s desktop</source>
         <translation>De vuelta en el escritorio de %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="297"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="301"/>
         <source>Press %1 to leave the stream.</source>
         <translation>Pulsa %1 para salir de la transmisión.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2555,19 +2567,19 @@
 <context>
     <name>WinApp</name>
     <message>
-        <location filename="../../app/src/winapp.cpp" line="118"/>
+        <location filename="../../app/src/winapp.cpp" line="123"/>
         <source>%1: %2 is controlling this computer</source>
         <translation>%1: %2 está controlando este equipo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/src/winapp.cpp" line="121"/>
+        <location filename="../../app/src/winapp.cpp" line="126"/>
         <source>%1: Remote control is on</source>
         <translation>%1: el control remoto está activado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/src/winapp.cpp" line="124"/>
+        <location filename="../../app/src/winapp.cpp" line="129"/>
         <source>%1: Remote control is off</source>
         <translation>%1: el control remoto está desactivado</translation>
         <extra-sodium-review>machine</extra-sodium-review>

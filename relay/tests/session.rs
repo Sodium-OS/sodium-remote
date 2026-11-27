@@ -177,3 +177,31 @@ async fn a_device_signs_the_server_it_connected_to() {
     assert!(r.is_ok(), "{:?}", r.err());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// One server.toml reaches both the app's client connection and the host's: only the host's connection
+/// sends the token, so the client one doesn't spend a one-use token and the host still registers with it.
+#[tokio::test(flavor = "multi_thread")]
+async fn only_the_hosts_connection_sends_the_enrolment_token() {
+    let dir = temp_dir("token-roles");
+    std::fs::create_dir_all(&dir).unwrap();
+    if !make_certs(&dir) {
+        eprintln!("no openssl: skipped");
+        return;
+    }
+    let ca = std::fs::read(dir.join("ca.pem")).unwrap();
+    let tls = server::load_tls(&dir.join("leaf.pem"), &dir.join("leaf.key")).unwrap();
+    let mut cfg = Config::new("localhost", dir.join("state"), b"test-secret-test-secret-test-secret".to_vec());
+    cfg.enrol = Enrol::Token;
+    let now = unix_now();
+    let (token, _) = tokens::mint(&cfg.tokens_dir(), Some(1), Some(now + 3600), None, now).unwrap();
+    let listener = TcpListener::bind((LO, 0)).await.unwrap();
+    let url = format!("wss://localhost:{}/remote", listener.local_addr().unwrap().port());
+    tokio::spawn(server::serve(listener, Some(tls), server::router(Hub::new(cfg).unwrap()), std::future::pending()));
+
+    let rc = RendezvousConfig { url, ca_pem: Some(ca), token: Some(token) };
+    let client = Rendezvous::connect(&rc, &DeviceKey::generate(), DeviceRole::Client).await;
+    assert!(client.is_ok(), "{:?}", client.err());
+    let host = Rendezvous::connect(&rc, &DeviceKey::generate(), DeviceRole::Host).await;
+    assert!(matches!(host, Ok((_, _, true))), "{:?}", host.err());
+    let _ = std::fs::remove_dir_all(&dir);
+}
