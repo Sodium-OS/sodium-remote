@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/sodium-os/sodium-remote/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/sodium-os/sodium-remote/ci.yml?branch=main&style=flat-square&label=CI&labelColor=151229"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0-only" src="https://img.shields.io/badge/license-AGPL--3.0--only-ffb84d?style=flat-square&labelColor=151229"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.1.0 preview" src="https://img.shields.io/badge/version-0.1.0_preview-9aa8ff?style=flat-square&labelColor=151229"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.2.0 preview" src="https://img.shields.io/badge/version-0.2.0_preview-9aa8ff?style=flat-square&labelColor=151229"></a>
   <a href="#platforms"><img alt="Windows, macOS and Linux" src="https://img.shields.io/badge/platforms-Windows_·_macOS_·_Linux-9aa8ff?style=flat-square&labelColor=151229"></a>
   <a href="docs/translating.md"><img alt="Ten languages" src="https://img.shields.io/badge/languages-10-9aa8ff?style=flat-square&labelColor=151229"></a>
 </p>
