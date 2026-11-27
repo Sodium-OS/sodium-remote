@@ -29186,6 +29186,71 @@
         }
       }
     },
+    "The server is busy. Try again in a minute.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is busy. Try again in a minute."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is busy. Try again in a minute."
+          }
+        },
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is busy. Try again in a minute."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器繁忙。请一分钟后再试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器忙碌中。請一分鐘後再試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーがビジーです。1分後にもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버가 사용 중입니다. 1분 후에 다시 시도하세요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El servidor está ocupado. Inténtalo de nuevo en un minuto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le serveur est occupé. Réessayez dans une minute."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server ist ausgelastet. In einer Minute erneut versuchen."
+          }
+        }
+      }
+    },
     "The computer’s": {
       "extractionState": "manual",
       "localizations": {

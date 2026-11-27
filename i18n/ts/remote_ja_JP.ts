@@ -166,48 +166,54 @@
     </message>
     <message>
         <location filename="../../app/qml/AddSheet.qml" line="200"/>
+        <source>The server is busy. Try again in a minute.</source>
+        <translation>サーバーがビジーです。1分後にもう一度お試しください。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/AddSheet.qml" line="201"/>
         <source>Couldn’t pair with %1. Check that it is on and on this network.</source>
         <translation>%1とペアリングできませんでした。電源が入っていて、このネットワーク上にあるか確認してください。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="201"/>
+        <location filename="../../app/qml/AddSheet.qml" line="202"/>
         <source>The code is shown on that computer, where pairing is switched on.</source>
         <translation>コードは、ペアリングを有効にしているそのコンピューターに表示されます。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="208"/>
+        <location filename="../../app/qml/AddSheet.qml" line="209"/>
         <source>Back</source>
         <translation>戻る</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="212"/>
+        <location filename="../../app/qml/AddSheet.qml" line="213"/>
         <source>Try a new code</source>
         <translation>新しいコードを試す</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="230"/>
+        <location filename="../../app/qml/AddSheet.qml" line="231"/>
         <source>%1 is paired</source>
         <translation>%1とペアリングしました</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="237"/>
+        <location filename="../../app/qml/AddSheet.qml" line="238"/>
         <source>Its key is saved on this computer.</source>
         <translation>キーはこのコンピューターに保存されました。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="243"/>
+        <location filename="../../app/qml/AddSheet.qml" line="244"/>
         <source>Done</source>
         <translation>完了</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="246"/>
+        <location filename="../../app/qml/AddSheet.qml" line="247"/>
         <source>Connect now</source>
         <translation>今すぐ接続</translation>
         <extra-sodium-review>machine</extra-sodium-review>

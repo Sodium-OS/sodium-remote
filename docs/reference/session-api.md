@@ -142,6 +142,8 @@ host.network_changed();  host.shutdown().await;
 let mut cfg = ClientConfig::new(store, "MacBook Air");     // cfg.rendezvous, cfg.mdns, cfg.hold, cfg.lan_hints
 let (client, mut events) = Client::start(cfg).await?;
 let targets = client.discover_pairing(Duration::from_secs(2)).await;   // mDNS and the rendezvous, merged by host
+let targets = client.try_discover_pairing(Duration::from_secs(2)).await?;  // the same, Err(ServerBusy) when the server is rate limiting
+let targets = client.discover_pairing_idle(Duration::from_millis(400)).await; // a background refresh: the server at most every 30 s
 client.pair(&targets[0], "123456").await?;                // PairedDevice | PairError::{WrongCode, Closed, Failed}
 client.paired();  client.forget(&id);  client.presence().await;        // online, on_lan, last_seen, asleep_since
 client.connect(host_id, hello, false).await?;             // ConnectError::Busy { by } → ask → connect(.., true)
@@ -217,7 +219,7 @@ let core = try RemoteClient(settings: ClientSettings(name: "MacBook Air", rendez
                             store: KeychainStore(),        // KeyStore: load/save/remove(name)
                             listener: self)                // ClientListener: onEvent(event: RemoteEvent)
 core.id(); core.paired(); try core.forget(host:)
-let hosts = await core.discoverPairing(timeoutMs: 2000)    // [PairingHost]
+let hosts = try await core.discoverPairing(timeoutMs: 2000) // [PairingHost]; RemoteError.serverBusy
 let host = try await core.pair(host: hosts[0], code: "123456")   // RemoteError.wrongCode, .pairingClosed
 await core.presence()                                      // [HostPresence]
 try await core.connect(host: id, hello: Hello(...), takeover: false)   // RemoteError.busy(by:)

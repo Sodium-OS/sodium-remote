@@ -166,48 +166,54 @@
     </message>
     <message>
         <location filename="../../app/qml/AddSheet.qml" line="200"/>
+        <source>The server is busy. Try again in a minute.</source>
+        <translation>El servidor está ocupado. Inténtalo de nuevo en un minuto.</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/AddSheet.qml" line="201"/>
         <source>Couldn’t pair with %1. Check that it is on and on this network.</source>
         <translation>No se pudo vincular con %1. Comprueba que está encendido y en esta red.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="201"/>
+        <location filename="../../app/qml/AddSheet.qml" line="202"/>
         <source>The code is shown on that computer, where pairing is switched on.</source>
         <translation>El código aparece en ese ordenador, donde está activado el emparejamiento.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="208"/>
+        <location filename="../../app/qml/AddSheet.qml" line="209"/>
         <source>Back</source>
         <translation>Atrás</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="212"/>
+        <location filename="../../app/qml/AddSheet.qml" line="213"/>
         <source>Try a new code</source>
         <translation>Probar un código nuevo</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="230"/>
+        <location filename="../../app/qml/AddSheet.qml" line="231"/>
         <source>%1 is paired</source>
         <translation>%1 está vinculado</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="237"/>
+        <location filename="../../app/qml/AddSheet.qml" line="238"/>
         <source>Its key is saved on this computer.</source>
         <translation>Su clave se ha guardado en este equipo.</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="243"/>
+        <location filename="../../app/qml/AddSheet.qml" line="244"/>
         <source>Done</source>
         <translation>Hecho</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="246"/>
+        <location filename="../../app/qml/AddSheet.qml" line="247"/>
         <source>Connect now</source>
         <translation>Conectar ahora</translation>
         <extra-sodium-review>machine</extra-sodium-review>

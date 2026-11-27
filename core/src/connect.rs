@@ -2241,6 +2241,29 @@ pub struct Client {
     rdv: Arc<RdvShared>,
     browser: Option<Arc<Browser>>,
     pair_route: Arc<Mutex<Option<(String, mpsc::UnboundedSender<rendezvous::Event>)>>>,
+    /// When the rendezvous was last asked for pairing windows, and what it said (see [`Client::discover_pairing_idle`]).
+    rdv_lookup: Arc<Mutex<RdvLookup>>,
+}
+
+/// How often background refreshes may ask the rendezvous for open pairing windows. The server allows 30 lookups a
+/// minute per address, and homes and offices share one: a window left open on a host-only machine would use it up.
+pub const IDLE_LOOKUP_INTERVAL: Duration = Duration::from_secs(30);
+
+/// The rendezvous refused a pairing lookup as `rate_limited`, twice.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ServerBusy;
+
+#[derive(Default)]
+struct RdvLookup {
+    at: Option<Instant>,
+    windows: Vec<rendezvous::OpenWindow>,
+}
+
+impl RdvLookup {
+    /// The last answer when it is younger than `interval`.
+    fn fresh(&self, now: Instant, interval: Duration) -> Option<&[rendezvous::OpenWindow]> {
+        self.at.filter(|t| now.duration_since(*t) < interval).map(|_| self.windows.as_slice())
+    }
 }
 
 impl Client {
@@ -2307,6 +2330,7 @@ impl Client {
             rdv: rdv.clone(),
             browser: browser.clone(),
             pair_route,
+            rdv_lookup: Default::default(),
         };
         let stored_addrs: Vec<(DeviceId, SocketAddr)> = pairings
             .lock()
@@ -2414,24 +2438,62 @@ impl Client {
         false
     }
 
-    /// Hosts with an open pairing window, from mDNS and the rendezvous
-    /// (normally exactly one).
+    /// Hosts with an open pairing window, from mDNS and the rendezvous (normally exactly one). A lookup the person
+    /// asked for: it always goes to the server. When the server is busy the list is what the LAN found.
     pub async fn discover_pairing(&self, timeout: Duration) -> Vec<PairingTarget> {
+        self.try_discover_pairing(timeout).await.unwrap_or_default()
+    }
+
+    /// [`discover_pairing`](Self::discover_pairing) for a lookup the person asked for (entering a code, the pair sheet),
+    /// telling a busy server from "nobody is pairing". A `rate_limited` answer is waited out once (the server's
+    /// `retry_after`, else 3 s, at most 10 s); if it is still limited the result is `Err(ServerBusy)`, unless the LAN
+    /// found something.
+    pub async fn try_discover_pairing(&self, timeout: Duration) -> Result<Vec<PairingTarget>, ServerBusy> {
+        let mut out = self.lan_pairing(timeout).await;
+        let Some(rdv) = self.rdv() else { return Ok(out) };
+        let mut r = rdv.pair_discover().await;
+        if let Err(RdvError::Server { code, retry_after, .. }) = &r {
+            if code == "rate_limited" {
+                tokio::time::sleep(Duration::from_secs(retry_after.unwrap_or(3).min(10))).await;
+                r = rdv.pair_discover().await;
+            }
+        }
+        match r {
+            Ok(ws) => {
+                *self.rdv_lookup.lock().unwrap() = RdvLookup { at: Some(Instant::now()), windows: ws.clone() };
+                merge_windows(&mut out, ws);
+                Ok(out)
+            }
+            Err(e) if e.code() == Some("rate_limited") && out.is_empty() => Err(ServerBusy),
+            Err(_) => Ok(out),
+        }
+    }
+
+    /// The same for a background refresh: the rendezvous is asked at most every [`IDLE_LOOKUP_INTERVAL`] (the
+    /// answer in between is the last one), and errors are not shown. The LAN is looked at every time.
+    pub async fn discover_pairing_idle(&self, timeout: Duration) -> Vec<PairingTarget> {
+        let mut out = self.lan_pairing(timeout).await;
+        let Some(rdv) = self.rdv() else { return out };
+        let cached = self.rdv_lookup.lock().unwrap().fresh(Instant::now(), IDLE_LOOKUP_INTERVAL).map(<[_]>::to_vec);
+        let ws = match cached {
+            Some(ws) => ws,
+            None => {
+                // Stamped even when it fails, so a refused lookup is not repeated every refresh.
+                let ws = rdv.pair_discover().await.unwrap_or_default();
+                *self.rdv_lookup.lock().unwrap() = RdvLookup { at: Some(Instant::now()), windows: ws.clone() };
+                ws
+            }
+        };
+        merge_windows(&mut out, ws);
+        out
+    }
+
+    async fn lan_pairing(&self, timeout: Duration) -> Vec<PairingTarget> {
         let mut out: Vec<PairingTarget> = Vec::new();
         if let Some(b) = &self.browser {
             b.wait_for(timeout, |h| h.pairing).await;
             for h in b.hosts().into_iter().filter(|h| h.pairing) {
                 out.push(PairingTarget { host: h.id, name: h.name, lan: Some((h.addrs, h.port)), rendezvous: None });
-            }
-        }
-        if let Some(rdv) = self.rdv() {
-            if let Ok(ws) = rdv.pair_discover().await {
-                for w in ws {
-                    match out.iter_mut().find(|t| t.host == w.host) {
-                        Some(t) => t.rendezvous = Some(w.pairing),
-                        None => out.push(PairingTarget { host: w.host, name: w.name, lan: None, rendezvous: Some(w.pairing) }),
-                    }
-                }
             }
         }
         out
@@ -3214,8 +3276,27 @@ async fn dial(ctx: DialCtx) -> Result<(EndpointHandle, SigChan), ConnectError> {
     }
 }
 
+fn merge_windows(out: &mut Vec<PairingTarget>, ws: Vec<rendezvous::OpenWindow>) {
+    for w in ws {
+        match out.iter_mut().find(|t| t.host == w.host) {
+            Some(t) => t.rendezvous = Some(w.pairing),
+            None => out.push(PairingTarget { host: w.host, name: w.name, lan: None, rendezvous: Some(w.pairing) }),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn background_lookups_reuse_the_last_answer_for_thirty_seconds() {
+        let t0 = Instant::now();
+        let mut l = RdvLookup::default();
+        assert!(l.fresh(t0, IDLE_LOOKUP_INTERVAL).is_none(), "nothing asked yet");
+        l.at = Some(t0);
+        assert!(l.fresh(t0 + Duration::from_secs(29), IDLE_LOOKUP_INTERVAL).is_some());
+        assert!(l.fresh(t0 + Duration::from_secs(30), IDLE_LOOKUP_INTERVAL).is_none());
+    }
+
     #[test]
     fn a_refused_token_stops_the_retries_and_a_rate_limit_waits_five_minutes() {
         let refused = |code: &str| RdvError::Server { code: code.into(), message: String::new(), retry_after: None };

@@ -48,7 +48,7 @@ Sheet {
             if (pairing.id)
                 targetId = pairing.id
             step = "done"
-        } else if (step === "pair" && (pairing.state === "wrong" || pairing.state === "withdrawn" || pairing.state === "closed" || pairing.state === "failed")) {
+        } else if (step === "pair" && (pairing.state === "wrong" || pairing.state === "withdrawn" || pairing.state === "closed" || pairing.state === "failed" || pairing.state === "busy")) {
             code.clear()
             code.focusInput()
         }
@@ -190,13 +190,14 @@ Sheet {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
                 font: Theme.font("body")
-                color: sheet.pairing.state === "wrong" || sheet.pairing.state === "withdrawn" || sheet.pairing.state === "closed" || sheet.pairing.state === "failed" ? Theme.dangerText : Theme.text2
+                color: sheet.pairing.state === "wrong" || sheet.pairing.state === "withdrawn" || sheet.pairing.state === "closed" || sheet.pairing.state === "failed" || sheet.pairing.state === "busy" ? Theme.dangerText : Theme.text2
                 text: {
                     switch (sheet.pairing.state) {
                     case "checking": return qsTr("Checking with the computer…")
                     case "wrong": return qsTr("That code didn’t match. Check the computer and try again: %n attempt(s) left.", "", sheet.pairing.left ?? 0)
                     case "withdrawn": return qsTr("Too many wrong codes, so the computer withdrew it. Make a new code there.")
                     case "closed": return qsTr("This code expired. On the computer, choose New code.")
+                    case "busy": return qsTr("The server is busy. Try again in a minute.")
                     case "failed": return qsTr("Couldn’t pair with %1. Check that it is on and on this network.").arg(sheet.targetName)
                     default: return qsTr("The code is shown on that computer, where pairing is switched on.")
                     }

@@ -220,7 +220,7 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
 **Limits:**
 - 32 messages per window, all attempts and both directions together.
 - `pair_open`: 10 per 10 minutes per host.
-- `pair_discover`: 10 per minute per address (IPv6 per /64).
+- `pair_discover`: 30 per minute per address (IPv6 per /64). Homes and offices share an address, and a lookup only shows windows that are open and need the code. The apps look every 30 s in the background (and every few seconds while the pairing screen is open); a lookup the person asked for that gets `rate_limited` waits the `retry_after` (3 s without one) and asks once more, then says the server is busy.
 - `pair_join`: 5 per minute per device and 10 per 10 minutes per address.
 - A join to a missing, expired or busy window gets `not_found`; to a window with no attempts left, `too_many`.
 
@@ -277,7 +277,7 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
 | New connections | 30 per minute per address (HTTP 429 instead of the upgrade) |
 | New device registrations | 5 per hour per address; an `unregister` gives one back. 10,000 devices at most. |
 | Requests | 20 per second per device, bursts of 100 |
-| `pair_open` / `pair_discover` / `pair_join` | 10 per 10 minutes per host / 10 per minute per address / 5 per minute per device and 10 per 10 minutes per address |
+| `pair_open` / `pair_discover` / `pair_join` | 10 per 10 minutes per host / 30 per minute per address / 5 per minute per device and 10 per 10 minutes per address |
 | `turn_credentials` | 10 per minute per device |
 | Frame / signal blob / pairing blob / list payload | 64 KiB / 16 KiB / 4 KiB / 8 KiB |
 

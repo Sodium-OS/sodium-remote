@@ -289,6 +289,8 @@ pub enum RemoteError {
     /// The pairing window is gone.
     PairingClosed { reason: String },
     Timeout,
+    /// The server refused a pairing lookup as rate limited, twice: "The server is busy. Try again in a minute."
+    ServerBusy,
     Failed { message: String },
 }
 
@@ -513,16 +515,17 @@ impl RemoteClient {
 
     /// Computers with an open pairing window (normally one), from mDNS and
     /// the rendezvous.
-    pub async fn discover_pairing(&self, timeout_ms: u64) -> Vec<PairingHost> {
+    pub async fn discover_pairing(&self, timeout_ms: u64) -> Result<Vec<PairingHost>, RemoteError> {
         let c = self.client.clone();
         let found = self
             .rt
-            .spawn(async move { c.discover_pairing(Duration::from_millis(timeout_ms)).await })
+            .spawn(async move { c.try_discover_pairing(Duration::from_millis(timeout_ms)).await })
             .await
-            .unwrap_or_default();
+            .unwrap_or(Ok(Vec::new()))
+            .map_err(|_| RemoteError::ServerBusy)?;
         let mut keep = self.pairing.lock().unwrap();
         *keep = found.clone();
-        found
+        Ok(found
             .into_iter()
             .enumerate()
             .map(|(i, t)| PairingHost {
@@ -536,7 +539,7 @@ impl RemoteClient {
                 .into(),
                 handle: i as u64,
             })
-            .collect()
+            .collect())
     }
 
     /// SPAKE2 with the typed code. On success both sides have pinned keys.

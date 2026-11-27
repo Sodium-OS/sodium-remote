@@ -166,48 +166,54 @@
     </message>
     <message>
         <location filename="../../app/qml/AddSheet.qml" line="200"/>
+        <source>The server is busy. Try again in a minute.</source>
+        <translation>伺服器忙碌中。請一分鐘後再試。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/AddSheet.qml" line="201"/>
         <source>Couldn’t pair with %1. Check that it is on and on this network.</source>
         <translation>無法與 %1 配對。請檢查它是否已開機並在此網路上。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="201"/>
+        <location filename="../../app/qml/AddSheet.qml" line="202"/>
         <source>The code is shown on that computer, where pairing is switched on.</source>
         <translation>驗證碼會顯示在已開啟配對的那台電腦上。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="208"/>
+        <location filename="../../app/qml/AddSheet.qml" line="209"/>
         <source>Back</source>
         <translation>返回</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="212"/>
+        <location filename="../../app/qml/AddSheet.qml" line="213"/>
         <source>Try a new code</source>
         <translation>嘗試新代碼</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="230"/>
+        <location filename="../../app/qml/AddSheet.qml" line="231"/>
         <source>%1 is paired</source>
         <translation>已與 %1 配對</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="237"/>
+        <location filename="../../app/qml/AddSheet.qml" line="238"/>
         <source>Its key is saved on this computer.</source>
         <translation>它的金鑰已儲存在這台電腦上。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="243"/>
+        <location filename="../../app/qml/AddSheet.qml" line="244"/>
         <source>Done</source>
         <translation>完成</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/AddSheet.qml" line="246"/>
+        <location filename="../../app/qml/AddSheet.qml" line="247"/>
         <source>Connect now</source>
         <translation>立即連線</translation>
         <extra-sodium-review>machine</extra-sodium-review>
