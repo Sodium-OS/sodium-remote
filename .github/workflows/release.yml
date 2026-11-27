@@ -170,8 +170,26 @@ jobs:
 
       # stage-app.sh also writes THIRD-PARTY-NOTICES.md (cargo-about's Rust list, then the full text of every license in
       # licenses/) and fails when a shipped DLL has no license text (package-licenses.py check).
+      # The matched display's driver is signed outside CI (the key never leaves the maintainer's PC) and committed as
+      # packaging/windows/sudovda/signed/ (BUILDINFO: CI run, unsigned and signed hashes). It ships only if every file still
+      # matches its pin in host-desktop/src/vdd_pin.rs, the hashes the app checks before installing.
+      - name: The signed display driver matches the app's pins
+        run: |
+          dir=packaging/windows/sudovda/signed
+          pin() { sed -n "s/^pub const $1: &str = \"\([0-9a-f]*\)\";/\1/p" host-desktop/src/vdd_pin.rs; }
+          check() { local want; want=$(pin "$1"); got=$(sha256sum "$2" | cut -d' ' -f1)
+            if [[ -z $want || $want != "$got" ]]; then echo "::error file=$2::$2 is $got, the pin $1 says '$want'."; exit 1; fi; }
+          check DLL_SHA256 $dir/SodiumRemoteDisplay.dll
+          check INF_SHA256 $dir/SodiumRemoteDisplay.inf
+          check CAT_SHA256 $dir/sodiumremotedisplay.cat
+          check CER_SHA256 packaging/windows/sudovda/sodium-remote-driver-signing.cer
+          echo "SUDOVDA_DIR=$GITHUB_WORKSPACE/$dir" >> "$GITHUB_ENV"
+
       - name: Build and stage the app
         run: packaging/windows/stage-app.sh --no-zip
+
+      - name: The display driver is in the package
+        run: test -f build/win-app/SodiumRemote/drivers/sudovda/sodiumremotedisplay.cat
 
       # The LGPL asks for the source of the Qt and FFmpeg DLLs: the exact archives they were built from (checked against the
       # pins) go to the release as assets; licenses/README.txt in the zip says so.
@@ -342,6 +360,7 @@ jobs:
             echo "## Files"
             echo
             echo "- \`SodiumRemote-$VERSION-win64.zip\`: Windows, portable, **not code-signed** (SmartScreen will warn)."
+            echo "  Its \`drivers\\sudovda\\\` folder is Sodium Remote Display, the matched display's driver: SudoVDA (MIT/CC0, MS-PL) with our patches, built unsigned in CI and signed outside CI with Sodium Remote's own certificate; \`packaging/windows/sudovda/signed/BUILDINFO\` records both builds' hashes."
             echo "- \`qt*-everywhere-src-*.tar.xz\` and \`ffmpeg-*.tar.xz\`: the exact Qt and FFmpeg sources the Windows DLLs were built from (LGPL), unmodified."
             echo "- \`sodium-remote-$VERSION.tar.gz\`: the source, with the third-party notices of each program."
             echo "- \`PKGBUILD\` and \`sodium-remote.SRCINFO\`: the Arch Linux package; put them next to the tarball and run \`makepkg -si\`."

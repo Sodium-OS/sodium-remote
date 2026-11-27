@@ -1,0 +1,74 @@
+; SodiumRemoteDisplay.inf: Sodium Remote's build of SudoVDA (SudoMaker), an indirect display driver based on
+; Microsoft's IddSampleDriver. Its own hardware ID, names and catalog, so it can sit beside another program's SudoVDA.
+
+[Version]
+PnpLockdown=1
+Signature="$Windows NT$"
+ClassGUID = {4D36E968-E325-11CE-BFC1-08002BE10318}
+Class = Display
+ClassVer = 2.0
+Provider=%ManufacturerName%
+CatalogFile=sodiumremotedisplay.cat
+DriverVer = 11/26/2026,20.45.56.538
+
+[Manufacturer]
+%ManufacturerName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%DeviceName%=SodiumRemoteDisplay_Install, Root\SodiumRemoteDisplay
+
+[SourceDisksFiles]
+SodiumRemoteDisplay.dll=1
+
+[SourceDisksNames]
+1 = %DiskName%
+
+; =================== UMDF Device ==================================
+
+[SodiumRemoteDisplay_Install.NT]
+CopyFiles=UMDriverCopy
+
+[SodiumRemoteDisplay_Install.NT.hw]
+AddReg = SodiumRemoteDisplay_HardwareDeviceSettings
+
+[SodiumRemoteDisplay_HardwareDeviceSettings]
+HKR,, "UpperFilters",  %REG_MULTI_SZ%, "IndirectKmd"
+HKR, "WUDF", "DeviceGroupId", %REG_SZ%, "SodiumRemoteDisplayGroup"
+HKR,, "Security",, "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;WD)"
+
+[SodiumRemoteDisplay_Install.NT.Services]
+AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
+
+[SodiumRemoteDisplay_Install.NT.Wdf]
+UmdfService=SodiumRemoteDisplay,SodiumRemoteDisplay_Install
+UmdfServiceOrder=SodiumRemoteDisplay
+UmdfKernelModeClientPolicy = AllowKernelModeClients
+
+[SodiumRemoteDisplay_Install]
+UmdfLibraryVersion=2.25.0
+ServiceBinary=%12%\UMDF\SodiumRemoteDisplay.dll
+UmdfExtensions = IddCx0102
+
+[WUDFRD_ServiceInstall]
+DisplayName = %WudfRdDisplayName%
+ServiceType = 1
+StartType = 3
+ErrorControl = 1
+ServiceBinary = %12%\WUDFRd.sys
+
+[DestinationDirs]
+UMDriverCopy=12,UMDF ; copy to drivers\umdf
+
+[UMDriverCopy]
+SodiumRemoteDisplay.dll
+
+; =================== Generic ==================================
+
+[Strings]
+ManufacturerName="Sodium Remote"
+DiskName = "Sodium Remote Display Installation Disk"
+DeviceName="Sodium Remote Display Adapter"
+WudfRdDisplayName="Windows Driver Foundation - User-mode Driver Framework Reflector"
+
+REG_MULTI_SZ  = 0x00010000
+REG_SZ        = 0x00000000
