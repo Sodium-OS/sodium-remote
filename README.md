@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://github.com/sodium-os/sodium-remote/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/sodium-os/sodium-remote/ci.yml?branch=main&style=flat-square&label=CI&labelColor=151229"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0-only" src="https://img.shields.io/badge/license-AGPL--3.0--only-ffb84d?style=flat-square&labelColor=151229"></a>
-  <a href="CHANGELOG.md"><img alt="Version 0.2.0 preview" src="https://img.shields.io/badge/version-0.2.0_preview-9aa8ff?style=flat-square&labelColor=151229"></a>
+  <a href="CHANGELOG.md"><img alt="Version 0.2.1 preview" src="https://img.shields.io/badge/version-0.2.1_preview-9aa8ff?style=flat-square&labelColor=151229"></a>
   <a href="#platforms"><img alt="Windows, macOS and Linux" src="https://img.shields.io/badge/platforms-Windows_·_macOS_·_Linux-9aa8ff?style=flat-square&labelColor=151229"></a>
   <a href="docs/translating.md"><img alt="Ten languages" src="https://img.shields.io/badge/languages-10-9aa8ff?style=flat-square&labelColor=151229"></a>
 </p>
@@ -34,7 +34,7 @@
 </picture>
 
 > [!NOTE]
-> **Version 0.2.0 is a preview.** Windows and the generic Linux host have so far been tested in virtual machines, and there is no hosted relay service yet. See [Status and known limits](#status-and-known-limits).
+> **Version 0.2.1 is a preview.** Windows and the generic Linux host have so far been tested in virtual machines, and there is no hosted relay service yet. See [Status and known limits](#status-and-known-limits).
 
 ## What it does
 
@@ -130,11 +130,11 @@ Details for each host are in [docs/hosts/](docs/hosts/).
 
 ## Download and install
 
-Version 0.2.0 is a preview.
+Version 0.2.1 is a preview.
 
 | Platform | How |
 |---|---|
-| Windows 11 | Download `SodiumRemote-0.2.0-win64.zip` from [Releases](https://github.com/sodium-os/sodium-remote/releases), unzip it and run `SodiumRemote.exe`. The build is **not signed yet**, so Windows SmartScreen warns on first run: choose More info, then Run anyway. Compare the file with the checksum on the release page first |
+| Windows 11 | Download `SodiumRemote-0.2.1-win64.zip` from [Releases](https://github.com/sodium-os/sodium-remote/releases), unzip it and run `SodiumRemote.exe`. The build is **not signed yet**, so Windows SmartScreen warns on first run: choose More info, then Run anyway. Compare the file with the checksum on the release page first |
 | macOS | [Build it from source](docs/building/macos.md) until a signed and notarized build exists |
 | Arch Linux | Build the package from the `PKGBUILD` in `packaging/arch/` (the app, and the server as a second package) |
 | Other Linux | [Build it from source](docs/building/linux.md) |
@@ -201,7 +201,7 @@ The full index is [docs/README.md](docs/README.md). The most useful pages:
 
 ## Status and known limits
 
-Version 0.2.0 is a preview.
+Version 0.2.1 is a preview.
 
 - Windows has been tested in a virtual machine only so far.
 - Hosting from SodiumOS needs an NVIDIA graphics card.
