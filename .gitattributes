@@ -3,3 +3,5 @@
 # The display driver's patches apply to SudoVDA's files byte for byte, and their SHA-256 goes in each build's record:
 # never convert their line endings (a Windows checkout would otherwise make them CRLF).
 packaging/windows/sudovda/patches/*.patch -text
+# The signed display driver: byte for byte as signed, or its catalog and the pins in host-desktop/src/vdd_pin.rs no longer match.
+packaging/windows/sudovda/signed/* binary

@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-27
+
+Windows hosts can match their display to the client's window, Windows sessions resize and go full screen like SodiumOS ones, and Intel Quick Sync encodes sharply. Windows and the generic Linux host have so far been tested in virtual machines.
+
 ### Added
 
 - **Windows host: "Match the display to the connecting computer"** (This computer, off by default). While someone is connected, Windows uses a virtual display the size of their window as the only display, so the picture is 1:1 at any window size; this computer's screens are off meanwhile and its keyboard and mouse keep working. The virtual display follows the window 400 ms after a resize, falls back to the real screens and scaling when it can't start, and goes away with the host if the app stops. Turning it on installs Sodium Remote Display (SudoVDA with Sodium Remote's own IDs and an in-place resize, built and signed by Sodium Remote) with one administrator prompt, beside any other program's SudoVDA; turning it off removes it. One Sodium Remote host runs on a Windows computer at a time. A video encoder that won't open after a resize is tried once more, then software H.264 takes over for the session instead of ending it.
@@ -18,7 +22,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - **Windows, Mac and Linux-desktop hosts follow the client's window.** When the client resizes its window or goes full screen, the host re-encodes the stream at the largest size with the display's aspect that fits the window (never above the display's own size), about 150 ms after the resizing stops. The client shows it 1:1 instead of scaling the host's full-size picture. Shrunk text stays clean (area scaling).
 - **Windows app:** built with Qt 6.12.1 (was 6.12.0), the version Arch now ships for the host tools the cross build needs.
 - The `sodiumos-remoted` unit runs `/usr/bin/remoted` instead of a SodiumOS checkout's build, and `host/install.links` is gone (SodiumOS no longer carries Sodium Remote in its tree).
-
 - **LAN signalling** now starts with `SignalHelloV2`, and the host answers with a fresh nonce that goes into the seal context of that connection. Hosts refuse the 0.1.0 `SignalHello`, so connecting over the LAN needs both computers on this version.
 - **Server.** `--enrol open` is refused unless `--listen` is a loopback or private address, or `--open-enrol-on-public-address` is given.
 
