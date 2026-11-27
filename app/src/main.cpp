@@ -14,6 +14,7 @@
 // --version      the version, the license and where the source is (AGPL-3.0 section 13), then exit.
 #include "brand.h"
 #include "controller.h"
+#include "remote_qt.h"
 #ifdef Q_OS_WIN
 #include "hostcontroller.h"
 #include "winapp.h"
@@ -36,6 +37,11 @@
 #include <QFileInfo>
 #include <QIcon>
 #include <QStandardPaths>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 namespace {
 
@@ -99,6 +105,20 @@ QString linkArgument(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_WIN
+    // The elevated helper of "Match the display to the connecting computer" (HostController starts it with one UAC prompt):
+    //   SodiumRemote.exe --matched-display install|uninstall --log FILE
+    // installs or removes the virtual display driver, then exits 0 (done) or 1 (failed: FILE says why). No window, no second
+    // instance check, nothing else on the command line is read.
+    if (argc >= 3 && qstrcmp(argv[1], "--matched-display") == 0) {
+        int n = 0;
+        wchar_t **w = CommandLineToArgvW(GetCommandLineW(), &n);
+        const QByteArray action = n >= 3 ? QString::fromWCharArray(w[2]).toUtf8() : QByteArray();
+        const QByteArray log = n >= 5 && QString::fromWCharArray(w[3]) == QLatin1String("--log") ? QString::fromWCharArray(w[4]).toUtf8() : QByteArray();
+        LocalFree(w);
+        return rh_matched_display_admin(action.constData(), log.constData());
+    }
+#endif
     QGuiApplication app(argc, argv);
     app.setApplicationName(QString::fromLatin1(brand::AppBinaryName));
     app.setApplicationVersion(QStringLiteral(REMOTE_VERSION));

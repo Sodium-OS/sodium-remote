@@ -30,6 +30,7 @@ use crate::backend::{Backend, ClipEntry, Clipboard, Consent, Display, Input, Inp
 use crate::media::{Media, MediaEvent, StreamSetup, p50, stream_format};
 use crate::opus::OpusEncoder;
 use crate::policy;
+use crate::vdisplay::{self, Choice, Matched};
 
 /// The LAN listener's port when none is given, so "connect by address" and a firewall
 /// rule have one to name (decisions table: builder, for). Taken: any free port.
@@ -116,6 +117,9 @@ pub enum Note {
     /// The sharing permission changed, where the OS asks per session (generic Linux:
     /// the portal's dialog and its restore token).
     Consent(Consent),
+    /// "Match the display to the connecting computer" is on, but the virtual display
+    /// couldn't start: this session shows the physical display (Windows).
+    MatchedDisplayFailed,
 }
 
 pub type Notes = Arc<dyn Fn(Note) + Send + Sync>;
@@ -150,6 +154,11 @@ struct Live {
     /// The client was welcomed (the OS let this computer be shown): until then, and
     /// after the session ends, nothing it sends is applied.
     serving: bool,
+    /// The matched display's id while it is up (`vdisplay`): the stream's only display.
+    virtual_display: Option<u32>,
+    /// The codec the stream fell back to when no encoder of the chosen one would open
+    /// (`MediaEvent::CodecFallback`): kept for the session, so a resize doesn't try the other again.
+    codec_fallback: Option<msg::Codec>,
 }
 
 struct Shared {
@@ -161,6 +170,11 @@ struct Shared {
     media: Mutex<Option<Media>>,
     /// Counts `Resize` messages: a resize applies once no newer one came within 150 ms.
     resize_gen: AtomicU64,
+    /// The matched display while it is up.
+    matched: Mutex<Option<Matched>>,
+    /// Counts lost connections and new ones: a lost one's matched display goes 15 s later
+    /// unless a connection came since.
+    lost_gen: AtomicU64,
     audio: Mutex<Option<(Arc<AtomicBool>, std::thread::JoinHandle<()>)>>,
     clipboard: Option<Arc<dyn Clipboard>>,
     /// The host clipboard entry last offered, for the client's requests.
@@ -324,6 +338,11 @@ impl Session {
         );
         write_private(&o.data.join("host.txt"), format!("id={}\ncode={}\nport={port}\nname={name}\n", host.id(), host.id().code()).as_bytes())?;
 
+        // A matched display left up by a host that stopped (a crash, a sign-out): the displays as they were.
+        {
+            let (b, data) = (backend.clone(), o.data.clone());
+            tokio::task::spawn_blocking(move || recover_displays(&*b, &data)).await?;
+        }
         let input = backend.input()?;
         // The clipboard's change callback is made before `Shared` exists: it finds it here.
         let slot: Arc<Mutex<std::sync::Weak<Shared>>> = Arc::new(Mutex::new(std::sync::Weak::new()));
@@ -351,6 +370,8 @@ impl Session {
             live: Mutex::new(Live::default()),
             media: Mutex::new(None),
             resize_gen: AtomicU64::new(0),
+            matched: Mutex::new(None),
+            lost_gen: AtomicU64::new(0),
             audio: Mutex::new(None),
             clipboard,
             clip_out: Mutex::new(None),
@@ -608,6 +629,11 @@ impl Shared {
                     tokio::task::spawn_blocking(move || b.check_ready()).await.unwrap_or_else(|e| Err(NotReady::Other(e.to_string())))
                 };
                 self.update_consent();
+                // The matched display first (it may take up to 3 s to appear): Welcome names it.
+                if ready.is_ok() {
+                    let (s, h) = (self.clone(), hello.clone());
+                    let _ = tokio::task::spawn_blocking(move || s.prepare_display(&h)).await;
+                }
                 self.on_connected(client, name, hello, took_over_from, resumed, ready);
             }
             HostEvent::ClientLost { client } => {
@@ -615,17 +641,28 @@ impl Shared {
                 self.pause();
                 self.live.lock().unwrap().held = true;
                 self.update_status();
+                // The matched display waits 15 s for the client to come back.
+                let generation = self.lost_gen.fetch_add(1, Ordering::Relaxed) + 1;
+                let me = self.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(vdisplay::LOST_GRACE).await;
+                    if me.lost_gen.load(Ordering::Relaxed) == generation && me.live.lock().unwrap().held {
+                        let _ = tokio::task::spawn_blocking(move || me.end_matched()).await;
+                    }
+                });
             }
             HostEvent::HoldExpired { client } => {
                 eprintln!("sodium-remote-host: {} didn't come back", client.code());
                 if self.live.lock().unwrap().client == Some(client) {
-                    self.end_session();
+                    let s = self.clone();
+                    let _ = tokio::task::spawn_blocking(move || s.end_session()).await;
                 }
             }
             HostEvent::ClientDisconnected { client, reason } => {
                 eprintln!("sodium-remote-host: {} left: {reason:?}", client.code());
                 if self.live.lock().unwrap().client == Some(client) {
-                    self.end_session();
+                    let s = self.clone();
+                    let _ = tokio::task::spawn_blocking(move || s.end_session()).await;
                 }
             }
             // Input and the clipboard only from a client this computer is serving, and never in
@@ -651,9 +688,10 @@ impl Shared {
     /// the size that fits its window and its decoder (never above native), its rate (at most the display's), and
     /// the codec both sides have.
     fn setup(&self) -> Result<StreamSetup, String> {
-        let (hello, settings, chosen, window) = {
+        let (hello, settings, chosen, window, fallback) = {
             let l = self.live.lock().unwrap();
-            (l.hello.clone(), l.settings, l.display, l.window)
+            // The matched display is the only one while it is up.
+            (l.hello.clone(), l.settings, l.virtual_display.or(l.display), l.window, l.codec_fallback)
         };
         let hello = hello.ok_or("no Hello")?;
         let displays = self.backend.displays();
@@ -665,6 +703,7 @@ impl Shared {
             .ok_or("this computer has no display to show")?;
         let codec = policy::choose_codec(self.backend.encoder_caps(), &hello.decode, settings.codec)
             .ok_or("no video codec in common: this computer encodes H.264 (and HEVC with a GPU) only")?;
+        let codec = fallback.filter(|_| codec == msg::Codec::Hevc420).unwrap_or(codec);
         let (width, height) = policy::stream_size(
             (display.info.width, display.info.height),
             window,
@@ -701,6 +740,7 @@ impl Shared {
             l.secure = false;
             l.held = false;
             l.serving = false;
+            l.codec_fallback = None;
         }
         // A new connection is a new session: its table comes after Hello.
         self.keys.lock().unwrap().set_table(vec![]);
@@ -726,6 +766,7 @@ impl Shared {
         self.backend.session_active(true);
         self.update_status();
         let displays = self.backend.displays();
+        let virtual_display = self.live.lock().unwrap().virtual_display.is_some();
         self.host.send(&Msg::Welcome(msg::Welcome {
             version,
             name: self.name.lock().unwrap().clone(),
@@ -736,7 +777,7 @@ impl Shared {
             took_over_from,
             resumed,
             host_os: self.backend.os(),
-            display_mode: msg::DisplayMode::Physical,
+            display_mode: if virtual_display { msg::DisplayMode::Virtual } else { msg::DisplayMode::Physical },
             live_resize: self.backend.live_resize(),
             displays: displays.iter().map(|d| d.info.clone()).collect(),
             current_display: setup.display.info.id,
@@ -776,6 +817,7 @@ impl Shared {
                     s.host.disconnect(ended_reason(s.backend.locked()));
                     s.update_consent();
                 }
+                MediaEvent::CodecFallback(c) => s.live.lock().unwrap().codec_fallback = Some(c),
                 MediaEvent::Secure(on) => {
                     s.live.lock().unwrap().secure = on;
                     if on {
@@ -838,6 +880,7 @@ impl Shared {
 
     fn end_session(&self) {
         self.pause();
+        self.end_matched();
         let was = {
             let mut l = self.live.lock().unwrap();
             let was = l.client.take().is_some();
@@ -919,6 +962,9 @@ impl Shared {
                 }
             }
             Msg::SelectDisplay(id) => {
+                if self.live.lock().unwrap().virtual_display.is_some() {
+                    return; // the matched display is the only one
+                }
                 if !self.backend.displays().iter().any(|d| d.info.id == id) {
                     eprintln!("sodium-remote-host: the client chose display {id}, which isn't here");
                     return;
@@ -928,7 +974,9 @@ impl Shared {
             }
             Msg::Settings(st) => {
                 let old = std::mem::replace(&mut self.live.lock().unwrap().settings, st);
-                if old.codec != st.codec || old.refresh_mhz != st.refresh_mhz {
+                if old.refresh_mhz != st.refresh_mhz && self.live.lock().unwrap().virtual_display.is_some() {
+                    self.schedule_matched_mode();
+                } else if old.codec != st.codec || old.refresh_mhz != st.refresh_mhz {
                     self.restart_stream();
                 } else if let Some(s) = self.current_setup() {
                     self.send_route_demand(&s);
@@ -949,6 +997,13 @@ impl Shared {
                     tokio::time::sleep(RESIZE_QUIET).await;
                     if me.resize_gen.load(Ordering::Relaxed) == generation {
                         me.apply_resize();
+                    }
+                    // The matched display takes the window's size once it has settled; scaling covered the drag.
+                    if me.live.lock().unwrap().virtual_display.is_some() {
+                        tokio::time::sleep(vdisplay::MODE_QUIET.saturating_sub(RESIZE_QUIET)).await;
+                        if me.resize_gen.load(Ordering::Relaxed) == generation {
+                            me.schedule_matched_mode();
+                        }
                     }
                 });
             }
@@ -980,6 +1035,107 @@ impl Shared {
         } else {
             self.restart_stream();
         }
+    }
+
+    /// The display for a connection about to be welcomed: the matched display when the setting is on (created, or
+    /// resized for this client), else the physical one. A matched display that doesn't start falls back to the physical
+    /// display and scaling for this session, and the app is told. Blocking (up to about 4 s).
+    fn prepare_display(&self, hello: &msg::Hello) {
+        // A connection came: a lost one's matched display stays.
+        self.lost_gen.fetch_add(1, Ordering::Relaxed);
+        let topo = self.backend.topology();
+        let wanted = topo.is_some() && vdisplay::wanted(&self.opts.data);
+        let refresh = if hello.settings.refresh_mhz != 0 { hello.settings.refresh_mhz } else { hello.display.refresh_mhz };
+        let mode = vdisplay::matched_mode((hello.display.width, hello.display.height), refresh, (hello.decode.max_width, hello.decode.max_height));
+        let mut g = self.matched.lock().unwrap();
+        let id = match g.as_mut() {
+            // Turned off since the last connection.
+            Some(_) if !wanted => {
+                if let Some(m) = g.take() {
+                    m.end();
+                }
+                None
+            }
+            Some(m) => {
+                if let Err(e) = m.set_mode(mode, vdisplay::APPEAR_WITHIN) {
+                    eprintln!("sodium-remote-host: matched display: {e:#}; keeping its size");
+                }
+                Some(m.display())
+            }
+            None => match vdisplay::open(wanted, topo, || self.backend.virtual_display(), self.opts.data.join(vdisplay::JOURNAL), mode, vdisplay::APPEAR_WITHIN) {
+                Choice::Virtual(m) => {
+                    let id = m.display();
+                    *g = Some(m);
+                    Some(id)
+                }
+                Choice::Failed => {
+                    self.note(Note::MatchedDisplayFailed);
+                    None
+                }
+                Choice::Physical => None,
+            },
+        };
+        drop(g);
+        if let Some(id) = id {
+            self.wait_listed(id);
+        }
+        self.live.lock().unwrap().virtual_display = id;
+    }
+
+    /// Until the capture's list of displays has `id` (about 1 s at most).
+    fn wait_listed(&self, id: u32) {
+        let until = Instant::now() + Duration::from_secs(1);
+        while !self.backend.displays().iter().any(|d| d.info.id == id) && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    /// The matched display at the client's window size and rate now, then the stream on it (a new one when anything
+    /// changed: the display's mode, or only the rate the client asked for).
+    fn schedule_matched_mode(self: &Arc<Self>) {
+        let me = self.clone();
+        tokio::spawn(async move {
+            let s = me.clone();
+            let _ = tokio::task::spawn_blocking(move || s.apply_matched_mode()).await;
+            me.restart_stream();
+        });
+    }
+
+    /// True when the matched display changed mode.
+    fn apply_matched_mode(&self) -> bool {
+        let mode = {
+            let l = self.live.lock().unwrap();
+            let Some(h) = l.hello.as_ref() else { return false };
+            let refresh = if l.settings.refresh_mhz != 0 { l.settings.refresh_mhz } else { h.display.refresh_mhz };
+            vdisplay::matched_mode(l.window, refresh, (h.decode.max_width, h.decode.max_height))
+        };
+        // Not while the media loop opens an encoder at the scaled size: the mode change disturbs the GPU.
+        if let Some(media) = self.media.lock().unwrap().as_ref() {
+            media.settle(Duration::from_secs(3));
+        }
+        let mut g = self.matched.lock().unwrap();
+        let Some(m) = g.as_mut() else { return false };
+        if m.mode() == Some(mode) {
+            return false;
+        }
+        if let Err(e) = m.set_mode(mode, vdisplay::APPEAR_WITHIN) {
+            eprintln!("sodium-remote-host: matched display: {e:#}; keeping its size");
+            return false;
+        }
+        let id = m.display();
+        drop(g);
+        self.wait_listed(id);
+        self.live.lock().unwrap().virtual_display = Some(id);
+        true
+    }
+
+    /// The matched display goes: the displays as they were. Blocking.
+    fn end_matched(&self) {
+        let m = self.matched.lock().unwrap().take();
+        if let Some(m) = m {
+            m.end();
+        }
+        self.live.lock().unwrap().virtual_display = None;
     }
 
     /// A new display or settings: a new stream, announced with `Format`.
@@ -1207,6 +1363,18 @@ fn audio_loop(backend: Arc<dyn Backend>, host: Host, stop: Arc<AtomicBool>) {
             }
         }
     }
+}
+
+/// At startup: a matched display left up by a host that stopped (its journal in `data`) is undone
+/// (`vdisplay::recover`). Does nothing where the backend has no display configuration.
+pub fn recover_displays(backend: &dyn Backend, data: &std::path::Path) -> bool {
+    let journal = data.join(vdisplay::JOURNAL);
+    if !journal.exists() {
+        return false;
+    }
+    let Some(topo) = backend.topology() else { return false };
+    let driver = backend.virtual_display().ok();
+    vdisplay::recover(&journal, driver.as_deref(), &*topo)
 }
 
 /// Display helper for logs.

@@ -1,0 +1,143 @@
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 Ning Bao
+Adds IOCTL_UPDATE_VIRTUAL_DISPLAY_MODE (protocol 0.3): sets a monitor's preferred mode and rebuilds its target modes
+with IddCxMonitorUpdateModes (IddCxMonitorUpdateModes2 when the HDR callbacks are in use), so a resize keeps the same
+monitor instead of adding a new one and removing the old.
+Applies to SudoVDA at the commit in ../UPSTREAM with `git apply` (build.ps1, run by .github/workflows/sudovda.yml).
+The text below is a diff of SudoVDA's own files, which stay under their licences (see ../UPSTREAM).
+
+diff --git a/Common/Include/sudovda-ioctl.h b/Common/Include/sudovda-ioctl.h
+index b65dca7..39f1245 100644
+--- a/Common/Include/sudovda-ioctl.h
++++ b/Common/Include/sudovda-ioctl.h
+@@ -11,6 +11,8 @@ namespace SUDOVDA
+ #define IOCTL_REMOVE_VIRTUAL_DISPLAY CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
+ #define IOCTL_SET_RENDER_ADAPTER CTL_CODE(FILE_DEVICE_UNKNOWN, 0x802, METHOD_BUFFERED, FILE_ANY_ACCESS)
+ #define IOCTL_GET_WATCHDOG CTL_CODE(FILE_DEVICE_UNKNOWN, 0x803, METHOD_BUFFERED, FILE_ANY_ACCESS)
++// Protocol 0.3: changes a monitor's preferred mode in place, without the monitor leaving.
++#define IOCTL_UPDATE_VIRTUAL_DISPLAY_MODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x804, METHOD_BUFFERED, FILE_ANY_ACCESS)
+ #define IOCTL_DRIVER_PING CTL_CODE(FILE_DEVICE_UNKNOWN, 0x888, METHOD_BUFFERED, FILE_ANY_ACCESS)
+ #define IOCTL_GET_PROTOCOL_VERSION CTL_CODE(FILE_DEVICE_UNKNOWN, 0x8FF, METHOD_BUFFERED, FILE_ANY_ACCESS)
+ 
+@@ -22,7 +24,7 @@ typedef struct _SUVDA_PROTOCAL_VERSION {
+ } SUVDA_PROTOCAL_VERSION, * PSUVDA_PROTOCAL_VERSION;
+ 
+ // Please update the version after ioctl changed
+-static const SUVDA_PROTOCAL_VERSION VDAProtocolVersion = { 0, 2, 1, true };
++static const SUVDA_PROTOCAL_VERSION VDAProtocolVersion = { 0, 3, 0, false };
+ 
+ // Sodium Remote's build: its own hardware ID and interface, so it never meets another program's SudoVDA.
+ static const char* SUVDA_HARDWARE_ID = "root\\sodiumremotedisplay";
+@@ -46,6 +48,13 @@ typedef struct _VIRTUAL_DISPLAY_REMOVE_PARAMS {
+ 	GUID MonitorGuid;
+ } VIRTUAL_DISPLAY_REMOVE_PARAMS, * PVIRTUAL_DISPLAY_REMOVE_PARAMS;
+ 
++typedef struct _VIRTUAL_DISPLAY_UPDATE_MODE_PARAMS {
++	GUID MonitorGuid;
++	UINT Width;
++	UINT Height;
++	UINT RefreshRate;
++} VIRTUAL_DISPLAY_UPDATE_MODE_PARAMS, * PVIRTUAL_DISPLAY_UPDATE_MODE_PARAMS;
++
+ typedef struct _VIRTUAL_DISPLAY_ADD_OUT {
+ 	LUID AdapterLuid;
+ 	UINT TargetId;
+diff --git a/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp b/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp
+index 873fe97..fd68234 100644
+--- a/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp	
++++ b/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp	
+@@ -1477,6 +1477,52 @@ NTSTATUS SudoVDAMonitorSetGammaRamp(
+ 
+ #pragma endregion
+ 
++// Rebuilds the monitor's target modes from its preferred mode and hands them to IddCx, so a new size
++// becomes available without the monitor leaving and the desktop topology changing.
++static NTSTATUS UpdateTargetModes(IDDCX_MONITOR Monitor)
++{
++	NTSTATUS Status;
++	IDARG_OUT_QUERYTARGETMODES Count{};
++
++	if (isHDRSupported) {
++		IDARG_IN_QUERYTARGETMODES2 Query{};
++		Status = SudoVDAMonitorQueryModes2(Monitor, &Query, &Count);
++		if (!NT_SUCCESS(Status)) {
++			return Status;
++		}
++		vector<IDDCX_TARGET_MODE2> Modes(Count.TargetModeBufferOutputCount);
++		Query.TargetModeBufferInputCount = (UINT)Modes.size();
++		Query.pTargetModes = Modes.data();
++		Status = SudoVDAMonitorQueryModes2(Monitor, &Query, &Count);
++		if (!NT_SUCCESS(Status)) {
++			return Status;
++		}
++		IDARG_IN_UPDATEMODES2 Update{};
++		Update.Reason = IDDCX_UPDATE_REASON_OTHER;
++		Update.TargetModeCount = (UINT)Modes.size();
++		Update.pTargetModes = Modes.data();
++		return IddCxMonitorUpdateModes2(Monitor, &Update);
++	}
++
++	IDARG_IN_QUERYTARGETMODES Query{};
++	Status = SudoVDAMonitorQueryModes(Monitor, &Query, &Count);
++	if (!NT_SUCCESS(Status)) {
++		return Status;
++	}
++	vector<IDDCX_TARGET_MODE> Modes(Count.TargetModeBufferOutputCount);
++	Query.TargetModeBufferInputCount = (UINT)Modes.size();
++	Query.pTargetModes = Modes.data();
++	Status = SudoVDAMonitorQueryModes(Monitor, &Query, &Count);
++	if (!NT_SUCCESS(Status)) {
++		return Status;
++	}
++	IDARG_IN_UPDATEMODES Update{};
++	Update.Reason = IDDCX_UPDATE_REASON_OTHER;
++	Update.TargetModeCount = (UINT)Modes.size();
++	Update.pTargetModes = Modes.data();
++	return IddCxMonitorUpdateModes(Monitor, &Update);
++}
++
+ VOID SudoVDAIoDeviceControl(
+ 	_In_ WDFDEVICE Device,
+ 	_In_ WDFREQUEST Request,
+@@ -1593,6 +1639,41 @@ VOID SudoVDAIoDeviceControl(
+ 
+ 		break;
+ 	}
++	case IOCTL_UPDATE_VIRTUAL_DISPLAY_MODE: {
++		if (InputBufferLength < sizeof(VIRTUAL_DISPLAY_UPDATE_MODE_PARAMS)) {
++			Status = STATUS_BUFFER_TOO_SMALL;
++			break;
++		}
++
++		PVIRTUAL_DISPLAY_UPDATE_MODE_PARAMS params;
++		Status = WdfRequestRetrieveInputBuffer(Request, sizeof(VIRTUAL_DISPLAY_UPDATE_MODE_PARAMS), (PVOID*)&params, NULL);
++		if (!NT_SUCCESS(Status)) {
++			break;
++		}
++
++		if (!params->Width || !params->Height || !params->RefreshRate) {
++			Status = STATUS_INVALID_PARAMETER;
++			break;
++		}
++
++		Status = STATUS_NOT_FOUND;
++
++		std::lock_guard<std::mutex> lg(monitorListOp);
++
++		for (auto* ctx : monitorCtxList) {
++			if (ctx->monitorGuid == params->MonitorGuid) {
++				VirtualMonitorMode mode = {params->Width, params->Height, params->RefreshRate};
++				if (mode.VSync < 1000) {
++					mode.VSync *= 1000;
++				}
++				ctx->preferredMode = mode;
++				Status = UpdateTargetModes(ctx->GetMonitor());
++				break;
++			}
++		}
++
++		break;
++	}
+ 	case IOCTL_SET_RENDER_ADAPTER: {
+ 		PVIRTUAL_DISPLAY_SET_RENDER_ADAPTER_PARAMS params;
+ 		Status = WdfRequestRetrieveInputBuffer(Request, sizeof(VIRTUAL_DISPLAY_SET_RENDER_ADAPTER_PARAMS), (PVOID*)&params, NULL);

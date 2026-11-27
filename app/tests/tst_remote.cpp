@@ -353,6 +353,11 @@ void TstRemote::theDesktopsPermissionStatesMapToThePanesState()
     h.handleEvent(parse(R"({"ev":"host_status","controlled":true,"client":{"id":"a","name":"Laptop","os":"mac","since":1,"view_only":true}})"));
     QVERIFY(h.controlled());
     QVERIFY(h.controller().value("view_only").toBool());
+    // A lost connection's held session isn't "connected now".
+    h.handleEvent(parse(R"({"ev":"host_status","controlled":true,"held":true,"client":{"id":"a","name":"Laptop","os":"mac","since":1}})"));
+    QVERIFY(!h.controlled());
+    h.handleEvent(parse(R"({"ev":"host_status","controlled":false})"));
+    QVERIFY(!h.controlled());
     QCOMPARE(HostController::desktopIdFor(QStringLiteral("ubuntu:GNOME")), QStringLiteral("gnome"));
     QCOMPARE(HostController::desktopIdFor(QStringLiteral("KDE")), QStringLiteral("kde"));
     QCOMPARE(HostController::desktopIdFor(QStringLiteral("Hyprland")), QStringLiteral("other"));

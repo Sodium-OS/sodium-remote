@@ -331,6 +331,11 @@ void HostController::handleEvent(const QJsonObject &ev)
             Q_EMIT codecNoticeRequested();
         return;
     }
+    if (kind == QLatin1String("host_matched")) {
+        m_matchedFailed = ev.value(QStringLiteral("state")).toString() == QLatin1String("failed");
+        Q_EMIT matchedChanged();
+        return;
+    }
     if (kind == QLatin1String("host_consent")) {
         setConsent(consentFromEvent(ev));
         if (m_consent == QLatin1String("unavailable") && m_enabled) {
@@ -396,7 +401,9 @@ void HostController::handleEvent(const QJsonObject &ev)
     } else if (kind == QLatin1String("host_paired")) {
         refreshPaired();
     } else if (kind == QLatin1String("host_status")) {
-        const bool now = ev.value(QStringLiteral("controlled")).toBool();
+        // A held session (the connection was lost; the host waits for the client to come back) isn't controlling
+        // anything: the page, the tray and the paired list stop showing it as connected. A client that returns is a new "controlling".
+        const bool now = ev.value(QStringLiteral("controlled")).toBool() && !ev.value(QStringLiteral("held")).toBool();
         QVariantMap c;
         if (now) {
             c = ev.value(QStringLiteral("client")).toObject().toVariantMap();
@@ -413,6 +420,10 @@ void HostController::handleEvent(const QJsonObject &ev)
         if (started)
             Q_EMIT controlStarted(c);
         if (ended) {
+            if (m_matchedFailed) {
+                m_matchedFailed = false;
+                Q_EMIT matchedChanged();
+            }
             Q_EMIT controlEnded(was);
             if (m_serverPending)
                 restartForServer();
@@ -581,6 +592,64 @@ void HostController::loadConsent()
         setConsent(consentFromEvent(QJsonDocument::fromJson(QByteArray(s)).object()));
         rq_free_string(s);
     }
+#endif
+}
+
+// ---- Windows: "Match the display to the connecting computer" -------------------------------------------------------
+
+bool HostController::matchedDisplay() const
+{
+    if (m_matchedBusy)
+        return m_matchedWant;
+    return m_rh && rh_matched_display(m_rh) != 0;
+}
+
+void HostController::setMatchedDisplay(bool on)
+{
+#ifdef Q_OS_WIN
+    if (!m_rh || m_matchedBusy || on == matchedDisplay())
+        return;
+    m_matchedBusy = true;
+    m_matchedWant = on;
+    m_matchedInstallFailed = false;
+    Q_EMIT matchedChanged();
+    // The driver goes in or out in an elevated copy of this program (one UAC prompt), which checks the driver's files against
+    // their pins first. The setting is saved only when that worked; a No at the prompt changes nothing.
+    const QString exe = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    const QString log = QDir::toNativeSeparators(m_dataDir + QStringLiteral("/matched-display-setup.log"));
+    const QString args = QStringLiteral("--matched-display %1 --log \"%2\"").arg(on ? QStringLiteral("install") : QStringLiteral("uninstall"), log);
+    HWND owner = GetForegroundWindow();
+    QThread *t = QThread::create([this, exe, args, on, owner] {
+        SHELLEXECUTEINFOW sei{};
+        sei.cbSize = sizeof sei;
+        sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+        sei.hwnd = owner;
+        sei.lpVerb = L"runas";
+        sei.lpFile = reinterpret_cast<const wchar_t *>(exe.utf16());
+        sei.lpParameters = reinterpret_cast<const wchar_t *>(args.utf16());
+        sei.nShow = SW_HIDE;
+        DWORD code = 1;
+        bool cancelled = false;
+        if (ShellExecuteExW(&sei) && sei.hProcess) {
+            WaitForSingleObject(sei.hProcess, INFINITE);
+            GetExitCodeProcess(sei.hProcess, &code);
+            CloseHandle(sei.hProcess);
+        } else {
+            cancelled = GetLastError() == ERROR_CANCELLED; // No at the UAC prompt
+        }
+        QMetaObject::invokeMethod(this, [this, on, code, cancelled] {
+            m_matchedBusy = false;
+            if (code == 0 && m_rh)
+                rh_set_matched_display(m_rh, on ? 1 : 0);
+            // Silent on a No; the reason for a real failure is in the log.
+            m_matchedInstallFailed = on && code != 0 && !cancelled;
+            Q_EMIT matchedChanged();
+        }, Qt::QueuedConnection);
+    });
+    connect(t, &QThread::finished, t, &QObject::deleteLater);
+    t->start();
+#else
+    Q_UNUSED(on)
 #endif
 }
 

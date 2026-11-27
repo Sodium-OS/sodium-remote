@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-FileCopyrightText: 2026 Ning Bao
+#
+# Builds the matched display's driver, Sodium Remote Display (SudoMaker's SudoVDA at the pinned commit with
+# packaging/windows/sudovda/patches/), on a windows-2022 runner with the Windows Driver Kit from NuGet, and uploads the
+# unsigned INF, DLL and catalog as the artifact "sodium-remote-display-unsigned". No secrets: the signing key never leaves
+# the maintainer's machine, where packaging/windows/sudovda/sign.sh signs the artifact (docs/hosts/windows.md).
+# Actions are pinned to full commit SHAs; the version is in the comment.
+name: Display driver
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - packaging/windows/sudovda/**
+      - .github/workflows/sudovda.yml
+  pull_request:
+    paths:
+      - packaging/windows/sudovda/**
+      - .github/workflows/sudovda.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sudovda-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (unsigned)
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the driver
+        shell: pwsh
+        run: packaging/windows/sudovda/build.ps1 -Work "$env:RUNNER_TEMP\sodium-remote-display" -Out "$env:GITHUB_WORKSPACE\out"
+      - name: Upload
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sodium-remote-display-unsigned
+          path: out/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Summary
+        shell: pwsh
+        env:
+          DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          ID: ${{ steps.upload.outputs.artifact-id }}
+        run: |
+          "Artifact $env:ID, zip SHA-256 $env:DIGEST (sign.sh records it)." | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          Get-Content out\BUILDINFO, out\SHA256SUMS | Tee-Object -Append $env:GITHUB_STEP_SUMMARY

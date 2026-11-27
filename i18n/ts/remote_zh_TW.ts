@@ -1858,61 +1858,61 @@
 <context>
     <name>StreamWindow</name>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="39"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="41"/>
         <source>Remote</source>
         <translation>遠端控制</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Connection lost · retrying</source>
         <translation>連線已中斷 · 正在重試</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="191"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="203"/>
         <source>Reconnecting…</source>
         <translation>正在重新連線…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="222"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="234"/>
         <source>%1 is showing a secure screen</source>
         <translation>%1 正在顯示安全螢幕</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="231"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="243"/>
         <source>Its lock screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>無法在此顯示或控制其鎖定畫面。桌面恢復後工作階段將繼續。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="232"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="244"/>
         <source>Its lock, sign-in or UAC screen can’t be shown or controlled from here. The session resumes when the desktop is back.</source>
         <translation>無法在此顯示或控制其鎖定、登入或 UAC 畫面。桌面恢復後工作階段將繼續。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="239"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="251"/>
         <source>Waiting for the desktop…</source>
         <translation>正在等待桌面…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="245"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="257"/>
         <source>Disconnect</source>
         <translation>中斷連線</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="265"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="277"/>
         <source>Back on %1’s desktop</source>
         <translation>已回到 %1 的桌面</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/StreamWindow.qml" line="285"/>
+        <location filename="../../app/qml/StreamWindow.qml" line="297"/>
         <source>Press %1 to leave the stream.</source>
         <translation>按 %1 可離開串流。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2259,7 +2259,7 @@
     </message>
     <message>
         <location filename="../../app/qml/ThisComputerPage.qml" line="377"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="575"/>
         <source>Remove</source>
         <translation>移除</translation>
         <extra-sodium-review>machine</extra-sodium-review>
@@ -2283,183 +2283,207 @@
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="397"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="404"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="399"/>
+        <source>Match the display to the connecting computer</source>
+        <translation>使顯示器與連線的電腦相符</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="400"/>
+        <source>While someone is connected, Windows uses a virtual display the size of their window, and this computer’s screens turn off. This needs a display driver, installed once with administrator permission.</source>
+        <translation>有人連線時，Windows 會使用與其視窗大小相同的虛擬顯示器，這台電腦的螢幕會關閉。這需要一個顯示驅動程式，只需以系統管理員權限安裝一次。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <source>The display driver couldn’t be installed.</source>
+        <translation>無法安裝顯示驅動程式。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
+        <source>The virtual display couldn’t start. Showing this computer’s screen instead.</source>
+        <translation>無法啟動虛擬顯示器。改為顯示這台電腦的螢幕。</translation>
+        <extra-sodium-review>machine</extra-sodium-review>
+    </message>
+    <message>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="423"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="430"/>
         <source>Name shown to other computers</source>
         <translation>向其他電腦顯示的名稱</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="413"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
         <source>Network</source>
         <translation>網路</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="418"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="444"/>
         <source>This network is Public</source>
         <translation>此網路為公用網路</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="419"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="445"/>
         <source>Remote control needs a Private network. Set this network to Private in Windows network settings.</source>
         <translation>遠端控制需要私人網路。請在 Windows 網路設定中將此網路設為私人。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="420"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
         <source>Network settings</source>
         <translation>網路設定</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="425"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
         <source>The firewall is blocking %1</source>
         <translation>防火牆正在封鎖 %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="426"/>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="433"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="452"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="459"/>
         <source>Other computers on your network can’t reach this one until you allow it.</source>
         <translation>在你允許之前，網路上的其他電腦無法存取這台電腦。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="427"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="453"/>
         <source>Allow…</source>
         <translation>允許…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="432"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="458"/>
         <source>Waiting for Windows to ask…</source>
         <translation>正在等待 Windows 詢問…</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="439"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="465"/>
         <source>Allowed on private networks</source>
         <translation>已在私人網路上允許</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="446"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="472"/>
         <source>Address for connecting directly</source>
         <translation>用於直接連線的位址</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="451"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="477"/>
         <source>Copy</source>
         <translation>複製</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="467"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="493"/>
         <source>Limits</source>
         <translation>限制</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="471"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="497"/>
         <source>This computer keeps its own resolution. The picture is scaled to fit the other computer’s window.</source>
         <translation>這台電腦保持自己的解析度。畫面會縮放以符合另一台電腦的視窗。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="475"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="501"/>
         <source>Your desktop shows its own indicator while the screen is shared.</source>
         <translation>螢幕分享期間，你的桌面會顯示它自己的指示器。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="476"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="502"/>
         <source>Remote control works only while %1 is open.</source>
         <translation>只有在 %1 開啟時，遠端控制才能使用。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="489"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="515"/>
         <source>To share without keeping the app open, see the Linux guide.</source>
         <translation>如需在不保持 App 開啟的情況下分享，請參閱 Linux 指南。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="490"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="516"/>
         <source>Open guide</source>
         <translation>開啟指南</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="523"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="549"/>
         <source>Copy %1</source>
         <translation>複製 %1</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="529"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="555"/>
         <source>Copy full address</source>
         <translation>複製完整位址</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="498"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="524"/>
         <source>Lock, sign-in and UAC screens can’t be shown or controlled remotely.</source>
         <translation>鎖定、登入和 UAC 畫面無法遠端顯示或控制。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="440"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="466"/>
         <source>Windows Firewall allows it. Public networks stay blocked.</source>
         <translation>Windows 防火牆已允許。公用網路仍被封鎖。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="473"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="499"/>
         <source>While this computer is locked, a paired device sees the lock screen and can unlock it with your password. Nobody can connect before you sign in.</source>
         <translation>這台電腦鎖定期間，已配對的裝置會看到鎖定畫面，並可用你的密碼將其解鎖。你登入之前，任何人都無法連線。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="474"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="500"/>
         <source>Locking this computer ends the session. Nobody can connect while it’s locked or before you sign in.</source>
         <translation>鎖定這台電腦會結束工作階段。電腦鎖定期間或你登入之前，任何人都無法連線。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="478"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="504"/>
         <source>Only characters on this computer’s keyboard layout can be typed from the other computer. Paste other text instead.</source>
         <translation>從另一台電腦只能輸入這台電腦鍵盤配置上有的字元。其他文字請改用貼上。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="535"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="561"/>
         <source>Forget the screen sharing permission?</source>
         <translation>忘記螢幕分享權限？</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="536"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="562"/>
         <source>Your desktop asks again the next time a paired device connects.</source>
         <translation>下次已配對的裝置連線時，你的桌面會再次詢問。</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="538"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="564"/>
         <source>Forget permission</source>
         <translation>忘記權限</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="546"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="572"/>
         <source>Remove %1?</source>
         <translation>移除 %1?</translation>
         <extra-sodium-review>machine</extra-sodium-review>
     </message>
     <message>
-        <location filename="../../app/qml/ThisComputerPage.qml" line="547"/>
+        <location filename="../../app/qml/ThisComputerPage.qml" line="573"/>
         <source>It can’t connect to this computer again until you pair it again. If it’s connected now, it’s disconnected.</source>
         <translation>重新配對之前，它無法再連線到這台電腦。如果它目前已連線，將會中斷。</translation>
         <extra-sodium-review>machine</extra-sodium-review>

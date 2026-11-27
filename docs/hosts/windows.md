@@ -20,11 +20,27 @@ The host is a per-user program in your interactive session. It doesn't run as a 
 ## What the host shows
 
 - **Displays.** The host streams your real screen. When there are several displays, the controlling computer chooses which to see. One display at a time.
-- **Resolution.** The host does not resize or create displays. The picture follows the controlling computer's window: when that window is resized or goes full screen, the host re-encodes at the largest size with the display's shape that fits it, so the other computer shows it pixel for pixel (with bars only where the shapes differ). It is never larger than the display's own size. The stream changes about 150 ms after the window stops changing, with one keyframe.
+- **Resolution.** Unless [the display is matched to the connecting computer](#matching-the-display-to-the-connecting-computer), the host does not resize or create displays. The picture follows the controlling computer's window: when that window is resized or goes full screen, the host re-encodes at the largest size with the display's shape that fits it, so the other computer shows it pixel for pixel (with bars only where the shapes differ). It is never larger than the display's own size. The stream changes about 150 ms after the window stops changing, with one keyframe.
 - **Video.** The host uses a hardware encoder when there is one: NVENC, AMD's AMF or Intel's Quick Sync for HEVC, and the GPU's Media Foundation encoder for H.264. Without any of those it falls back to a software H.264 encoder. HEVC is used when a hardware HEVC encoder works and the client decodes HEVC; otherwise H.264.
 - **Sound.** The default output device is shared (48 kHz stereo, Opus). If you change the default device, sharing follows it.
 - **Clipboard.** Text, HTML and images, both ways. Entries that a password manager marks as concealed are kept out of the clipboard history on the receiving side.
 - **A notice** shows when someone is connected, with **Disconnect** and **Dismiss**.
+
+## Matching the display to the connecting computer
+
+**Match the display to the connecting computer** on **This computer** is off by default. When it is on, Windows uses a virtual display the size of the other computer's window while someone is connected, so that computer shows the desktop pixel for pixel, with no bars and no scaling.
+
+- **Turning it on** installs a display driver, Sodium Remote Display, which Sodium Remote builds from SudoVDA's open source and signs with its own certificate. Windows asks once for administrator permission. The app first checks the driver's files against checksums built into the app, then adds Sodium Remote's signing certificate to this computer's Trusted Root Certification Authorities and Trusted Publishers stores, and installs the driver. If you choose No, nothing changes and the switch stays off. If the driver can't be installed, the switch stays off and **This computer** says "The display driver couldn't be installed."
+- **While someone is connected**, the virtual display is the only display: this computer's own screens turn off, and Windows moves the open windows onto the virtual display. When the session ends, the screens come back as they were and Windows moves the windows back. A window left outside every screen is moved to the main screen.
+- **The keyboard and mouse at this computer keep working** while its screens are off. What is typed there goes to the shared desktop.
+- **Resizing.** While the other computer's window is being resized, the picture is scaled to fit it. About 400 ms after the size stops changing, the virtual display takes the new size. The virtual display's width and height are even, at least 800 × 600, and its refresh rate is at most 120 Hz. A window larger than the other computer can decode gets a smaller virtual display of the same shape.
+- **If the virtual display can't start** within 3 seconds, or the driver is missing, the session shows this computer's own screens instead, scaled to the window, and **This computer** says "The virtual display couldn't start. Showing this computer's screen instead."
+- **A lost connection** keeps the virtual display for 15 seconds, so the other computer can come back to it. **Disconnect** and **Quit** turn the screens back on at once.
+- **If the app stops unexpectedly** (it crashes, it is ended in Task Manager, or you sign out), the virtual display goes away by itself about 3 seconds later and Windows turns the screens back on: the change was never saved to Windows' display settings. The next time the app starts, it puts the screens back as they were if they aren't.
+- **Turning it off** asks for administrator permission again, then removes the driver, its device and the certificate. The setting can't be changed while someone is connected.
+- **If the app folder was deleted while the setting was on**, remove the rest by hand: in Device Manager, under Display adapters, uninstall "Sodium Remote Display Adapter" and choose to remove its driver; in `certlm.msc`, delete "Sodium Remote Driver Signing (self-signed)" from Trusted Root Certification Authorities and from Trusted Publishers.
+
+While the setting is on, the certificate is trusted for code signing on this computer, and any program running on it can add virtual displays through the driver. Another program's SudoVDA (Apollo installs one) is a separate driver: Sodium Remote neither uses nor removes it. One Sodium Remote host runs on a computer at a time, even with several people signed in. One virtual display at a time; no HDR. Windows picks the virtual display's scale. The matched display has not been tested on real hardware yet.
 
 ## Limits
 

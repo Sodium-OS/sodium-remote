@@ -392,6 +392,32 @@ Item {
                     description: qsTr("Keeps this computer available after you sign in.")
                     Switch { objectName: "login-switch"; checked: Host.startAtLogin; onToggled: Host.setStartAtLogin(checked) }
                 }
+                // Windows: a virtual display the size of the other computer's window; the driver goes in with one UAC prompt.
+                ControlRow {
+                    visible: !page.linux
+                    Layout.fillWidth: true
+                    text: qsTr("Match the display to the connecting computer")
+                    description: qsTr("While someone is connected, Windows uses a virtual display the size of their window, and this computer’s screens turn off. This needs a display driver, installed once with administrator permission.")
+                    Switch {
+                        objectName: "matched-switch"
+                        checked: Host.matchedDisplay
+                        enabled: !Host.matchedBusy && !Host.controlled
+                        // Back to the controller's state: it changes only once the driver is in or out.
+                        onToggled: { Host.setMatchedDisplay(checked); checked = Qt.binding(() => Host.matchedDisplay) }
+                    }
+                }
+                ControlRow {
+                    objectName: "matched-install-failed"
+                    visible: !page.linux && Host.matchedInstallFailed
+                    Layout.fillWidth: true
+                    text: qsTr("The display driver couldn’t be installed.")
+                }
+                ControlRow {
+                    objectName: "matched-failed"
+                    visible: !page.linux && Host.matchedFailed
+                    Layout.fillWidth: true
+                    text: qsTr("The virtual display couldn’t start. Showing this computer’s screen instead.")
+                }
                 ControlRow {
                     Layout.fillWidth: true
                     text: qsTr("Name shown to other computers")

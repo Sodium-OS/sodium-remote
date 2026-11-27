@@ -79,6 +79,11 @@ void WinApp::start(bool background)
             break;
         }
     m_tray = new Tray(this);
+    // The tray menu and the notice bind to Host: they go before it does (else every binding reads null).
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this] {
+        delete m_menu.data();
+        delete m_notice.data();
+    });
     connect(m_tray, &Tray::activated, this, [this](const QPoint &at, bool context) {
         if (context)
             showTrayMenu(at);
@@ -148,8 +153,11 @@ void WinApp::pairDevice()
 
 void WinApp::quit()
 {
-    m_host->setEnabled(false);
-    QCoreApplication::quit();
+    // Hosting stops when the app ends (the controller's destructor shuts the session down, the matched display included).
+    // The "Allow remote control" choice is the user's and stays saved: the next start hosts again.
+    // Queued: the tray menu's Quit item calls this from its own signal handler, and quitting deletes the menu (aboutToQuit),
+    // which Qt answers with a fatal error while the handler runs (an APPCRASH on every tray Quit, the matched display left up).
+    QMetaObject::invokeMethod(QCoreApplication::instance(), &QCoreApplication::quit, Qt::QueuedConnection);
 }
 
 void WinApp::showTrayMenu(const QPoint &anchor)

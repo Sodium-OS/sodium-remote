@@ -313,4 +313,14 @@ pub trait Backend: Send + Sync {
     fn locked(&self) -> bool {
         false
     }
+    /// The OS's display configuration, for the matched display (`vdisplay`; Windows). None
+    /// where there is no matched display.
+    fn topology(&self) -> Option<Arc<dyn crate::vdisplay::Topology>> {
+        None
+    }
+    /// The virtual display driver, opened (Windows: SudoVDA); an error when it isn't
+    /// installed or doesn't answer.
+    fn virtual_display(&self) -> anyhow::Result<Arc<dyn crate::vdisplay::VirtualDisplay>> {
+        anyhow::bail!("this computer has no virtual display driver")
+    }
 }

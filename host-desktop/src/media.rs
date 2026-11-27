@@ -33,12 +33,14 @@ use remote_core::connect::Host;
 use remote_core::msg::{self, Codec, CursorImage, Msg};
 use remote_core::session::OutgoingFrame;
 
-use crate::backend::{Backend, CursorShape, Display, Encoder, EncoderConfig, Picture, Rect};
+use crate::backend::{Backend, CursorShape, Display, EncodedFrame, Encoder, EncoderConfig, Picture, Rect};
 use crate::policy::{KeyframeGate, RateFollower, Refresh};
 
 /// The encoder's rate until core has a budget (core's controller starts at 8 Mbps).
 pub const START_BPS: u64 = 8_000_000;
 const MIN_BPS: u64 = 300_000;
+/// The wait before an encoder that wouldn't open is opened once more.
+const REOPEN_RETRY: Duration = Duration::from_millis(250);
 
 /// What the stream is: one display, at a size and rate, in a codec.
 #[derive(Clone, Debug, PartialEq)]
@@ -80,6 +82,9 @@ pub enum MediaEvent {
     Secure(bool),
     /// The person at this computer stopped sharing (`backend::SharingEnded`).
     Ended,
+    /// No encoder of the stream's codec would open, so the stream went on in this one
+    /// (software H.264); the client has the new `Format`.
+    CodecFallback(Codec),
 }
 
 enum In {
@@ -93,6 +98,8 @@ enum In {
     Hint(RefHint),
     /// The client's window changed: encode at this size from now on (a new encoder).
     Resize(u32, u32),
+    /// Answered once everything sent before it is done.
+    Barrier(mpsc::Sender<()>),
     Stop,
 }
 
@@ -147,6 +154,14 @@ impl Media {
     /// Encode at another size, on the same capture: a new encoder, a new `Format` and a keyframe.
     pub fn resize(&self, width: u32, height: u32) {
         let _ = self.tx.send(In::Resize(width, height));
+    }
+
+    /// Waits (at most `timeout`) until the media loop has done what it was asked so far, a
+    /// `resize` (a new encoder) included: a display mode change must not overlap an encoder
+    /// being opened (QSV then fails its set-up). False: it timed out or the loop is gone.
+    pub fn settle(&self, timeout: Duration) -> bool {
+        let (tx, rx) = mpsc::channel();
+        self.tx.send(In::Barrier(tx)).is_ok() && rx.recv_timeout(timeout).is_ok()
     }
 
     /// Core's hint that the client lost frames (`LinkStatus::ref_hint`).
@@ -273,8 +288,70 @@ impl Loop {
         self.host.link_status().map(|l| l.budget.encoder_bps).filter(|&b| b > 0).unwrap_or(START_BPS).max(MIN_BPS)
     }
 
+    /// A new encoder for the stream. A failure is no reason to end the session: once more
+    /// (the GPU may have been busy with something else, a display change say), then the
+    /// software H.264 encoder for the rest of the session ([`Loop::fall_back`]).
     fn open_encoder(&mut self, bps: u64) -> Result<()> {
         self.encoder = None;
+        let first = match self.try_open(bps) {
+            Ok(()) => return Ok(()),
+            Err(e) => e,
+        };
+        eprintln!("sodium-remote-host: encoder: {first:#}; trying again");
+        std::thread::sleep(REOPEN_RETRY);
+        match self.try_open(bps) {
+            Ok(()) => Ok(()),
+            Err(e) => self.fall_back(bps, e),
+        }
+    }
+
+    /// The stream in H.264 (the next encoder: for HEVC, the H.264 ones, software last), told to
+    /// the client in a new `Format`. `why` is returned when that doesn't open either.
+    fn fall_back(&mut self, bps: u64, why: anyhow::Error) -> Result<()> {
+        if self.setup.codec == Codec::H264 {
+            return Err(why);
+        }
+        eprintln!("sodium-remote-host: encoder: {why:#}; using H.264 for this session");
+        let hevc = self.setup.codec;
+        self.setup.codec = Codec::H264;
+        match self.try_open(bps) {
+            Ok(()) => {
+                *self.shared.lock().unwrap() = self.setup.clone();
+                self.host.send(&Msg::Format(stream_format(&self.setup)));
+                (self.events)(MediaEvent::CodecFallback(Codec::H264));
+                Ok(())
+            }
+            Err(_) => {
+                self.setup.codec = hevc;
+                Err(why)
+            }
+        }
+    }
+
+    /// An encode error is no reason to end the session either. HEVC goes to H.264 for the rest of the
+    /// session at once (a hardware HEVC encoder that failed once fails again: `hevc_qsv`'s empty frames);
+    /// H.264 gets a new encoder. Then that encoder's keyframe of the same picture, once more with a new
+    /// encoder if it fails too; after that the error ends the stream.
+    fn recover(&mut self, pic: &dyn Picture, bps: u64, e: anyhow::Error) -> Result<EncodedFrame> {
+        if self.setup.codec == Codec::H264 {
+            eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
+            self.open_encoder(bps)?;
+        } else {
+            eprintln!("sodium-remote-host: encode: {e:#}");
+            self.encoder = None;
+            self.fall_back(bps, e)?;
+        }
+        match self.encoder.as_mut().expect("encoder").encode(pic, true, bps) {
+            Ok(f) => Ok(f),
+            Err(e) => {
+                eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
+                self.open_encoder(bps)?;
+                self.encoder.as_mut().expect("encoder").encode(pic, true, bps)
+            }
+        }
+    }
+
+    fn try_open(&mut self, bps: u64) -> Result<()> {
         let cfg = EncoderConfig {
             codec: self.setup.codec,
             width: self.setup.width,
@@ -338,6 +415,9 @@ impl Loop {
                         }
                     }
                     In::Resize(w, h) => self.resize(w, h)?,
+                    In::Barrier(done) => {
+                        let _ = done.send(());
+                    }
                     In::Update(u) => self.merge(u),
                 }
             }
@@ -460,12 +540,7 @@ impl Loop {
         let enc = self.encoder.as_mut().expect("encoder");
         let f = match enc.encode(pic.as_ref(), keyframe, bps) {
             Ok(f) => f,
-            Err(e) => {
-                // One retry with a new encoder, then give up on the session.
-                eprintln!("sodium-remote-host: encode: {e:#}; opening the encoder again");
-                self.open_encoder(target)?;
-                self.encoder.as_mut().unwrap().encode(pic.as_ref(), true, target)?
-            }
+            Err(e) => self.recover(pic.as_ref(), target, e)?,
         };
         let t_encoded = Instant::now();
         self.last_sent = Some(now);

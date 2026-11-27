@@ -290,7 +290,7 @@ impl ThisComputer {
                 Note::PairingClosed { reason } => ThisComputerEvent::PairingClosed { reason },
                 Note::Paired(_) | Note::PairedChanged => ThisComputerEvent::DevicesChanged,
                 // The Mac asks through Screen Recording and Accessibility, not per session.
-                Note::Consent(_) => return,
+                Note::Consent(_) | Note::MatchedDisplayFailed => return,
             };
             listener.on_event(ev);
         });

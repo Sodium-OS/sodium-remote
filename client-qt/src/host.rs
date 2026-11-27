@@ -16,8 +16,29 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+/// The runtime, dropped with `shutdown_background`: the last `Arc<Rh>` may go in a task on the runtime's own thread
+/// (a finished `disable`), where tokio's plain drop would panic.
+struct Rt(Option<tokio::runtime::Runtime>);
+
+impl std::ops::Deref for Rt {
+    type Target = tokio::runtime::Runtime;
+    fn deref(&self) -> &tokio::runtime::Runtime {
+        self.0.as_ref().expect("the runtime")
+    }
+}
+
+impl Drop for Rt {
+    fn drop(&mut self) {
+        if let Some(rt) = self.0.take() {
+            rt.shutdown_background();
+        }
+    }
+}
+
 pub struct Rh {
-    rt: tokio::runtime::Runtime,
+    rt: Rt,
+    /// The stop in flight (`disable`): `rh_free` waits for it, so the matched display is restored before the app ends.
+    stopping: Mutex<Option<tokio::task::JoinHandle<()>>>,
     data: PathBuf,
     sink: Sink,
     gate: Arc<crate::Gate>,
@@ -43,10 +64,14 @@ fn consent_json(c: &Consent) -> Value {
 }
 
 /// `{"ev": "host", "state": "error", "detail"}` (English, for the log) and, when another host already serves from the
-/// data directory, `"code": "in_use"`: the page shows its own translated line for it.
+/// data directory (Windows: runs on this computer), `"code": "in_use"`: the page shows its own translated line for it.
 fn host_error_json(e: &anyhow::Error) -> Value {
     #[cfg(target_os = "linux")]
     if e.downcast_ref::<host_desktop::linux::DataDirInUse>().is_some() {
+        return json!({"ev": "host", "state": "error", "code": "in_use", "detail": format!("{e:#}")});
+    }
+    #[cfg(windows)]
+    if e.downcast_ref::<host_desktop::win::HostInUse>().is_some() {
         return json!({"ev": "host", "state": "error", "code": "in_use", "detail": format!("{e:#}")});
     }
     json!({"ev": "host", "state": "error", "detail": format!("{e:#}")})
@@ -65,6 +90,7 @@ fn note_json(n: Note) -> Value {
         Note::Paired(d) => json!({"ev": "host_paired", "id": d.id.to_string(), "name": d.name}),
         Note::PairedChanged => json!({"ev": "host_paired"}),
         Note::Consent(c) => consent_json(&c),
+        Note::MatchedDisplayFailed => json!({"ev": "host_matched", "state": "failed"}),
     }
 }
 
@@ -113,12 +139,13 @@ impl Rh {
     fn disable(self: &Arc<Self>) {
         let s = self.session.lock().unwrap().take();
         let me = self.clone();
-        self.rt.spawn(async move {
+        let h = self.rt.spawn(async move {
             if let Some(s) = s {
                 s.shutdown().await;
             }
             (me.sink)(json!({"ev": "host", "state": "off"}));
         });
+        *self.stopping.lock().unwrap() = Some(h);
     }
 
     fn with(&self, f: impl FnOnce(&Session) + Send + 'static) {
@@ -142,7 +169,9 @@ pub unsafe extern "C" fn rh_new(data_dir: *const c_char, cb: EventFn, user: *mut
     };
     #[cfg(not(windows))]
     let soft = SoftwareVideo::system();
-    Box::into_raw(Box::new(Arc::new(Rh { rt, data, sink, gate, session: Mutex::new(None), soft })))
+    // A matched display left up by a host that stopped (a crash, a sign-out): the displays as they were, before anything else.
+    host_desktop::recover_matched_display(&data);
+    Box::into_raw(Box::new(Arc::new(Rh { rt: Rt(Some(rt)), stopping: Mutex::new(None), data, sink, gate, session: Mutex::new(None), soft })))
 }
 
 unsafe fn rh<'a>(p: *mut Arc<Rh>) -> &'a Arc<Rh> {
@@ -155,6 +184,9 @@ pub unsafe extern "C" fn rh_free(p: *mut Arc<Rh>) {
         return;
     }
     let b = unsafe { Box::from_raw(p) };
+    if let Some(h) = b.stopping.lock().unwrap().take() {
+        let _ = b.rt.block_on(h);
+    }
     if let Some(s) = b.session.lock().unwrap().take() {
         b.rt.block_on(s.shutdown());
     }
@@ -319,6 +351,54 @@ pub unsafe extern "C" fn rh_software_video(p: *mut Arc<Rh>) -> c_int {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rh_codec_retry(p: *mut Arc<Rh>) {
     unsafe { rh(p) }.soft.retry();
+}
+
+/// "Match the display to the connecting computer" (`settings.json` `matched_display`, default off): 1 on, 0 off.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_matched_display(p: *mut Arc<Rh>) -> c_int {
+    host_desktop::vdisplay::wanted(&unsafe { rh(p) }.data) as c_int
+}
+
+/// Saves "Match the display to the connecting computer". The app installs (on) or removes (off) the driver first, in an
+/// elevated copy of itself (`rh_matched_display_admin`), and saves only when that worked. A running host uses the setting
+/// from its next connection. When a connection with it on can't get the virtual display, the session shows the physical
+/// display and this event comes:
+///
+///     {"ev":"host_matched","state":"failed"}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_set_matched_display(p: *mut Arc<Rh>, on: c_int) {
+    host_desktop::vdisplay::set_wanted(&unsafe { rh(p) }.data, on != 0);
+}
+
+/// The elevated side of the setting (`SodiumRemote.exe --matched-display install|uninstall --log FILE`, Windows):
+/// `action` "install" checks the driver files beside the program against their pins, imports the certificate, creates the
+/// device and installs the driver; "uninstall" removes them. 0: done; 1: failed (`log`, when not empty, gets the reason in
+/// English); 2: not on this OS or an unknown action.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rh_matched_display_admin(action: *const c_char, log: *const c_char) -> c_int {
+    let (action, log) = (unsafe { cstr(action) }, unsafe { cstr(log) });
+    #[cfg(windows)]
+    {
+        use host_desktop::win::vdd_install;
+        let r = match action.as_str() {
+            "install" => vdd_install::install(None),
+            "uninstall" => vdd_install::uninstall(),
+            _ => return 2,
+        };
+        let line = match &r {
+            Ok(()) => format!("{action}: done\n"),
+            Err(e) => format!("{action}: {e:#}\n"),
+        };
+        if !log.is_empty() {
+            let _ = std::fs::write(&log, line);
+        }
+        return if r.is_ok() { 0 } else { 1 };
+    }
+    #[allow(unreachable_code)]
+    {
+        let _ = (action, log);
+        2
+    }
 }
 
 #[allow(dead_code)]

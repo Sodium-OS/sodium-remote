@@ -277,7 +277,7 @@ static int encode_openh264(hd_enc *e, int force_key, int64_t bitrate, const uint
 // ---------------------------------------------------------------------------
 // FFmpeg: the hardware HEVC encoders and Media Foundation's H.264, each set up for
 // low latency: no B-frames, no lookahead, an endless GOP with keyframes on request
-// (pict_type I, as an IDR), CBR with a one-frame VBV.
+// (pict_type I, as an IDR), CBR with a one-frame VBV (Quick Sync: half a second).
 
 static int open_ffmpeg(hd_enc *e, const hd_enc_config *cfg, char *err, int errlen) {
     const AVCodec *c = avcodec_find_encoder_by_name(cfg->name);
@@ -345,10 +345,16 @@ static int open_ffmpeg(hd_enc *e, const hd_enc_config *cfg, char *err, int errle
         av_dict_set(&o, "rc", "cbr", 0);
         av_dict_set(&o, "quality", "speed", 0);
     } else if (strstr(cfg->name, "_qsv")) {
+        // Not a one-frame VBV: FFmpeg gives Quick Sync an output buffer of the VBV's size, so a
+        // keyframe that doesn't fit comes back empty (hevc_qsv: "Invalid FrameType:0", the frame
+        // lost) or, with h264_qsv, squeezed to the highest QP, and its rate control never makes up
+        // for it (a smeared picture that stays so: dense text at 18 dB PSNR). Half a second, measured
+        // on a UHD 770 at 8-27 Mbit/s: no empty frames, and text at 42-52 dB within two seconds. Its
+        // LowDelayBRC is left off: the driver turned it down anyway.
+        x->rc_buffer_size = (int)(cfg->bitrate / 2);
         av_dict_set(&o, "preset", "veryfast", 0);
         av_dict_set(&o, "async_depth", "1", 0);
         av_dict_set(&o, "forced_idr", "1", 0);
-        av_dict_set(&o, "low_delay_brc", "1", 0);
     } else if (strstr(cfg->name, "_mf")) {
         // The GPU's MFT only. Microsoft's software MFT answers one forced keyframe with
         // seven IDRs (measured in the VM) and fixes its rate at open; OpenH264 does better.

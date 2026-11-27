@@ -1,0 +1,176 @@
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 Ning Bao
+Gives Sodium Remote's build of SudoVDA its own identity: hardware ID Root\SodiumRemoteDisplay, device interface
+{53f76209-42ea-44fd-897e-8607b15fa9be}, trace GUID, INF, DLL, catalog, service and registry names, and the adapter's
+names, so it installs beside another program's SudoVDA (Apollo, Sunshine setups) and never touches it.
+Applies to SudoVDA at the commit in ../UPSTREAM with `git apply` (build.ps1, run by .github/workflows/sudovda.yml).
+The text below is a diff of SudoVDA's own files, which stay under their licences (see ../UPSTREAM).
+
+diff --git a/Common/Include/sudovda-ioctl.h b/Common/Include/sudovda-ioctl.h
+index 849c87f..b65dca7 100644
+--- a/Common/Include/sudovda-ioctl.h
++++ b/Common/Include/sudovda-ioctl.h
+@@ -24,13 +24,14 @@ typedef struct _SUVDA_PROTOCAL_VERSION {
+ // Please update the version after ioctl changed
+ static const SUVDA_PROTOCAL_VERSION VDAProtocolVersion = { 0, 2, 1, true };
+ 
+-static const char* SUVDA_HARDWARE_ID = "root\\sudomaker\\sudovda";
++// Sodium Remote's build: its own hardware ID and interface, so it never meets another program's SudoVDA.
++static const char* SUVDA_HARDWARE_ID = "root\\sodiumremotedisplay";
+ 
+ // DO NOT CHANGE
+ // {4d36e968-e325-11ce-bfc1-08002be10318}
+ static const GUID SUVDA_CLASS_GUID = { 0x4d36e968, 0xe325, 0x11ce, { 0xbf, 0xc1, 0x08, 0x00, 0x2b, 0xe1, 0x03, 0x18 } };
+-// {e5bcc234-1e0c-418a-a0d4-ef8b7501414d}
+-static const GUID SUVDA_INTERFACE_GUID = { 0xe5bcc234, 0x1e0c, 0x418a, { 0xa0, 0xd4, 0xef, 0x8b, 0x75, 0x01, 0x41, 0x4d } };
++// {53f76209-42ea-44fd-897e-8607b15fa9be}
++static const GUID SUVDA_INTERFACE_GUID = { 0x53f76209, 0x42ea, 0x44fd, { 0x89, 0x7e, 0x86, 0x07, 0xb1, 0x5f, 0xa9, 0xbe } };
+ 
+ typedef struct _VIRTUAL_DISPLAY_ADD_PARAMS {
+ 	UINT Width;
+diff --git a/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp b/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp
+index 8e906a7..873fe97 100644
+--- a/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp	
++++ b/Virtual Display Driver (HDR)/SudoVDA/Driver.cpp	
+@@ -295,7 +295,7 @@ void LoadSettings() {
+ 	LONG lResult;
+ 
+ 	// Open the registry key
+-	lResult = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\SudoMaker\\SudoVDA", 0, KEY_READ, &hKey);
++	lResult = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Sodium Remote\\Display driver", 0, KEY_READ, &hKey);
+ 	if (lResult != ERROR_SUCCESS) {
+ 		return;
+ 	}
+@@ -803,9 +803,9 @@ void IndirectDeviceContext::InitAdapter()
+ 	AdapterCaps.EndPointDiagnostics.TransmissionType = IDDCX_TRANSMISSION_TYPE_WIRED_OTHER;
+ 
+ 	// Declare your device strings for telemetry (required)
+-	AdapterCaps.EndPointDiagnostics.pEndPointFriendlyName = L"SudoMaker Virtual Display Adapter";
+-	AdapterCaps.EndPointDiagnostics.pEndPointManufacturerName = L"SudoMaker";
+-	AdapterCaps.EndPointDiagnostics.pEndPointModelName = L"SudoVDA";
++	AdapterCaps.EndPointDiagnostics.pEndPointFriendlyName = L"Sodium Remote Display Adapter";
++	AdapterCaps.EndPointDiagnostics.pEndPointManufacturerName = L"Sodium Remote";
++	AdapterCaps.EndPointDiagnostics.pEndPointModelName = L"Sodium Remote Display";
+ 
+ 	// Declare your hardware and firmware versions (required)
+ 	IDDCX_ENDPOINT_VERSION Version = {};
+diff --git a/Virtual Display Driver (HDR)/SudoVDA/SodiumRemoteDisplay.inf b/Virtual Display Driver (HDR)/SudoVDA/SodiumRemoteDisplay.inf
+new file mode 100644
+index 0000000..80bee0a
+--- /dev/null
++++ b/Virtual Display Driver (HDR)/SudoVDA/SodiumRemoteDisplay.inf	
+@@ -0,0 +1,74 @@
++; SodiumRemoteDisplay.inf: Sodium Remote's build of SudoVDA (SudoMaker), an indirect display driver based on
++; Microsoft's IddSampleDriver. Its own hardware ID, names and catalog, so it can sit beside another program's SudoVDA.
++
++[Version]
++PnpLockdown=1
++Signature="$Windows NT$"
++ClassGUID = {4D36E968-E325-11CE-BFC1-08002BE10318}
++Class = Display
++ClassVer = 2.0
++Provider=%ManufacturerName%
++CatalogFile=sodiumremotedisplay.cat
++DriverVer= ; set by stampinf
++
++[Manufacturer]
++%ManufacturerName%=Standard,NT$ARCH$
++
++[Standard.NT$ARCH$]
++%DeviceName%=SodiumRemoteDisplay_Install, Root\SodiumRemoteDisplay
++
++[SourceDisksFiles]
++SodiumRemoteDisplay.dll=1
++
++[SourceDisksNames]
++1 = %DiskName%
++
++; =================== UMDF Device ==================================
++
++[SodiumRemoteDisplay_Install.NT]
++CopyFiles=UMDriverCopy
++
++[SodiumRemoteDisplay_Install.NT.hw]
++AddReg = SodiumRemoteDisplay_HardwareDeviceSettings
++
++[SodiumRemoteDisplay_HardwareDeviceSettings]
++HKR,, "UpperFilters",  %REG_MULTI_SZ%, "IndirectKmd"
++HKR, "WUDF", "DeviceGroupId", %REG_SZ%, "SodiumRemoteDisplayGroup"
++HKR,, "Security",, "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;WD)"
++
++[SodiumRemoteDisplay_Install.NT.Services]
++AddService=WUDFRd,0x000001fa,WUDFRD_ServiceInstall
++
++[SodiumRemoteDisplay_Install.NT.Wdf]
++UmdfService=SodiumRemoteDisplay,SodiumRemoteDisplay_Install
++UmdfServiceOrder=SodiumRemoteDisplay
++UmdfKernelModeClientPolicy = AllowKernelModeClients
++
++[SodiumRemoteDisplay_Install]
++UmdfLibraryVersion=$UMDFVERSION$
++ServiceBinary=%12%\UMDF\SodiumRemoteDisplay.dll
++UmdfExtensions = IddCx0102
++
++[WUDFRD_ServiceInstall]
++DisplayName = %WudfRdDisplayName%
++ServiceType = 1
++StartType = 3
++ErrorControl = 1
++ServiceBinary = %12%\WUDFRd.sys
++
++[DestinationDirs]
++UMDriverCopy=12,UMDF ; copy to drivers\umdf
++
++[UMDriverCopy]
++SodiumRemoteDisplay.dll
++
++; =================== Generic ==================================
++
++[Strings]
++ManufacturerName="Sodium Remote"
++DiskName = "Sodium Remote Display Installation Disk"
++DeviceName="Sodium Remote Display Adapter"
++WudfRdDisplayName="Windows Driver Foundation - User-mode Driver Framework Reflector"
++
++REG_MULTI_SZ  = 0x00010000
++REG_SZ        = 0x00000000
+diff --git a/Virtual Display Driver (HDR)/SudoVDA/SudoVDA.vcxproj b/Virtual Display Driver (HDR)/SudoVDA/SudoVDA.vcxproj
+index 3b2b0fc..93c3533 100644
+--- a/Virtual Display Driver (HDR)/SudoVDA/SudoVDA.vcxproj	
++++ b/Virtual Display Driver (HDR)/SudoVDA/SudoVDA.vcxproj	
+@@ -26,7 +26,7 @@
+     <ClInclude Include="Trace.h" />
+   </ItemGroup>
+   <ItemGroup>
+-    <Inf Include="SudoVDA.inf" />
++    <Inf Include="SodiumRemoteDisplay.inf" />
+   </ItemGroup>
+   <PropertyGroup Label="Globals">
+     <ProjectGuid>{8DC3F311-2CF2-4F7D-A1D0-FD75C75833FD}</ProjectGuid>
+@@ -36,6 +36,7 @@
+     <Configuration>Debug</Configuration>
+     <Platform Condition="'$(Platform)' == ''">x64</Platform>
+     <RootNamespace>SudoVDA</RootNamespace>
++    <TargetName>SodiumRemoteDisplay</TargetName>
+   </PropertyGroup>
+   <PropertyGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+     <PlatformToolset>WindowsUserModeDriver10.0</PlatformToolset>
+diff --git a/Virtual Display Driver (HDR)/SudoVDA/Trace.h b/Virtual Display Driver (HDR)/SudoVDA/Trace.h
+index c165590..a3f55f8 100644
+--- a/Virtual Display Driver (HDR)/SudoVDA/Trace.h	
++++ b/Virtual Display Driver (HDR)/SudoVDA/Trace.h	
+@@ -18,12 +18,12 @@ Environment:
+ //
+ // Define the tracing flags.
+ //
+-// Tracing GUID - b254994f-46e6-4718-80a0-0a3aa50d6ce4
++// Tracing GUID - 66e8cf69-49bc-44df-bbea-7b6edfc0ac30
+ //
+ 
+ #define WPP_CONTROL_GUIDS                                              \
+     WPP_DEFINE_CONTROL_GUID(                                           \
+-        MyDriver1TraceGuid, (b254994f,46e6,4718,80a0,0a3aa50d6ce4),                  \
++        MyDriver1TraceGuid, (66e8cf69,49bc,44df,bbea,7b6edfc0ac30),                  \
+                                                                        \
+         WPP_DEFINE_BIT(MYDRIVER_ALL_INFO)                              \
+         WPP_DEFINE_BIT(TRACE_DRIVER)                                   \

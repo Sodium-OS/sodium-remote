@@ -17,6 +17,9 @@ Window {
     readonly property real barHeight: Math.round(bar.height)
     property string pendingHost: ""
     property bool pendingTakeover: false
+    /// "Try again" or "Take over" on a failure card: the cleared session goes idle before the new one starts, and the
+    /// window stays up for it (hiding it there left the new session running with no window).
+    property bool retrying: false
     /// The main window: the stream window opens on its screen, fitted to it.
     property var anchor: null
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -122,13 +125,17 @@ Window {
         // A fresh start right after a failure: the old session needs a moment to finish.
         id: retryTimer
         interval: 400
-        onTriggered: Remote.connectTo(win.pendingHost, win, win.pendingTakeover, win.fullscreen, win.videoY)
+        onTriggered: {
+            win.retrying = false
+            if (!Remote.connectTo(win.pendingHost, win, win.pendingTakeover, win.fullscreen, win.videoY) && Remote.sessionState === "idle")
+                win.hide()
+        }
     }
 
     Connections {
         target: Remote
         function onSessionChanged() {
-            if (Remote.sessionState === "idle" && win.visible)
+            if (Remote.sessionState === "idle" && win.visible && !win.retrying)
                 win.hide()
             win.pushView()
         }
@@ -175,8 +182,8 @@ Window {
                 failure: Remote.failure
                 hostName: Remote.hostName
                 hostOs: Remote.hostOs
-                onRetry: { Remote.clearSession(); win.pendingTakeover = false; retryTimer.restart() }
-                onTakeover: { Remote.clearSession(); win.pendingTakeover = true; retryTimer.restart() }
+                onRetry: { win.retrying = true; Remote.clearSession(); win.pendingTakeover = false; retryTimer.restart() }
+                onTakeover: { win.retrying = true; Remote.clearSession(); win.pendingTakeover = true; retryTimer.restart() }
                 onPairNow: { win.hide(); Remote.clearSession(); win.pairRequested(win.pendingHost) }
                 onDismissed: win.hide()
                 onServerSettingsRequested: { win.hide(); Remote.clearSession(); win.serverSettingsRequested() }

@@ -47,6 +47,16 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Ning Bao"
 SPDX-License-Identifier = "AGPL-3.0-only"
 
+# Sodium Remote's own driver-signing certificate (public part, DER), imported by the app for the matched display's driver.
+# The driver itself (SudoVDA: MIT and CC0, and Microsoft's IddSampleDriver under MS-PL) is a separate binary that is never
+# in this tree, nor is its source: packaging/windows/sudovda/ builds it with our patches (MIT, their own headers), its record is packaging/windows/sudovda/UPSTREAM and its texts ship
+# as packaging/windows/licenses/SudoVDA-MIT.txt and SudoVDA-MS-PL.txt (covered by the third-party block below).
+[[annotations]]
+path = ["packaging/windows/sudovda/*.cer"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Ning Bao"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
 # The license text of the project itself, verbatim from the FSF (LICENSES/ is skipped by reuse).
 [[annotations]]
 path = ["LICENSE"]
