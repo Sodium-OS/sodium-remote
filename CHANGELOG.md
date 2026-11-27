@@ -25,6 +25,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Fixed
 
 - **Windows host, Intel Quick Sync.** The default codec (HEVC, `hevc_qsv`) no longer ends the session within seconds with "Invalid FrameType:0", and `h264_qsv`'s picture is no longer smeared and soft (vertical streaks through static text): the encoder's one-frame VBV, which FFmpeg also uses as Quick Sync's output buffer, left no room for a keyframe. Quick Sync now gets half a second, and static text is as sharp as with Media Foundation. Any HEVC encode error now switches the session to H.264 instead of ending it.
+- **Apps.** "Try again" and "Take over" on a failed or ended session no longer leave the new session running with no window: the session window stays open while the old session is cleared.
 - **Hosts.** Switching a host off and straight back on no longer fails with "address already in use": switching off now waits until the LAN port is released.
 - **Windows app.** The session window opens fitted to and centred on its screen at any display scale, instead of wider than a 150–200% laptop screen and partly off it. Its edges resize it, it maximises and snaps, it follows a move to a monitor with another scale, and full screen goes in and out with the previous size restored.
 - **Mac client.** Full screen no longer tears while content scrolls. Frames are shown with vsync on, drawn 5 ms before the vsync (`RemotePaceMs`); the old presenter is still there as `RemotePresentMode` `tearing`.
