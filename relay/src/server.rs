@@ -14,7 +14,7 @@ use axum::Router;
 use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use hyper::body::Incoming;
@@ -178,13 +178,24 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     State(hub): State<Arc<Hub>>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
 ) -> Response {
-    if !hub.admit(peer.ip()) {
+    let ip = client_ip(&hub.config().trusted_proxies, peer.ip(), &headers);
+    if !hub.admit(ip) {
         return (StatusCode::TOO_MANY_REQUESTS, "slow down\n").into_response();
     }
     ws.max_message_size(MAX_FRAME)
         .max_frame_size(MAX_FRAME)
-        .on_upgrade(move |socket| run_connection(hub, socket, peer.ip()))
+        .on_upgrade(move |socket| run_connection(hub, socket, ip))
+}
+
+/// The address a connection counts as: the TCP peer, or, when the peer is a trusted
+/// proxy, the address in its `X-Real-IP` header.
+fn client_ip(trusted: &[IpAddr], peer: IpAddr, headers: &HeaderMap) -> IpAddr {
+    if !trusted.contains(&peer) {
+        return peer;
+    }
+    headers.get("x-real-ip").and_then(|v| v.to_str().ok()).and_then(|v| v.trim().parse().ok()).unwrap_or(peer)
 }
 
 async fn send(ws: &mut WebSocket, frame: String) -> Result<(), axum::Error> {
@@ -277,9 +288,9 @@ async fn run_connection(hub: Arc<Hub>, mut ws: WebSocket, ip: IpAddr) {
 
     let (ob, mut obrx) = outbox();
     let ctx = match timeout(AUTH_TIMEOUT, authenticate(&hub, &mut ws, &nonce, ip, ob)).await {
-        Ok(Ok(Attached { ctx, registered, account })) => {
+        Ok(Ok(Attached { ctx, registered, account, service })) => {
             let notice = hub.config().notice.clone();
-            let ok = Event::AuthOk { device: ctx.device, role: ctx.role, registered, account, notice };
+            let ok = Event::AuthOk { device: ctx.device, role: ctx.role, registered, account, notice, service };
             if send(&mut ws, serde_json::to_string(&ok).expect("serializes")).await.is_err() {
                 hub.detach(&ctx);
                 return;

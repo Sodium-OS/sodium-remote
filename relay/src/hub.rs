@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 use tokio::sync::{Notify, mpsc};
 use tracing::{error, info, warn};
 
-use crate::hooks::Denial;
+use crate::hooks::{Denial, Hooks};
 use crate::tokens::{self, TokenError};
 use crate::{Config, Enrol};
 use crate::limits::{Key, Kind, Limits};
@@ -97,6 +97,8 @@ struct Conn {
     id: u64,
     role: Role,
     outbox: Outbox,
+    /// In memory only: never logged or stored.
+    ip: IpAddr,
 }
 
 struct Session {
@@ -178,6 +180,7 @@ fn denied(d: Denial) -> ApiError {
     match d {
         Denial::QuotaExceeded => err(ErrorCode::QuotaExceeded, "this account is over its quota"),
         Denial::PaymentRequired => err(ErrorCode::PaymentRequired, "this account needs a payment"),
+        Denial::AccountRequired => err(ErrorCode::AccountRequired, "this device needs an account"),
     }
 }
 
@@ -194,6 +197,8 @@ pub struct Attached {
     /// This authentication registered the device.
     pub registered: bool,
     pub account: Option<String>,
+    /// What the hooks add to `auth_ok`.
+    pub service: Option<Value>,
 }
 
 fn need(ctx: &ConnCtx, role: Role) -> Result<(), ApiError> {
@@ -247,7 +252,7 @@ impl Inner {
         }
     }
 
-    fn close_sessions(&mut self, pred: impl Fn(&str, &Session) -> bool, reason: &'static str) {
+    fn close_sessions(&mut self, hooks: &dyn Hooks, pred: impl Fn(&str, &Session) -> bool, reason: &'static str) {
         let ids: Vec<String> =
             self.sessions.iter().filter(|(k, s)| pred(k, s)).map(|(k, _)| k.clone()).collect();
         for id in ids {
@@ -255,6 +260,7 @@ impl Inner {
             for d in [s.host, s.client] {
                 send_to(&self.conns, &d, &Event::SessionClosed { session: id.clone(), reason });
             }
+            hooks.session_closed(&id);
             info!(session = &id[..8], host = %s.host.short(), client = %s.client.short(),
                   signals = s.signals, bytes = s.bytes, reason, "session closed");
         }
@@ -286,9 +292,9 @@ impl Inner {
         }
     }
 
-    fn drop_device(&mut self, d: &DeviceId, reason: &'static str) {
+    fn drop_device(&mut self, hooks: &dyn Hooks, d: &DeviceId, reason: &'static str) {
         let d = *d;
-        self.close_sessions(|_, s| s.host == d || s.client == d, reason);
+        self.close_sessions(hooks, |_, s| s.host == d || s.client == d, reason);
         self.close_pairings(|_, p| p.host == d, reason);
         // A client that goes away only ends its attempt; the host's window stays open.
         let attempts: Vec<String> =
@@ -333,7 +339,7 @@ impl Inner {
 
         for c in old_set.difference(&new_set) {
             let c = *c;
-            self.close_sessions(|_, s| s.host == host && s.client == c, "revoked");
+            self.close_sessions(&*cfg.hooks, |_, s| s.host == host && s.client == c, "revoked");
             send_to(&self.conns, &c, &Event::Revoked { host });
             info!(host = %host.short(), client = %c.short(), "client revoked");
         }
@@ -344,7 +350,7 @@ impl Inner {
         Ok(json!({ "seq": p.seq, "clients": new_set.len() }))
     }
 
-    fn connect(&mut self, client: DeviceId, host: &str) -> Result<Value, ApiError> {
+    fn connect(&mut self, hooks: &dyn Hooks, client: DeviceId, host: &str, wish: Option<u16>) -> Result<Value, ApiError> {
         let host = parse_device(host)?;
         if !self.is_authorised(&client, &host) {
             return Err(err(ErrorCode::NotAuthorised, "this host has not paired this client"));
@@ -356,10 +362,22 @@ impl Inner {
             return Err(err(ErrorCode::TooMany, "too many open sessions"));
         }
         let id = random_id();
-        hc.outbox.send(&Event::Incoming { session: id.clone(), client });
+        let offer = self
+            .conns
+            .get(&client)
+            .and_then(|cc| hooks.route_offer(&id, &client, &host, cc.ip, hc.ip, wish));
+        let (for_client, for_host) = match offer {
+            Some((c, h)) => (Some(c), Some(h)),
+            None => (None, None),
+        };
+        hc.outbox.send(&Event::Incoming { session: id.clone(), client, routes: for_host });
         self.sessions.insert(id.clone(), Session { host, client, signals: 0, bytes: 0 });
         info!(session = &id[..8], host = %host.short(), client = %client.short(), "session open");
-        Ok(json!({ "session": id }))
+        let mut out = json!({ "session": id });
+        if let Some(r) = for_client {
+            out["routes"] = r;
+        }
+        Ok(out)
     }
 
     fn signal(&mut self, me: DeviceId, session: String, blob: String) -> Result<Value, ApiError> {
@@ -376,12 +394,22 @@ impl Inner {
         Ok(json!({}))
     }
 
-    fn close(&mut self, me: DeviceId, session: &str) -> Result<Value, ApiError> {
+    fn routes(&self, hooks: &dyn Hooks, me: DeviceId, session: &str) -> Result<Value, ApiError> {
+        if !self.sessions.get(session).is_some_and(|s| s.host == me || s.client == me) {
+            return Err(err(ErrorCode::NotFound, "no such session"));
+        }
+        Ok(match hooks.route_refresh(session, &me) {
+            Some(r) => json!({ "routes": r }),
+            None => json!({}),
+        })
+    }
+
+    fn close(&mut self, hooks: &dyn Hooks, me: DeviceId, session: &str) -> Result<Value, ApiError> {
         if !self.sessions.get(session).is_some_and(|s| s.host == me || s.client == me) {
             return Err(err(ErrorCode::NotFound, "no such session"));
         }
         // Both sides get session_closed, the closer included, so each sees one ending.
-        self.close_sessions(|k, _| k == session, "closed");
+        self.close_sessions(hooks, |k, _| k == session, "closed");
         Ok(json!({}))
     }
 
@@ -616,15 +644,16 @@ impl Hub {
         if let Some(old) = inner.conns.remove(&device) {
             old.outbox.send(&Event::Replaced {});
             old.outbox.kill();
-            inner.drop_device(&device, "peer_offline");
+            inner.drop_device(&*self.cfg.hooks, &device, "peer_offline");
         }
         let id = self.next_conn.fetch_add(1, Ordering::Relaxed);
-        inner.conns.insert(device, Conn { id, role, outbox });
+        inner.conns.insert(device, Conn { id, role, outbox, ip });
         if role == Role::Host {
             inner.broadcast_presence(&device);
         }
         info!(device = %device.short(), role = role.as_str(), registered, "authenticated");
-        Ok(Attached { ctx: ConnCtx { device, role, conn: id, ip }, registered, account })
+        let service = self.cfg.hooks.auth_extra(&device, role, account.as_deref());
+        Ok(Attached { ctx: ConnCtx { device, role, conn: id, ip }, registered, account, service })
     }
 
     /// Called when a connection ends, whatever the reason.
@@ -635,7 +664,7 @@ impl Hub {
             return; // replaced or unregistered already
         }
         inner.conns.remove(&ctx.device);
-        inner.drop_device(&ctx.device, "peer_offline");
+        inner.drop_device(&*self.cfg.hooks, &ctx.device, "peer_offline");
         if let Some(rec) = inner.store.data.devices.get_mut(&ctx.device) {
             rec.last_seen = unix_now();
             inner.store.save();
@@ -680,16 +709,17 @@ impl Hub {
                 }
                 Ok(json!({ "hosts": out }))
             }
-            Request::Connect { host } => {
+            Request::Connect { host, node } => {
                 need(ctx, Role::Client)?;
                 let account = inner.store.data.devices.get(&me).and_then(|r| r.account.clone());
                 if let Some(h) = DeviceId::parse(&host) {
                     self.cfg.hooks.connect(&me, &h, account.as_deref()).map_err(denied)?;
                 }
-                inner.connect(me, &host)
+                inner.connect(&*self.cfg.hooks, me, &host, node)
             }
             Request::Signal { session, blob } => inner.signal(me, session, blob),
-            Request::Close { session } => inner.close(me, &session),
+            Request::Close { session } => inner.close(&*self.cfg.hooks, me, &session),
+            Request::Routes { session } => inner.routes(&*self.cfg.hooks, me, &session),
             Request::PairOpen { name } => {
                 need(ctx, Role::Host)?;
                 inner.pair_open(&self.cfg, me, name)
@@ -744,7 +774,7 @@ impl Hub {
             }
             Request::Unregister {} => {
                 inner.conns.remove(&me);
-                inner.drop_device(&me, "unregistered");
+                inner.drop_device(&*self.cfg.hooks, &me, "unregistered");
                 if let Some(rec) = inner.store.data.paired.remove(&me) {
                     for c in &rec.clients {
                         send_to(&inner.conns, c, &Event::Revoked { host: me });
@@ -844,7 +874,7 @@ impl Hub {
             if let Some(c) = inner.conns.remove(&d) {
                 c.outbox.kill();
             }
-            inner.drop_device(&d, "peer_offline");
+            inner.drop_device(&*self.cfg.hooks, &d, "peer_offline");
             inner.broadcast_presence(&d);
             info!(device = %d.short(), "host removed from the allowlist; disconnected");
         }

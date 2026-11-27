@@ -83,11 +83,12 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
   - `nonce` is the 32 raw bytes.
   - Verification is strict (`verify_strict`: no small-order keys, no malleable signatures).
 - **Timeout:** the device has 10 s to answer the challenge.
-- **On failure** the server sends `{"t":"error","id":null,"code":...}` and closes. Codes: `auth_failed`, `host_not_allowed`, `token_invalid`, `token_expired`, `quota_exceeded`, `payment_required`, `role_mismatch`, `rate_limited`, `server_full`, `bad_request`.
+- **On failure** the server sends `{"t":"error","id":null,"code":...}` and closes. Codes: `auth_failed`, `host_not_allowed`, `token_invalid`, `token_expired`, `quota_exceeded`, `payment_required`, `account_required`, `role_mismatch`, `rate_limited`, `server_full`, `bad_request`.
 - **Registration:** `registered: true` means this authentication registered the device just now. `token` is read only then (section 3).
 - **Additive fields:**
   - `source` in the challenge: where the server's source code is offered (AGPL-3.0 section 13).
   - `account` in `auth_ok`: the account of the token the device registered with, if any.
+  - `service` in `auth_ok`: a hosted service may add data of its own here (any JSON value). Devices that don't know it ignore it.
   - `notice` in `auth_ok`, and the event `{"t":"notice","code","text","url"}` at any time: a message from the operator (`--notice-code`, `--notice-text`, `--notice-url`). `text` is shown as written; `url` is only ever `https://`.
 - **Redirect:** a server may answer a device it doesn't know with `redirect` instead of `auth_ok` (`--redirect URL`, for example a cluster sending new devices to their node) and close. The device follows it once, only to `wss://` and only to the host it was configured with or a subdomain of it (`sub.example.com` from `example.com`; never the parent, a sibling or another domain), and an IP address only to itself, with the same trust and token. Registered devices are never redirected.
 - **One connection per device.** A new authenticated connection replaces the old one:
@@ -160,9 +161,10 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
 | Request | Fields | Result | Notes |
 |---|---|---|---|
 | `presence` | `hosts` (≤ 32 IDs) | `hosts: [{host, state, last_seen, since}]` | `state`: `online`, `asleep`, `offline` or `not_authorised`. `last_seen` (Unix seconds, when it disconnected) when `offline` or `asleep`. `since` (Unix seconds, its sleep notice) only when `asleep`. Otherwise both are `null`. |
-| `connect` | `host` | `session` | Asks for the host by ID. The host gets `incoming`. Errors: `not_authorised`, `host_offline`, `too_many` (8 open sessions). |
+| `connect` | `host`, `node` (optional, a number 0–65535) | `session`, `routes` (optional) | Asks for the host by ID. The host gets `incoming`. A hosted service may use `node` as the client's preference and add `routes` (any JSON value) to the result and to `incoming`. Errors: `not_authorised`, `host_offline`, `too_many` (8 open sessions). |
 | `signal` | `session`, `blob` | `{}` | Opaque blob to the host |
 | `close` | `session` | `{}` | |
+| `routes` | `session` | `routes` (optional) | Asks a hosted service for fresh `routes` for an open session; `{}` when it has none. Either side of the session may ask; for any other session: `not_found`. |
 | `pair_discover` | | `hosts: [{pairing, host, name, expires_in}]` | Open pairing windows nobody is attempting right now, newest first, at most 8. Any registered client may ask (that's how it gets paired). |
 | `pair_join` | `pairing` | `pairing`, `host`, `attempt`, `expires_in` | Starts an attempt in that window |
 | `pair_msg` | `pairing`, `blob` | `{}` | Opaque SPAKE2 message to the host |
@@ -174,7 +176,7 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
 
 | Event | Fields | To | When |
 |---|---|---|---|
-| `incoming` | `session`, `client` | host | A paired client called `connect` |
+| `incoming` | `session`, `client`, `routes` (optional) | host | A paired client called `connect` |
 | `signal` | `session`, `blob` | the other side | The peer sent `signal` |
 | `session_closed` | `session`, `reason` | both sides | `closed` (either side), `revoked`, `peer_offline` (disconnected or replaced), `unregistered` |
 | `pair_joined` | `pairing`, `attempt` | host | A client started attempt 1, 2 or 3. The client's ID is deliberately not given: the host must learn and pin it from the SPAKE2-protected exchange, not from the server. |
@@ -301,6 +303,7 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
 | `token_expired` | The enrolment token is past its expiry or used up: ask for a new one |
 | `quota_exceeded` | The device's account is over a quota (a hook; off by default) |
 | `payment_required` | The device's account needs a payment (a hook; off by default) |
+| `account_required` | The device has no account to act for (a hook; off by default) |
 
 ## 11. What the server logs and stores
 
@@ -313,7 +316,7 @@ server → {"t":"auth_ok","device":"<id>","role":"host","registered":true|false,
   - `/etc/systemd/journald@sodium-remote.conf` keeps them **7 days** (`MaxRetentionSec=7day`), at most 200 MB (`SystemMaxUse=200M`), and forwards them nowhere (not to syslog, kmsg, the console or wall).
   - Read them with `journalctl --namespace=sodium-remote -u sodium-remote-coturn`. The system journal doesn't get them.
 - **State** (`/var/lib/sodium-remote-server/state.json`): registered devices (role, first and last seen, a sleeping host's `asleep_since`, and the account of the token it registered with) and each host's signed list. Enrolment tokens are `tokens/<id>.json` beside it: the token's SHA-256, uses left, expiry and account; never the token itself.
-- **Memory only:** pairing windows (with display names), signalling sessions and rate limits.
+- **Memory only:** pairing windows (with display names), signalling sessions, rate limits and the address of each connected device.
 
 ## 12. Example
 

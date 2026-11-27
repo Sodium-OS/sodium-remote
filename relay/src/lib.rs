@@ -90,6 +90,8 @@ pub struct Config {
     pub redirect: Option<String>,
     /// The operator's message at `auth_ok`.
     pub notice: Option<Notice>,
+    /// Proxies whose `X-Real-IP` header names the real client address. Empty: the header is ignored.
+    pub trusted_proxies: Vec<std::net::IpAddr>,
     /// Quota and account hooks; `NoHooks` (everything allowed) by default.
     pub hooks: Arc<dyn Hooks>,
     pub pairing_ttl: Duration,
@@ -115,6 +117,7 @@ impl Config {
             relays: vec![],
             redirect: None,
             notice: None,
+            trusted_proxies: vec![],
             hooks: Arc::new(NoHooks),
             pairing_ttl: Duration::from_secs(300),
             asleep_ttl: Duration::from_secs(24 * 3600),

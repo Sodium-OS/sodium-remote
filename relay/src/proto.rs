@@ -154,9 +154,14 @@ pub enum Request {
     PairedList { list: String, sig: String },
     GetPairedList {},
     Presence { hosts: Vec<String> },
-    Connect { host: String },
+    Connect {
+        host: String,
+        #[serde(default)]
+        node: Option<u16>,
+    },
     Signal { session: String, blob: String },
     Close { session: String },
+    Routes { session: String },
     PairOpen { name: String },
     PairDiscover {},
     PairJoin { pairing: String },
@@ -177,6 +182,7 @@ impl Request {
             Request::Connect { .. } => "connect",
             Request::Signal { .. } => "signal",
             Request::Close { .. } => "close",
+            Request::Routes { .. } => "routes",
             Request::PairOpen { .. } => "pair_open",
             Request::PairDiscover {} => "pair_discover",
             Request::PairJoin { .. } => "pair_join",
@@ -226,10 +232,17 @@ pub enum Event {
         account: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         notice: Option<crate::Notice>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        service: Option<serde_json::Value>,
     },
     /// Instead of `auth_ok`, for a registration: register at this server instead.
     Redirect { url: String },
-    Incoming { session: String, client: DeviceId },
+    Incoming {
+        session: String,
+        client: DeviceId,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        routes: Option<serde_json::Value>,
+    },
     Signal { session: String, blob: String },
     SessionClosed { session: String, reason: &'static str },
     PairJoined { pairing: String, attempt: u32 },
@@ -261,6 +274,7 @@ pub enum ErrorCode {
     TokenExpired,
     QuotaExceeded,
     PaymentRequired,
+    AccountRequired,
 }
 
 impl ErrorCode {
@@ -284,6 +298,7 @@ impl ErrorCode {
             ErrorCode::TokenExpired => "token_expired",
             ErrorCode::QuotaExceeded => "quota_exceeded",
             ErrorCode::PaymentRequired => "payment_required",
+            ErrorCode::AccountRequired => "account_required",
         }
     }
 }

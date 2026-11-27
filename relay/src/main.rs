@@ -133,6 +133,9 @@ struct Serve {
     /// Forget a client no host has paired after this many days without a connection (0: never).
     #[arg(long, default_value_t = 30)]
     client_idle_days: u64,
+    /// Address of a reverse proxy to trust: from it, the client address is read from `X-Real-IP`. Repeat for several.
+    #[arg(long = "trusted-proxy")]
+    trusted_proxies: Vec<std::net::IpAddr>,
     /// Send new registrations to this server instead (wss://…, same domain).
     #[arg(long)]
     redirect: Option<String>,
@@ -281,6 +284,7 @@ async fn main() -> anyhow::Result<()> {
     cfg.turn_urls = args.turn_urls;
     cfg.relays = relays;
     cfg.redirect = args.redirect;
+    cfg.trusted_proxies = args.trusted_proxies;
     cfg.notice = notice;
     cfg.hooks = Arc::new(NoHooks);
     cfg.pairing_ttl = Duration::from_secs(args.pairing_ttl);
