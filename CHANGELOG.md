@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-27
+
+The first binaries since 0.1.0: everything in 0.2.0 below (matched display on Windows hosts, Windows sessions that resize and go full screen, sharp Intel Quick Sync), plus fixes that let a Windows host register and pair through a server on the first try.
+
 ### Fixed
 
 - **A host registers on the first try on a freshly installed Windows.** The server's certificate chain was checked against the roots in Windows' store at start, and a new Windows has not installed Let's Encrypt's ISRG Root X1 yet, so the first start failed with `UnknownIssuer` until the app was restarted. On Windows and macOS the operating system now verifies the chain, fetching a missing root itself; this covers the server, TURN over TLS and the server check in Settings › Server. A pinned CA works as before.
@@ -12,6 +16,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - **Pairing through the server works when the host and the client share an address.** The app looked for pairing windows every 5 s even on a computer used only as a host, which used up the server's 10 lookups a minute per address, so the other computer's pairing screen saw "No computer has a pairing window open" and the host never saw an attempt. The background refresh now asks the server every 30 s (the local network every time), the server allows 30 lookups a minute per address, and a lookup the person asked for that is still refused says "The server is busy. Try again in a minute." instead of finding nothing.
 
 ## [0.2.0] - 2026-11-27
+
+Tagged, but never released as binaries; 0.2.1 ships it with the fixes above.
 
 Windows hosts can match their display to the client's window, Windows sessions resize and go full screen like SodiumOS ones, and Intel Quick Sync encodes sharply. Windows and the generic Linux host have so far been tested in virtual machines.
 

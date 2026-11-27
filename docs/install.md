@@ -1,6 +1,6 @@
 # Install
 
-Sodium Remote 0.2.0 is a preview. This page covers installing it on each platform and keeping it up to date.
+Sodium Remote 0.2.1 is a preview. This page covers installing it on each platform and keeping it up to date.
 
 Install it on every computer you want to use, whether you'll control it, control others from it, or both: one app does both.
 
@@ -15,12 +15,12 @@ Install it on every computer you want to use, whether you'll control it, control
 
 ## Windows 11
 
-1. Download `SodiumRemote-0.2.0-win64.zip` from the [Releases](https://github.com/sodium-os/sodium-remote/releases) page.
-2. Check it against the SHA-256 checksum published with the release. In PowerShell: `Get-FileHash SodiumRemote-0.2.0-win64.zip`.
+1. Download `SodiumRemote-0.2.1-win64.zip` from the [Releases](https://github.com/sodium-os/sodium-remote/releases) page.
+2. Check it against the SHA-256 checksum published with the release. In PowerShell: `Get-FileHash SodiumRemote-0.2.1-win64.zip`.
 3. Unzip it anywhere you like. It is portable: there is no installer.
 4. Run `SodiumRemote.exe`.
 
-**SmartScreen.** The 0.2.0 build is not signed, so Windows SmartScreen shows "Windows protected your PC" the first time. Choose **More info**, then **Run anyway**. This is expected for an unsigned preview; checking the checksum first is how you know the file is the one we published. A signed build is planned.
+**SmartScreen.** The 0.2.1 build is not signed, so Windows SmartScreen shows "Windows protected your PC" the first time. Choose **More info**, then **Run anyway**. This is expected for an unsigned preview; checking the checksum first is how you know the file is the one we published. A signed build is planned.
 
 **Allowing control.** In the app, open **This computer** and turn on **Allow remote control**. If Windows asks to allow the program through the firewall, allow it on private networks. The app can start when you sign in (**Start at login**) so the computer stays available.
 
@@ -28,7 +28,7 @@ The app keeps its files under `%LOCALAPPDATA%\SodiumRemote` and its configuratio
 
 ## macOS
 
-There is no signed build for 0.2.0, so you build the app yourself. It takes a Mac with the Command Line Tools and Rust; [the build guide](building/macos.md) goes from a fresh clone to `build/Sodium Remote.app`.
+There is no signed build for 0.2.1, so you build the app yourself. It takes a Mac with the Command Line Tools and Rust; [the build guide](building/macos.md) goes from a fresh clone to `build/Sodium Remote.app`.
 
 On first launch macOS asks for permissions, in the app's welcome screen:
 

@@ -509,7 +509,7 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "client-windows"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "png",
@@ -1122,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "host-desktop"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "ashpd",
@@ -2144,7 +2144,7 @@ dependencies = [
 
 [[package]]
 name = "remote-client"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -2166,7 +2166,7 @@ dependencies = [
 
 [[package]]
 name = "remote-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "chacha20poly1305",
@@ -2201,7 +2201,7 @@ dependencies = [
 
 [[package]]
 name = "remote-engine"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "cc",
@@ -2214,14 +2214,14 @@ dependencies = [
 
 [[package]]
 name = "remote-linux-media"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cc",
 ]
 
 [[package]]
 name = "remote-qt"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "client-windows",
@@ -2235,7 +2235,7 @@ dependencies = [
 
 [[package]]
 name = "remote-rendezvous"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "remote-wlclip"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "remote-core",
@@ -2274,7 +2274,7 @@ dependencies = [
 
 [[package]]
 name = "remoted"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "ash",

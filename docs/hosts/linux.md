@@ -1,6 +1,6 @@
 # Hosting on other Linux desktops
 
-A Linux computer running GNOME or KDE Plasma 6 on Wayland can be controlled by any paired Sodium Remote client. The host uses the desktop's own screen-sharing permission, the same one video-call apps ask for, so the desktop asks before anything is shared. Version 0.2.0 is a preview: the Linux host has so far been tested only in virtual machines (GNOME 49 and KDE Plasma 6.8). The Sodium Remote app has a **This computer** page for it; the host also runs from the command line.
+A Linux computer running GNOME or KDE Plasma 6 on Wayland can be controlled by any paired Sodium Remote client. The host uses the desktop's own screen-sharing permission, the same one video-call apps ask for, so the desktop asks before anything is shared. Version 0.2.1 is a preview: the Linux host has so far been tested only in virtual machines (GNOME 49 and KDE Plasma 6.8). The Sodium Remote app has a **This computer** page for it; the host also runs from the command line.
 
 If you run SodiumOS, it has its own host: see [the SodiumOS page](sodiumos.md).
 

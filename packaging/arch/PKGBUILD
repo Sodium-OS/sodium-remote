@@ -14,12 +14,12 @@
 #
 # From a release:  download PKGBUILD and sodium-remote-<version>.tar.gz from the GitHub release into one folder, then
 #                  makepkg -s         (the release's PKGBUILD has the checksum filled in)
-# From a checkout: packaging/arch/make-source-tarball.sh 0.2.0 packaging/arch, then makepkg -s in packaging/arch
+# From a checkout: packaging/arch/make-source-tarball.sh 0.2.1 packaging/arch, then makepkg -s in packaging/arch
 #                  (sha256sums is SKIP in the repository; the release workflow fills it in).
 # Then pacman -U the packages you want (makepkg -si installs all three, sodium-remote-sodiumos included).
 pkgbase=sodium-remote
 pkgname=(sodium-remote sodium-remote-server sodium-remote-sodiumos)
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc='Remote desktop between your own computers (client, rendezvous server and SodiumOS host)'
 arch=(x86_64)
