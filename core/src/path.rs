@@ -798,10 +798,17 @@ impl PathAgent {
                             }
                         }
                     }
-                } else if msg.is_binding_request() && self.selected.is_none() && !self.routes.contains_key(&(local, from)) {
+                } else if msg.is_binding_request()
+                    && self.selected.is_none()
+                    && !self.routes.contains_key(&(local, from))
+                    && self.ice.remote_credentials().is_some()
+                {
                     // The peer reached us and knows the password: answer on this
                     // route until our own check measures one (RTT unknown, so
-                    // a pessimistic 50 ms that any measured route beats).
+                    // a pessimistic 50 ms that any measured route beats). Not
+                    // before we have the peer's credentials: until then the agent
+                    // holds the check unanswered, the peer has no route back, and
+                    // its handshake reply would be lost (a 400 ms resend).
                     self.routes.insert((local, from), RouteInfo::new(now, Duration::from_millis(50), false));
                     self.reselect(now);
                 }
@@ -1208,6 +1215,44 @@ mod tests {
         assert!(a.send(now, &[0xC3, 1, 2, 3]));
         let t = a.poll_transmit().unwrap();
         assert_eq!(b.handle_receive(now, Transport::Udp, t.to, t.from, &t.data), vec![vec![0xC3, 1, 2, 3]]);
+    }
+
+    /// The peer's checks can come before its answer (a relay is a candidate the host has at once).
+    /// Until we have its credentials they make no route: the peer has none back yet, so our
+    /// handshake's reply would be lost. Then the direct path is found as usual.
+    #[test]
+    fn no_route_from_checks_we_cannot_answer_yet() {
+        fn deliver(now: Instant, x: &mut PathAgent, y: &mut PathAgent) {
+            x.handle_timeout(now);
+            while let Some(e) = x.poll_event() {
+                if let PathEvent::LocalCandidate(c) = e {
+                    y.add_remote_candidate(&c).unwrap();
+                }
+            }
+            while let Some(t) = x.poll_transmit() {
+                y.handle_receive(now, Transport::Udp, t.to, t.from, &t.data);
+            }
+        }
+        let mut now = Instant::now();
+        let cfg = |controlling| PathConfig { controlling, stun_servers: vec![], turn_servers: vec![], tls: None };
+        let (mut a, mut b) = (PathAgent::new(cfg(true), now), PathAgent::new(cfg(false), now));
+        let (aa, ba): (SocketAddr, SocketAddr) = ("192.0.2.1:5000".parse().unwrap(), "192.0.2.2:6000".parse().unwrap());
+        a.add_udp_socket(now, aa);
+        b.add_udp_socket(now, ba);
+        let (ua, pa) = a.local_credentials();
+        b.set_remote_credentials(&ua, &pa);
+        for i in 0..35 {
+            if i == 30 {
+                assert!(a.selected_route().is_none() && b.selected_route().is_none());
+                let (ub, pb) = b.local_credentials();
+                a.set_remote_credentials(&ub, &pb);
+            }
+            deliver(now, &mut a, &mut b);
+            deliver(now, &mut b, &mut a);
+            now += Duration::from_millis(10);
+        }
+        assert_eq!(a.selected_route().map(|r| (r.local, r.remote)), Some((aa, ba)));
+        assert_eq!(b.selected_route().map(|r| (r.local, r.remote)), Some((ba, aa)));
     }
 
     /// A train only goes to a route the switching test could ever pick.
